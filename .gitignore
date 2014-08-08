@@ -1,3 +1,6 @@
+# Binary outputs
+/bin
+
 # Compiled Object files
 *.slo
 *.lo
@@ -19,3 +22,5 @@
 *.exe
 *.out
 *.app
+
+.sconsign.dblite
