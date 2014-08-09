@@ -1,7 +1,8 @@
-#ifndef __LLPM_INTRINSICS_HPP__
-#define __LLPM_INTRINSICS_HPP__
+#ifndef __LLPM_COMM_INTR_HPP__
+#define __LLPM_COMM_INTR_HPP__
 
 #include <llpm/block.hpp>
+#include <llvm/IR/InstrTypes.h>
 
 namespace llpm {
 
@@ -10,6 +11,21 @@ protected:
     virtual bool hasState() const {
         return false;
     }
+};
+
+// Convert one data type to another. Usually compiles down to a
+// no-op
+class Cast : public CommunicationIntrinsic {
+    InputPort _din;
+    OutputPort _dout;
+    llvm::CastInst* _cast;
+public:
+    Cast(llvm::CastInst* cast);
+    virtual ~Cast() { }
+
+    DEF_GET(din);
+    DEF_GET(cast);
+    DEF_GET(dout);
 };
 
 // Takes N inputs and concatenates them into one output
@@ -44,6 +60,7 @@ class SelectUnion : public CommunicationIntrinsic {
     vector<OutputPort> _dout;
 public:
     SelectUnion(const vector<llvm::Type*>& inputs);
+    // Note: unimplemented for now since LLVM lacks a union type!
     virtual ~SelectUnion() { }
 
     DEF_ARRAY_GET(din);
@@ -95,30 +112,6 @@ public:
     DEF_ARRAY_GET(dout);
 };
 
-// Accepts a single input and stores it. Outputs the stored
-// input when a request arrives. Also supports a reset signal,
-// which invalidates the contents. Requests on invalid data are held
-// until input data arrives.
-class Register : public Block {
-    InputPort _din;
-    InputPort _reset;
-    InputPort _req;
-    OutputPort _dout;
-
-public:
-    Register(llvm::Type* type);
-    virtual ~Register() { }
-
-    virtual bool hasState() const {
-        return true;
-    }
-
-    DEF_GET(din);
-    DEF_GET(reset);
-    DEF_GET(req);
-    DEF_GET(dout);
-};
-
 } // namespace llpm
 
-#endif // __LLPM_INTRINSICS_HPP__
+#endif // __LLPM_COMintrinsics.hppM_INTR_HPP__

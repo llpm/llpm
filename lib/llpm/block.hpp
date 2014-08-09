@@ -52,9 +52,13 @@ protected:
 
     virtual ~Function() { }
 
+public:
     virtual bool hasState() const {
         return false;
     }
+
+    DEF_GET(din);
+    DEF_GET(dout);
 };
 
 } // namespace llpm
