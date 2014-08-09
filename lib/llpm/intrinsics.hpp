@@ -95,12 +95,14 @@ public:
     DEF_ARRAY_GET(dout);
 };
 
-// Accepts a single input and continuously outputs that input
-// until a new input arrives. Also supports a reset signal, which
-// removes the contents
+// Accepts a single input and stores it. Outputs the stored
+// input when a request arrives. Also supports a reset signal,
+// which invalidates the contents. Requests on invalid data are held
+// until input data arrives.
 class Register : public Block {
     InputPort _din;
     InputPort _reset;
+    InputPort _req;
     OutputPort _dout;
 
 public:
@@ -113,9 +115,10 @@ public:
 
     DEF_GET(din);
     DEF_GET(reset);
+    DEF_GET(req);
     DEF_GET(dout);
 };
 
-}
+} // namespace llpm
 
 #endif // __LLPM_INTRINSICS_HPP__
