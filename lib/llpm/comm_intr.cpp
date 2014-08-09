@@ -1,4 +1,4 @@
-#include "intrinsics.hpp"
+#include "comm_intr.hpp"
 
 #include <boost/foreach.hpp>
 #include <llvm/IR/DerivedTypes.h>
