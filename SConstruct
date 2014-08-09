@@ -10,7 +10,7 @@ llvm_libraries = map(lambda x: x[2:],
 env = Environment(CXX="clang++",
                   LD="clang++",
                   CC="clang",
-                  CPPPATH=['./bin/llvm/include/'],
+                  CPPPATH=['./lib', './bin/llvm/include/', './llvm/include'],
                   CXXFLAGS="""-O3 -mfpmath=sse -msse4 -march=native
                             -Wall -g -std=c++11 -stdlib=libc++
                             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
