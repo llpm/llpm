@@ -18,13 +18,19 @@ public:
 class InvalidCall : public Exception {
 public:
     InvalidCall(std::string msg = "") :
-        Exception("Function/method call invalid" + msg) { }
+        Exception("Function/method call invalid. " + msg) { }
 };
 
 class ImplementationError : public Exception {
 public:
     ImplementationError(std::string msg = "") :
-        Exception("Internal error detected: " + msg) { }
+        Exception("Internal error detected. " + msg) { }
+};
+
+class NullException: public Exception {
+public:
+    NullException(std::string msg = "") :
+        Exception("NULL value not allowed here. " + msg) { }
 };
 
 } // namespace llpm

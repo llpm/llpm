@@ -3,9 +3,10 @@
 
 /***************
  * This file contains all of the standard functions (and #includes
- * all intrinsics) which all backends and libraries should support.
- * Any blocks not in this file may be translated to boolean logic
- * and synthesized from boolean functions.
+ * all intrinsics) which backends should consider supporting. If
+ * not, libraries can convert these functions to boolean logic.  Any
+ * blocks not in this file may be translated to boolean logic and
+ * synthesized from boolean functions.
  */
 
 #include <llpm/block.hpp>

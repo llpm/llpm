@@ -4,6 +4,11 @@
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
 
+/*********
+ * Communication intrinsics govern the flow of information in an
+ * LLPM design.
+ */
+
 namespace llpm {
 
 class CommunicationIntrinsic: public Block {
