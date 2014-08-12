@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <llpm/ports.hpp>
+#include <llpm/exceptions.hpp>
 
 using namespace std;
 
@@ -35,8 +36,13 @@ public:
     }
 };
 
-// A purely functional block.
-// Takes one input and produces one output. No state
+/*****
+ * A purely functional block. 
+ * Takes one input and produces one output. No state
+ *
+ * Can sometimes be refined into smaller, more granular functions
+ * via "refine" method.
+ */
 class Function : public Block {
 protected:
     InputPort _din;
@@ -59,6 +65,15 @@ public:
 
     DEF_GET(din);
     DEF_GET(dout);
+    
+    virtual bool refinable() const {
+        return false;
+    }
+    virtual bool refine(std::vector<Function*>&) {
+        if (refinable())
+            throw ImplementationError("Block needs to implement refine method!");
+        return false;
+    }
 };
 
 } // namespace llpm
