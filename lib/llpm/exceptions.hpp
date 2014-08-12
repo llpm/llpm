@@ -33,6 +33,12 @@ public:
         Exception("NULL value not allowed here. " + msg) { }
 };
 
+class InvalidArgument: public Exception {
+public:
+    InvalidArgument(std::string msg = "") :
+        Exception("Invalid argument. " + msg) { }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_EXCEPTIONS_HPP__

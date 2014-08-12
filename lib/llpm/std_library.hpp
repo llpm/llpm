@@ -23,6 +23,9 @@ namespace llpm {
     // Sum of integers
     class IntAddition : public Function {
     public:
+        static llvm::Type* InType(std::vector<llvm::Type*>);
+        static llvm::Type* OutType(std::vector<llvm::Type*>);
+
         IntAddition(std::vector<llvm::Type*>);
     };
 
@@ -35,12 +38,29 @@ namespace llpm {
     // Shift by constant amount. Integers only
     class ConstShift : public Function {
     public:
+        enum Style {
+            LogicalTruncating,
+            LogicalExtending,
+            Rotating,
+            Arithmetic
+        };
+        static llvm::Type* InType(llvm::Type* a, int shift, Style style);
+        static llvm::Type* OutType(llvm::Type* a, int shift, Style style);
+
+    private:
+        int _shift;
+        Style _style;
+
+    public:
         // a is input type
         // shift is amount -- positive for shift left, 
-        ConstShift(llvm::Type* a, int shift);
+        ConstShift(llvm::Type* a, int shift, Style style);
+
+        DEF_GET(shift);
+        DEF_GET(style);
     };
 
-    // Variable amount shift. Integers only
+    // Variable amount shift. Integers only. Truncating only
     class Shift : public Function {
     public:
         enum Direction {
@@ -53,38 +73,81 @@ namespace llpm {
             Rotating,
             Arithmetic
         };
+
+        static llvm::Type* InType(llvm::Type* a, llvm::Type* shift,
+                                  Direction dir, Style style);
+        static llvm::Type* OutType(llvm::Type* a, llvm::Type* shift,
+                                   Direction dir, Style style);
+
+    private:
+        Direction _dir;
+        Style _style;
+
+    public:
         // a is type of data to be shifted
         // shift is amount to be shifted left or right
         // direction is direction to shift. If 'either', negative
         //   'shift' value is right shift, position is left
         // style defines logical, rotating, or arithmetic shift
-        Shift(llvm::Type* a, llvm::Type* shift, Direction dir, Style style);
+        Shift(llvm::Type* a, llvm::Type* shift, Direction dir,
+              Style style);
+
+        DEF_GET(dir);
+        DEF_GET(style);
     };
 
 
     // Multiply a bunch of integers
     class IntMultiply : public Function {
     public:
+        static llvm::Type* InType(std::vector<llvm::Type*>);
+        static llvm::Type* OutType(std::vector<llvm::Type*>);
         IntMultiply(std::vector<llvm::Type*>);
     };
 
     // Divide integer a by integer b
     class IntDivide : public Function {
+        bool _isSigned;
+
     public:
+        static llvm::Type* InType(llvm::Type* a, llvm::Type* b, bool isSigned);
+        static llvm::Type* OutType(llvm::Type* a, llvm::Type* b, bool isSigned);
         IntDivide(llvm::Type* a, llvm::Type* b, bool isSigned);
+
+        DEF_GET(isSigned);
     };
 
     // Remainder of int a divided by int b
     class IntRemainder : public Function {
+        bool _isSigned;
+
     public:
+        static llvm::Type* InType(llvm::Type* a, llvm::Type* b, bool isSigned);
+        static llvm::Type* OutType(llvm::Type* a, llvm::Type* b, bool isSigned);
         IntRemainder(llvm::Type* a, llvm::Type* b, bool isSigned);
+
+        DEF_GET(isSigned);
     };
 
     // Bitwise AND, OR, or XOR of N inputs. All inputs must be of
     // the same type. Integers only
     class Bitwise : public Function {
     public:
-        Bitwise(unsigned N, llvm::Type* t);
+        enum Op {
+            AND,
+            OR,
+            XOR
+        };
+
+        static llvm::Type* InType(unsigned N, llvm::Type* t);
+        static llvm::Type* OutType(unsigned N, llvm::Type* t);
+
+    private:
+        Op _op;
+
+    public:
+        Bitwise(unsigned N, llvm::Type* t, Op op);
+        DEF_GET(op);
     };
 
     class IntCompare : public Function {
@@ -95,8 +158,21 @@ namespace llpm {
             GT,
             GTE
         };
+
+        static llvm::Type* InType(llvm::Type* a, llvm::Type* b,
+                                  Cmp op, bool isSigned);
+        static llvm::Type* OutType(llvm::Type* a, llvm::Type* b,
+                                   Cmp op, bool isSigned);
+
+    private:
+        Cmp _op;
+        bool _isSigned;
+
         IntCompare(llvm::Type* a, llvm::Type* b,
                    Cmp op, bool isSigned);
+
+        DEF_GET(op);
+        DEF_GET(isSigned);
     };
 
 } // namespace llpm
