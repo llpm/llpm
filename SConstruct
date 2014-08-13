@@ -18,7 +18,7 @@ env = Environment(CXX="clang++",
                   LDFLAGS="""-stdlib=libc++""".split(),
                   LIBS="""c dl""".split() + llvm_libraries,
                   LIBPATH=LibPaths + ["bin/llvm/lib/"],
-                  LINKFLAGS=['-pthread'] + map(lambda x: "-Wl,-rpath=%s" % x, LibPaths))
+                  LINKFLAGS=['-pthread', '-stdlib=libc++'] + map(lambda x: "-Wl,-rpath=%s" % x, LibPaths))
 
 llpm = env.Library('bin/llpm', Glob("./lib/*.cpp") +
                            Glob("./lib/*/*.cpp"))

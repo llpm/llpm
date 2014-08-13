@@ -119,4 +119,4 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_COMintrinsics.hppM_INTR_HPP__
+#endif // __LLPM_COMM_INTR_HPP__

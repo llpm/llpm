@@ -4,7 +4,8 @@ import ycm_core
 flags = """-fopenmp -g -mfpmath=sse -msse4 -march=native -Wall
 -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
 -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
--Wno-deprecated -std=c++11 -D_FILE_OFFSET_BITS=64
+-Wno-deprecated -D_FILE_OFFSET_BITS=64
+-std=c++11 -stdlib=libc++
 -Ilib -Ibin/llvm/include -Illvm/include""".split()
 
 
