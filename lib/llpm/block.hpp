@@ -21,6 +21,7 @@ namespace llpm {
 
 // Forward decl. Stupid c++!
 class Function;
+class Module;
 
 
 /*******
@@ -34,10 +35,13 @@ class Function;
  */
 class Block {
 protected:
+    Module* _module;
     vector<InputPort*>  _inputs;
     vector<OutputPort*> _outputs;
 
-    Block() { }
+    Block(Module* module):
+        _module(module)
+    { }
     virtual ~Block() { }
 
 public:
@@ -57,7 +61,8 @@ public:
         return false;
     }
 
-    /* Refines a block into smaller blocks.
+    /* Refines a block into smaller blocks. Usually a default
+     * refinement -- libraries may override it.
      *
      * @return Returns false if this block does not know how to
      * refine itself. A library may be able to refine it further.
@@ -68,13 +73,20 @@ public:
      * @arg opMap Mapping of output ports in original block to
      *            output ports in new blocks
      */
-    virtual bool refine(std::vector<Function*>& blocks,
+    virtual bool refine(std::vector<Block*>& blocks,
                         std::map<InputPort*, vector<InputPort*> >& ipMap,
                         std::map<OutputPort*, OutputPort*>& opMap) {
         if (refinable())
             throw ImplementationError("Block needs to implement refine method!");
         return false;
     }
+
+
+    /* Refines this block just like the other refine method, but
+     * modifies connections referring to the input and output ports
+     * based on the mappings returned in the other refine method.
+     */
+    virtual bool refine(std::vector<Block*>& blocks);
 };
 
 /*****

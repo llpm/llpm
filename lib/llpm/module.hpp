@@ -6,7 +6,7 @@
 
 namespace llpm {
 
-class Module {
+class Module : public Block {
     std::string _name;
 public:
     Module(std::string name) :
@@ -21,9 +21,7 @@ public:
         return !hasState();
     }
 
-    virtual vector<InputPort&> inputPorts() const = 0;
-    virtual vector<OutputPort&> outputPorts() const = 0;
-    virtual vector<Block&> blocks();
+    virtual const vector<Block&>& blocks() const = 0;
 };
 
 } // namespace llpm

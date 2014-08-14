@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include <llpm/design.hpp>
 #include <llpm/module.hpp>
 #include <llpm/std_library.hpp>
 #include <refinery/refinery.hpp>

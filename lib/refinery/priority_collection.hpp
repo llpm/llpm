@@ -8,31 +8,29 @@
 
 namespace llpm {
     
-template<class K>
+template<class V>
 class PCHandler {
 public:
     // Determines weather or not 
-    virtual bool handles(K k) const = 0;
+    virtual bool handles(V v) const = 0;
 };
 
 /********
  * Contains an ordered list of widgets with particular capabilities,
  * the order defining the priorities of the widgets. When a lookup
- * is executed, the highest priority widget with the necessary
- * capabilities is selected.
+ * is executed, a list of widgets with the correct capabilities is
+ * returned, maintaining priority order.
  */
 template<class K, class V>
 class PriorityCollection {
 public:
     // V, the library entries, must extend Handler 
-#if 0
-    static_assert(std::is_trivially_assignable<V, PCHandler<K> >::value,
+    static_assert(std::is_base_of<PCHandler<K>, V>::value,
                   "PriorityCollection contents must extend PCHandler class");
-#endif
 
 private:
     std::vector<V*> _entries;
-    std::unordered_map<K, V*> _cache;
+    std::unordered_map<K, std::vector<V*> > _cache;
 
 public:
     PriorityCollection() { }
@@ -49,6 +47,16 @@ public:
         _cache.clear();
     }
 
+    void prependEntry(V* entry) {
+        _entries.push_front(entry);
+        _cache.clear();
+    }
+
+    void prependEntries(const std::vector<V*>& entries) {
+        _entries.insert(_entries.front(), entries.front(), entries.back());
+        _cache.clear();
+    }
+
     void appendEntry(V* entry) {
         _entries.push_back(entry);
         _cache.clear();
@@ -59,23 +67,22 @@ public:
         _cache.clear();
     }
 
-    V* lookup(K k) {
+    const std::vector<V*>& lookup(K k) {
         auto f = _cache.find(k);
         if (f == _cache.end()) {
+            std::vector<V*>& vvec = _cache[k];
             BOOST_FOREACH(auto v, _entries) {
                 if (v->handles(k)) {
-                    _cache[k] = v;
-                    return v;
+                    vvec.push_back(v);
                 }
             }
-            _cache[k] = NULL;
-            return NULL;
+            return vvec;
         } else {
             return f->second;
         }
     }
 
-    V* operator()(K k) {
+    const std::vector<V*>& operator()(K k) {
         return lookup(k);
     }
 };
