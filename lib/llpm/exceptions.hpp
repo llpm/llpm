@@ -39,6 +39,12 @@ public:
         Exception("Invalid argument. " + msg) { }
 };
 
+class TypeError: public Exception {
+public:
+    TypeError(std::string msg = "") :
+        Exception("Type error." + msg) { }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_EXCEPTIONS_HPP__

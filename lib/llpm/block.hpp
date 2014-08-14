@@ -5,19 +5,12 @@
 #include <map>
 #include <llpm/ports.hpp>
 #include <llpm/exceptions.hpp>
+#include <util/macros.hpp>
 
 using namespace std;
 
 namespace llpm {
 
-#define DEF_SET(F) void F( decltype(_##F) f ) { _##F = f; }
-#define DEF_SET_NONULL(F) void F( decltype(_##F) f ) { \
-    if (f == NULL) throw NullException(); \
-    _##F = f; }
-#define DEF_GET(F) auto F() const -> const decltype(_##F)* { return &_##F; }
-#define DEF_ARRAY_GET(F) \
-    unsigned F##_size() { return _##F.size(); } \
-    auto F(unsigned i) const -> const decltype(_##F)::value_type* { return &_##F[i]; }
 
 // Forward decl. Stupid c++!
 class Function;
@@ -39,12 +32,13 @@ protected:
     vector<InputPort*>  _inputs;
     vector<OutputPort*> _outputs;
 
-    Block(Module* module):
-        _module(module)
-    { }
+    Block(): _module(NULL) { }
     virtual ~Block() { }
 
 public:
+    DEF_GET(module);
+    DEF_SET_NONULL(module);
+
     vector<InputPort*>&  inputs()  {
         return _inputs;
     }

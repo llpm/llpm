@@ -3,6 +3,7 @@
 
 #include <llpm/ports.hpp>
 #include <llpm/block.hpp>
+#include <llpm/connection.hpp>
 
 namespace llpm {
 
@@ -22,6 +23,24 @@ public:
     }
 
     virtual const vector<Block&>& blocks() const = 0;
+};
+
+/**********
+ * This module simply contains blocks. It is likely to be the most
+ * common module and a good default.
+ */
+class ContainerModule : public Module {
+    // The blocks which I directly contain
+    set<Block*> _blocks;
+
+    // The connections between blocks in this module
+    ConnectionDB _conns;
+
+public:
+    ContainerModule(std::string name) :
+        Module(name),
+        _conns(this)
+    { }
 };
 
 } // namespace llpm
