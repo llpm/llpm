@@ -29,4 +29,9 @@ bool ContainerModule::refine(std::vector<Block*>& blocks,
     return true;
 }
 
+bool ContainerModule::internalRefine() {
+    assert(false && "Not implemented!");
+    return false;
+}
+
 } // namespace llpm

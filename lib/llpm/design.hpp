@@ -16,7 +16,7 @@ class Design {
     std::vector<Module*> _modules;
 
 public:
-    static llvm::LLVMContext Default_LLVMContext;
+    static llvm::LLVMContext& Default_LLVMContext;
 
     Design(llvm::LLVMContext& ctxt = Default_LLVMContext) :
         _context(ctxt),
@@ -28,6 +28,8 @@ public:
     Refinery<Block>& refinery() {
         return *_refinery;
     }
+
+    void refine(Module* m);
 
     const std::vector<Module*>& modules() const {
         return _modules;

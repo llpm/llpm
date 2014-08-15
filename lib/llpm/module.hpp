@@ -10,13 +10,19 @@
 
 namespace llpm {
 
+class Design;
+
 class Module : public Block {
+protected:
+    Design& _design;
     std::string _name;
+
 public:
-    Module(std::string name) :
+    Module(Design& design, std::string name) :
+        _design(design),
         _name(name)
     { }
-    virtual ~Module();
+    virtual ~Module() { }
 
     std::string name() { return _name; }
 
@@ -26,6 +32,7 @@ public:
     }
 
     virtual void blocks(vector<Block*>&) const = 0;
+    virtual bool internalRefine() = 0;
 };
 
 /**********
@@ -54,8 +61,8 @@ protected:
     void addOutputPort(OutputPort* op);
 
 public:
-    ContainerModule(std::string name) :
-        Module(name),
+    ContainerModule(Design& design, std::string name) :
+        Module(design, name),
         _conns(this)
     { }
 
@@ -136,6 +143,8 @@ public:
     virtual bool refine(std::vector<Block*>& blocks,
                         std::map<InputPort*, vector<InputPort*> >& ipMap,
                         std::map<OutputPort*, OutputPort*>& opMap) const;
+    
+    virtual bool internalRefine();
 };
 
 } // namespace llpm
