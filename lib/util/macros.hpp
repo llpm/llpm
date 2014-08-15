@@ -9,6 +9,7 @@
     if (f == NULL) throw NullException(); \
     _##F = f; }
 #define DEF_GET(F) auto F() const -> const decltype(_##F)* { return &_##F; }
+#define DEF_GET_NP(F) auto F() const -> const decltype(_##F) { return _##F; }
 #define DEF_ARRAY_GET(F) \
     unsigned F##_size() { return _##F.size(); } \
     auto F(unsigned i) const -> const decltype(_##F)::value_type* { return &_##F[i]; }

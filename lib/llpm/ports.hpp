@@ -2,6 +2,7 @@
 #define __LLPM_PORTS_HPP__
 
 #include <llvm/IR/Type.h>
+#include <util/macros.hpp>
 
 namespace llpm {
 
@@ -9,18 +10,23 @@ class Block;
 
 class Port {
 protected:
-    Block* owner;
+    Block* _owner;
     llvm::Type* _type;
 
     Port(Block* owner, llvm::Type* type) :
+        _owner(owner),
         _type(type)
     { }
 
     virtual ~Port() { }
 
 public:
-    const llvm::Type* type() const {
+    llvm::Type* type() const {
         return _type;
+    }
+
+    Block* owner() const {
+        return _owner;
     }
 };
 

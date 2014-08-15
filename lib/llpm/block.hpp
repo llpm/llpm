@@ -36,8 +36,14 @@ protected:
     virtual ~Block() { }
 
 public:
-    DEF_GET(module);
-    DEF_SET_NONULL(module);
+    Module* module() const {
+        return _module;
+    }
+    void module(Module* m) {
+        if (m == NULL)
+            throw InvalidArgument("Module cannot be NULL!");
+        _module = m;
+    }
 
     vector<InputPort*>&  inputs()  {
         return _inputs;
@@ -69,7 +75,7 @@ public:
      */
     virtual bool refine(std::vector<Block*>& blocks,
                         std::map<InputPort*, vector<InputPort*> >& ipMap,
-                        std::map<OutputPort*, OutputPort*>& opMap) {
+                        std::map<OutputPort*, OutputPort*>& opMap) const {
         if (refinable())
             throw ImplementationError("Block needs to implement refine method!");
         return false;

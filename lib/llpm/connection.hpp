@@ -23,9 +23,9 @@ public:
 
     Connection() { }
 
-    DEF_GET(source);
+    DEF_GET_NP(source);
     DEF_SET_NONULL(source);
-    DEF_GET(sink);
+    DEF_GET_NP(sink);
     DEF_SET_NONULL(sink);
 
     bool operator==(const Connection& c) const {
@@ -67,6 +67,9 @@ public:
     size_t numConnections() {
         return _connections.size();
     }
+
+    void findSinks(const OutputPort* op, std::vector<InputPort*>& out) const;
+    OutputPort* findSource(const InputPort* ip) const;
 };
 
 } // namespace llpm

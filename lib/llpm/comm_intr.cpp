@@ -15,6 +15,12 @@ static unsigned clog2(uint64_t n) {
     return 0;
 }
 
+Identity::Identity(llvm::Type* type) :
+    _din(this, type),
+    _dout(this, type)
+{
+}
+
 Cast::Cast(llvm::CastInst* cast) :
     _din(this, cast->getSrcTy()),
     _dout(this, cast->getDestTy()),

@@ -18,6 +18,18 @@ protected:
     }
 };
 
+// Identity function. Does nothing
+class Identity: public CommunicationIntrinsic {
+    InputPort _din;
+    OutputPort _dout;
+public:
+    Identity(llvm::Type*);
+    virtual ~Identity() { }
+
+    DEF_GET(din);
+    DEF_GET(dout);
+};
+
 // Convert one data type to another. Usually compiles down to a
 // no-op
 class Cast : public CommunicationIntrinsic {
