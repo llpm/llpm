@@ -9,9 +9,11 @@ if not os.path.isfile("./bin/llvm/bin/llvm-config"):
 LibPaths = []
 
 llvm_libraries = map(lambda x: x[2:],
-    os.popen("""./bin/llvm/bin/llvm-config --libs analysis bitreader
-    bitwriter codegen core engine jit linker mcjit scalaropts
-    support""").read().split())
+    os.popen(" ".join("""
+./bin/llvm/bin/llvm-config --libs analysis bitreader
+bitwriter codegen core engine jit linker mcjit scalaropts
+support irreader
+""".splitlines())).read().split())
 
 env = Environment(CXX="clang++",
                   LD="clang++",
@@ -27,7 +29,8 @@ env = Environment(CXX="clang++",
                   LINKFLAGS=['-pthread', '-stdlib=libc++'] + map(lambda x: "-Wl,-rpath=%s" % x, LibPaths))
 
 llpm = env.Library('bin/llpm', Glob("./lib/*.cpp") +
-                           Glob("./lib/*/*.cpp"))
+                               Glob("./lib/*/*.cpp") +
+                               Glob("./lib/*/*/*.cpp"))
 env.Prepend(LIBS=[llpm])
 
 for d in Glob("./tools/*"):
