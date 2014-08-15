@@ -5,7 +5,11 @@ export CXX=clang++
 
 mkdir -p bin/llvm
 cd bin/llvm
-../../llvm/configure --enable-libcpp --enable-cxx11 --enable-keep-symbols --enable-jit 
-cmake ../../llvm
+insdir=`pwd`
+cd ../../
+mkdir -p llvm_build
+cd llvm_build
+../llvm/configure --prefix=$insdir --enable-libcpp --enable-cxx11 --enable-keep-symbols --enable-jit 
 make -j16
-cd ../
+make install
+cd ..
