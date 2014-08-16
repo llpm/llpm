@@ -33,13 +33,13 @@ void LLVMTranslator::readBitcode(std::string fileName) {
     }
 }
 
-LLVMModule* LLVMTranslator::translate(llvm::Function* func) {
+LLVMFunction* LLVMTranslator::translate(llvm::Function* func) {
     if (func == NULL)
         throw InvalidArgument("Function cannot be NULL!");
-    return new LLVMModule(this->_design, func);
+    return new LLVMFunction(this->_design, func);
 }
 
-LLVMModule* LLVMTranslator::translate(std::string fnName) {
+LLVMFunction* LLVMTranslator::translate(std::string fnName) {
     if (this->_llvmModule.get() == NULL)
         throw InvalidCall("Must load a module into LLVMTranslator before translating");
     llvm::Function* func = this->_llvmModule->getFunction(fnName);

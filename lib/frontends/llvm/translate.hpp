@@ -4,7 +4,7 @@
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
 #include <refinery/refinery.hpp>
-#include <frontends/llvm/module.hpp>
+#include <frontends/llvm/objects.hpp>
 
 // fwd def
 namespace llvm {
@@ -27,8 +27,8 @@ public:
         this->_llvmModule.reset(module);
     }
 
-    LLVMModule* translate(llvm::Function*);
-    LLVMModule* translate(std::string fnName);
+    LLVMFunction* translate(llvm::Function*);
+    LLVMFunction* translate(std::string fnName);
 };
 
 } // namespace llpm
