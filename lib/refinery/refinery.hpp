@@ -15,13 +15,27 @@ namespace llpm {
 template<class Crude>
 class Refinery {
 public:
+    class Library;
+
     class Refiner: public PCHandler<std::type_index> {
+        Library* _library;
+
+    protected:
+        Refiner(Library* lib = NULL) :
+            _library(lib)
+        { }
+
     public:
-        Refiner() { }
         virtual ~Refiner() { }
 
         virtual bool handles(std::type_index) const = 0;
         virtual bool refine(std::vector<Crude*>& newCrude, Crude* c) const = 0;
+
+    };
+
+    class StopCondition {
+    public:
+        virtual bool stop(const std::vector<Crude*>&) = 0;
     };
 
 private:
@@ -35,7 +49,7 @@ public:
         return _refiners;
     }
 
-    void refine(std::vector<Crude*> crude, bool exhaust = true);
+    unsigned refine(std::vector<Crude*>& crude, StopCondition* sc = NULL);
 };
 
 class BlockDefaultRefiner: public Refinery<Block>::Refiner {
@@ -46,7 +60,11 @@ public:
 
 
 template<class Crude>
-void Refinery<Crude>::refine(std::vector<Crude*> crude, bool exhaust) {
+unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude, StopCondition* sc) {
+    if (sc && sc->stop(crude))
+        return false;
+
+    unsigned passes = 0;
     bool foundRefinement;
     do {
         std::vector<Crude*> newCrude;
@@ -68,7 +86,11 @@ void Refinery<Crude>::refine(std::vector<Crude*> crude, bool exhaust) {
             }
         }
         crude.swap(newCrude);
-    } while (exhaust && foundRefinement);
+        if (foundRefinement)
+            passes += 1;
+    } while (foundRefinement && sc && !sc->stop(crude));
+
+    return passes;
 }
 
 } // namespace llpm

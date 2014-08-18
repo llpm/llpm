@@ -70,6 +70,9 @@ public:
 
     void findSinks(const OutputPort* op, std::vector<InputPort*>& out) const;
     OutputPort* findSource(const InputPort* ip) const;
+
+    Connection& find(const InputPort* ip);
+    void find(const OutputPort* op, std::vector<Connection&>& out);
 };
 
 } // namespace llpm

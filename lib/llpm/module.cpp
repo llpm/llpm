@@ -29,9 +29,17 @@ bool ContainerModule::refine(std::vector<Block*>& blocks,
     return true;
 }
 
-bool ContainerModule::internalRefine() {
-    assert(false && "Not implemented!");
-    return false;
+bool ContainerModule::internalRefine(Design::Refinery::StopCondition* sc) {
+    std::vector<Block*> blocks(_blocks.begin(), _blocks.end());
+    auto rc = design().refinery().refine(blocks);
+    std::set<Block*> blockSet(blocks.begin(), blocks.end());
+    _blocks.swap(blockSet);
+    BOOST_FOREACH(auto block, blockSet) {
+        if (_blocks.find(block) == _blocks.end()) {
+            delete block;
+        }
+    }
+    return rc > 0;
 }
 
 } // namespace llpm

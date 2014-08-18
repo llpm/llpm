@@ -1,6 +1,7 @@
 #ifndef __LLPM_MODULE_HPP__
 #define __LLPM_MODULE_HPP__
 
+#include <llpm/design.hpp>
 #include <llpm/ports.hpp>
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
@@ -24,7 +25,8 @@ public:
     { }
     virtual ~Module() { }
 
-    std::string name() { return _name; }
+    DEF_GET_NP(name);
+    DEF_GET_NP(design);
 
     virtual bool hasState() const = 0;
     virtual bool isPure() const {
@@ -32,7 +34,7 @@ public:
     }
 
     virtual void blocks(vector<Block*>&) const = 0;
-    virtual bool internalRefine() = 0;
+    virtual bool internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
 };
 
 /**********
@@ -150,7 +152,7 @@ public:
                         std::map<InputPort*, vector<InputPort*> >& ipMap,
                         std::map<OutputPort*, OutputPort*>& opMap) const;
     
-    virtual bool internalRefine();
+    virtual bool internalRefine(Design::Refinery::StopCondition* sc = NULL);
 };
 
 } // namespace llpm

@@ -26,7 +26,8 @@ int main(int argc, const char** argv) {
 
         BOOST_FOREACH(auto m, modules) {
             // Refine each module until it cannot be further refined
-            while (m->internalRefine()) { }
+            unsigned passes = m->internalRefine();
+            printf("%u refinement passes on '%s'\n", passes, m->name().c_str());
         }
     } catch (Exception& e) {
         fprintf(stderr, "Caught exception!\n\t%s\n", e.msg.c_str());

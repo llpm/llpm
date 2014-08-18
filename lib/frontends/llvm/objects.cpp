@@ -41,12 +41,15 @@ llvm::Type* LLVMBasicBlock::buildInputs(llvm::BasicBlock* bb) {
                 assert(operand != NULL);
                 llvm::Instruction* ins = llvm::dyn_cast<llvm::Instruction>(operand);
                 llvm::Argument* arg = llvm::dyn_cast<llvm::Argument>(operand);
+
                 bool isInput = true;
                 if (ins != NULL && ins->getParent() == bb)
-                    // If it's an instruction and it's local
+                    // If it's an instruction and it's local, then
+                    // it's not an input!
                     isInput = false;
                 if (ins == NULL && arg == NULL)
-                    // It's neither an instruction nor an argument!
+                    // It's neither an instruction nor an argument,
+                    // so it's not an input!
                     isInput = false;
 
                 if (isInput && // It's an input to the basic block

@@ -3,16 +3,21 @@
 
 #include <llvm/IR/LLVMContext.h>
 #include <refinery/refinery.hpp>
-#include <llpm/block.hpp>
-#include <llpm/module.hpp>
 
 #include <vector>
 
 namespace llpm {
 
+// Fwd defs. Are modern compilers really still 1-pass?
+class Module;
+
 class Design {
+public:
+    typedef llpm::Refinery<Block> Refinery;
+
+private:
     llvm::LLVMContext& _context;
-    Refinery<Block>* _refinery;
+    Refinery* _refinery;
     std::vector<Module*> _modules;
 
 public:
@@ -20,12 +25,12 @@ public:
 
     Design(llvm::LLVMContext& ctxt = Default_LLVMContext) :
         _context(ctxt),
-        _refinery(new Refinery<Block>())
+        _refinery(new Refinery())
     {
         _refinery->refiners().appendEntry(new BlockDefaultRefiner());
     }
 
-    Refinery<Block>& refinery() {
+    Refinery& refinery() {
         return *_refinery;
     }
 

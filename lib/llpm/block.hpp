@@ -36,8 +36,6 @@ protected:
     std::set<OutputPort*> _outputs;
 
     Block(): _module(NULL) { }
-    virtual ~Block() { }
-
 
 private:
     friend class InputPort;
@@ -51,6 +49,8 @@ private:
     }
 
 public:
+    virtual ~Block() { }
+
     Module* module() const {
         return _module;
     }
