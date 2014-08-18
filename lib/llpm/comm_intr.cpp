@@ -32,7 +32,7 @@ Join::Join(const vector<llvm::Type*>& inputs) :
     _dout(this, StructType::create(inputs))
 {
     BOOST_FOREACH(auto input, inputs) {
-        _din.push_back(InputPort(this, input));
+        _din.push_back(new InputPort(this, input));
     }
 }
 
@@ -40,7 +40,7 @@ Select::Select(unsigned N, llvm::Type* type) :
     _dout(this, type)
 {
     for (unsigned i = 0; i<N; i++) {
-        _din.push_back(InputPort(this, type));
+        _din.push_back(new InputPort(this, type));
     }
 }
 
@@ -48,7 +48,7 @@ Split::Split(const vector<llvm::Type*>& outputs) :
     _din(this, StructType::create(outputs))
 {
     BOOST_FOREACH(auto output, outputs) {
-        _dout.push_back(OutputPort(this, output));
+        _dout.push_back(new OutputPort(this, output));
     }
 }
 
@@ -57,7 +57,7 @@ Multiplexer::Multiplexer(unsigned N, llvm::Type* type) :
     _dout(this, type)
 {
     for (unsigned i = 0; i<N; i++) {
-        _din.push_back(InputPort(this, type));
+        _din.push_back(new InputPort(this, type));
     }
 }
 
@@ -66,7 +66,7 @@ Router::Router(unsigned N, llvm::Type* type) :
     _sel(this, llvm::Type::getIntNTy(type->getContext(), clog2(N)))
 {
     for (unsigned i = 0; i<N; i++) {
-        _dout.push_back(OutputPort(this, type));
+        _dout.push_back(new OutputPort(this, type));
     }
 }
 

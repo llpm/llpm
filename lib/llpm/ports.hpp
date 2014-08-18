@@ -32,16 +32,14 @@ public:
 
 class InputPort : public Port {
 public:
-    InputPort(Block* owner, llvm::Type* type) :
-        Port(owner, type)
-    { }
+    InputPort(Block* owner, llvm::Type* type);
+    ~InputPort();
 };
 
 class OutputPort : public Port {
 public:
-    OutputPort(Block* owner, llvm::Type* type) :
-        Port(owner, type)
-    { }
+    OutputPort(Block* owner, llvm::Type* type);
+    ~OutputPort();
 };
 
 } //llpm

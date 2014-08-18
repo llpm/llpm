@@ -19,7 +19,7 @@ env = Environment(CXX="clang++",
                   LD="clang++",
                   CC="clang",
                   CPPPATH=['./lib', './bin/llvm/include/'],
-                  CXXFLAGS="""-O1 -mfpmath=sse -msse4 -march=native
+                  CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
                             -Wall -g -std=c++11 -stdlib=libc++
                             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
                             -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split(),

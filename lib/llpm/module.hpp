@@ -96,7 +96,13 @@ public:
         m->module(this);
     }
 
-    void connect(OutputPort* source, InputPort* sink) {
+    void connect(const InputPort* sink, const OutputPort* source) {
+        connect(source, sink);
+    }
+    void connect(const OutputPort* source, const InputPort* sink) {
+        if (source == NULL || sink == NULL)
+            throw InvalidArgument("Neither source nor sink can be NULL!");
+
         Block* sourceB = source->owner();
         Block* sinkB   = sink->owner();
 

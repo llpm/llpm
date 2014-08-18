@@ -3,9 +3,11 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <llpm/ports.hpp>
 #include <llpm/exceptions.hpp>
 #include <util/macros.hpp>
+#include <boost/foreach.hpp>
 
 using namespace std;
 
@@ -27,13 +29,26 @@ class Module;
  * via "refine" method.
  */
 class Block {
+
 protected:
     Module* _module;
-    vector<InputPort*>  _inputs;
-    vector<OutputPort*> _outputs;
+    std::set<InputPort*>  _inputs;
+    std::set<OutputPort*> _outputs;
 
     Block(): _module(NULL) { }
     virtual ~Block() { }
+
+
+private:
+    friend class InputPort;
+    friend class OutputPort;
+
+    void definePort(InputPort* ip) {
+        _inputs.insert(ip);
+    }
+    void definePort(OutputPort* op) {
+        _outputs.insert(op);
+    }
 
 public:
     Module* module() const {
@@ -45,10 +60,10 @@ public:
         _module = m;
     }
 
-    vector<InputPort*>&  inputs()  {
+    std::set<InputPort*>&  inputs()  {
         return _inputs;
     }
-    vector<OutputPort*>& outputs() {
+    std::set<OutputPort*>& outputs() {
         return _outputs;
     }
 
@@ -100,13 +115,15 @@ protected:
 
     Function(llvm::Type* input, llvm::Type* output) :
         _din(this, input),
-        _dout(this, output) {
-
-        _inputs = {&_din};
-        _outputs = {&_dout};
-    }
+        _dout(this, output)
+    { }
 
     virtual ~Function() { }
+
+    void resetTypes(llvm::Type* input, llvm::Type* output) {
+        _din = InputPort(this, input);
+        _dout = OutputPort(this, output);
+    }
 
 public:
     virtual bool hasState() const {
