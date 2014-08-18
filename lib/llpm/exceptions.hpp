@@ -45,6 +45,12 @@ public:
         Exception("Type error." + msg) { }
 };
 
+class IncompatibleException: public Exception {
+public:
+    IncompatibleException(std::string msg = "") :
+        Exception("An incompatibility was encountered." + msg) { }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_EXCEPTIONS_HPP__

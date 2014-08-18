@@ -7,11 +7,15 @@
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <frontends/llvm/library.hpp>
+
 namespace llpm {
 
 LLVMTranslator::LLVMTranslator(Design& design) :
     _design(design)
-{ }
+{
+    design.refinery().appendLibrary(new LLVMBaseLibrary());
+}
 
 LLVMTranslator::~LLVMTranslator() {
 }

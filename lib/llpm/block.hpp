@@ -95,13 +95,6 @@ public:
             throw ImplementationError("Block needs to implement refine method!");
         return false;
     }
-
-
-    /* Refines this block just like the other refine method, but
-     * modifies connections referring to the input and output ports
-     * based on the mappings returned in the other refine method.
-     */
-    virtual bool refine(std::vector<Block*>& blocks);
 };
 
 /*****

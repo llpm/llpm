@@ -68,7 +68,9 @@ protected:
 
     LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
         _function(f),
-        _basicBlock(bb)
+        _basicBlock(bb),
+        _returns(false),
+        _numInputs(0)
     { }
 
     llvm::Type* buildInputs(llvm::BasicBlock* bb);

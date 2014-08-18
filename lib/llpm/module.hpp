@@ -28,6 +28,10 @@ public:
     DEF_GET_NP(name);
     DEF_GET_NP(design);
 
+    virtual ConnectionDB* conns() {
+        return NULL;
+    }
+
     virtual bool hasState() const = 0;
     virtual bool isPure() const {
         return !hasState();
@@ -67,6 +71,10 @@ public:
         Module(design, name),
         _conns(this)
     { }
+
+    ConnectionDB* conns() {
+        return &_conns;
+    }
 
     const OutputPort* getDriver(InputPort* ip) const {
         auto f = _inputMap.find(ip);
@@ -118,10 +126,20 @@ public:
 
         if (sourceB->module() == NULL) {
             sourceB->module(this);
+            if (Module* sub = dynamic_cast<Module*>(sourceB)) {
+                this->addSubmodule(sub);
+            } else {
+                this->addBlock(sourceB);
+            }
         }
 
         if (sinkB->module() == NULL) {
             sinkB->module(this);
+            if (Module* sub = dynamic_cast<Module*>(sinkB)) {
+                this->addSubmodule(sub);
+            } else {
+                this->addBlock(sinkB);
+            }
         }
     }
 

@@ -6,7 +6,18 @@
 
 namespace llpm {
 
+class LLVMBaseLibrary : public Refinery<Block>::Library {
+    static std::vector<Refinery<Block>::Refiner*> BuildCollection();
+public:
+    LLVMBaseLibrary() :
+        Refinery<Block>::Library(BuildCollection())
+    { }
+    virtual ~LLVMBaseLibrary() { }
 
+    virtual std::string name() {
+        return "LLVM base translation library";
+    }
+};
 
 } // namespace llpm
 

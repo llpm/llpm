@@ -15,9 +15,11 @@ namespace llpm {
 template<class Crude>
 class Refinery {
 public:
-    class Library;
+    class Refiner;
+    typedef llpm::PriorityCollection<Block, Refiner> PCollection;
+    typedef llpm::Library<Refiner> Library;
 
-    class Refiner: public PCHandler<std::type_index> {
+    class Refiner: public PCHandler<Block> {
         Library* _library;
 
     protected:
@@ -28,8 +30,8 @@ public:
     public:
         virtual ~Refiner() { }
 
-        virtual bool handles(std::type_index) const = 0;
-        virtual bool refine(std::vector<Crude*>& newCrude, Crude* c) const = 0;
+        virtual bool handles(Block*) const = 0;
+        virtual bool refine(Crude* c, std::vector<Crude*>& newCrude) const = 0;
 
     };
 
@@ -39,23 +41,49 @@ public:
     };
 
 private:
-    PriorityCollection<std::type_index, Refiner> _refiners;
+    PCollection _refiners;
 
 public:
     Refinery() { }
     ~Refinery() { }
 
-    PriorityCollection<std::type_index, Refiner>& refiners() {
+    PCollection& refiners() {
         return _refiners;
+    }
+
+    void appendLibrary(Library* lib) {
+        refiners().appendLibrary(lib);
+    }
+
+    void prependLibrary(Library* lib) {
+        refiners().prependLibrary(lib);
     }
 
     unsigned refine(std::vector<Crude*>& crude, StopCondition* sc = NULL);
 };
 
-class BlockDefaultRefiner: public Refinery<Block>::Refiner {
+
+/* Allows a refining class to define a non-modifying refine method.
+ * Implements the modifying version based on it.
+ */
+class BlockRefiner: public Refinery<Block>::Refiner {
 public:
-    virtual bool handles(std::type_index) const;
-    virtual bool refine(std::vector<Block*>& newCrude, Block* c) const;
+    virtual bool refine(
+        const Block* block,
+        std::vector<Block*>& blocks,
+        std::map<InputPort*, vector<InputPort*> >& ipMap,
+        std::map<OutputPort*, OutputPort*>& opMap) const = 0;
+    virtual bool refine(Block* c, std::vector<Block*>& newCrude) const;
+};
+
+class BlockDefaultRefiner: public BlockRefiner {
+public:
+    virtual bool handles(Block*) const;
+    virtual bool refine(
+        const Block* block,
+        std::vector<Block*>& blocks,
+        std::map<InputPort*, vector<InputPort*> >& ipMap,
+        std::map<OutputPort*, OutputPort*>& opMap) const;
 };
 
 
@@ -70,11 +98,10 @@ unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude, StopCondition* sc) 
         std::vector<Crude*> newCrude;
         foundRefinement = false;
         BOOST_FOREACH(Crude* c, crude) {
-            std::type_index type = typeid(c);
-            vector<Refiner*> possible_refiners = _refiners(type);
+            const vector<Refiner*>& possible_refiners = _refiners(c);
             bool refined = false;
             BOOST_FOREACH(auto r, possible_refiners) {
-                if(r->refine(newCrude, c)) {
+                if(r->refine(c, newCrude)) {
                     refined = true;
                     break;
                 }
