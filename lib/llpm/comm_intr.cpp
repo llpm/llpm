@@ -45,6 +45,7 @@ Join::Join(llvm::Type* output) :
     unsigned idx = 0;
     while (ct->indexValid(idx)) {
         _din.push_back(new InputPort(this, ct->getTypeAtIndex(idx)));
+        idx += 1;
     }
 }
 

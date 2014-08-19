@@ -4,12 +4,17 @@
 #include <typeinfo>
 #include <typeindex>
 #include <boost/function.hpp>
+#include <llvm/IR/Instructions.h>
 
 #include <llpm/std_library.hpp>
 
 namespace llpm {
 
 llvm::Type* LLVMInstruction::getInput(llvm::Instruction* ins) {
+    if (ins->getNumOperands() == 0)
+        return llvm::Type::getVoidTy(ins->getContext());
+    if (ins->getNumOperands() == 1)
+        return ins->getOperand(0)->getType();
     vector<llvm::Type*> ty;
     for (unsigned i=0; i<ins->getNumOperands(); i++) {
         ty.push_back(ins->getOperand(i)->getType());
@@ -53,6 +58,30 @@ public:
 
     static FlowInstruction* Create(llvm::Instruction* ins) {
         return new FlowInstruction(ins);
+    }
+
+    virtual unsigned getNumHWOperands() const {
+        switch (_ins->getOpcode()) {
+        case llvm::Instruction::Br:
+            if (llvm::dyn_cast<llvm::BranchInst>(_ins)->isUnconditional())
+                return 0;
+            else
+                return 1;
+        default:
+            return _ins->getNumOperands();
+        }
+    }
+
+    virtual bool hwIgnoresOperand(unsigned idx) const {
+        switch (_ins->getOpcode()) {
+        case llvm::Instruction::Br:
+            if (llvm::dyn_cast<llvm::BranchInst>(_ins)->isUnconditional())
+                return true;
+            else
+                return idx > 0;
+        default:
+            return false;
+        }
     }
 };
 

@@ -25,6 +25,14 @@ public:
     virtual OutputPort* output() = 0;
 
     static LLVMInstruction* Create(llvm::Instruction*);
+
+    virtual unsigned getNumHWOperands() const {
+        return _ins->getNumOperands();
+    }
+
+    virtual bool hwIgnoresOperand(unsigned) const {
+        return false;
+    }
 };
 
 class LLVMPureInstruction: public Function, public LLVMInstruction {

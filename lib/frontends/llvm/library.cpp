@@ -59,16 +59,21 @@ public:
 
             vector<InputPort*> inputPorts;
             // Create a 'join' node for multiple inputs if necessary
-            if (ins.getNumOperands() > 1) {
+            if (li->getNumHWOperands() > 1) {
                 vector<llvm::Type*> inTypes;
                 for (unsigned i=0; i<ins.getNumOperands(); i++) {
-                    inTypes.push_back(ins.getOperand(i)->getType());
+                    if (!li->hwIgnoresOperand(i))
+                        inTypes.push_back(ins.getOperand(i)->getType());
                 }
                 Join* inJoin = new Join(inTypes);
                 blocks.push_back(inJoin);
                 conns.connect(inJoin->dout(), li->input());
+                unsigned hwNum =0;
                 for (unsigned i=0; i<ins.getNumOperands(); i++) {
-                    inputPorts.push_back(inJoin->din(i));
+                    if (!li->hwIgnoresOperand(i)) {
+                        inputPorts.push_back(inJoin->din(hwNum));
+                        hwNum += 1;
+                    }
                 }
             } else {
                 inputPorts.push_back(li->input());
@@ -76,19 +81,23 @@ public:
 
             // For each input, find the correct output port and
             // connect it
+            unsigned hwNum = 0;
             for (unsigned i=0; i<ins.getNumOperands(); i++) {
+                if (li->hwIgnoresOperand(i))
+                    continue;
                 llvm::Value* operand = ins.getOperand(i);
                 auto f = valueMap.find(operand);
                 if (f != valueMap.end()) {
                     OutputPort* port = f->second;
-                    conns.connect(port, inputPorts[i]);
+                    conns.connect(port, inputPorts[hwNum]);
                 } else {
                     // If it's not local it better be a
                     // constant!
                     Constant* c = new Constant(operand);
                     blocks.push_back(c);
-                    conns.connect(c->dout(), inputPorts[i]);
+                    conns.connect(c->dout(), inputPorts[hwNum]);
                 }
+                hwNum += 1;
             }
         }
 
