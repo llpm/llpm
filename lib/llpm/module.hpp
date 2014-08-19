@@ -28,9 +28,7 @@ public:
     DEF_GET_NP(name);
     DEF_GET_NP(design);
 
-    virtual ConnectionDB* conns() {
-        return NULL;
-    }
+
 
     virtual bool hasState() const = 0;
     virtual bool isPure() const {
@@ -39,6 +37,14 @@ public:
 
     virtual void blocks(vector<Block*>&) const = 0;
     virtual bool internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
+};
+
+// A module which a third party can edit
+class MutableModule: public Module {
+public:
+    virtual ConnectionDB* conns() = 0;
+    virtual void addBlock(Block* b) = 0;
+    virtual void addSubmodule(Module* m) = 0;
 };
 
 /**********
@@ -167,8 +173,7 @@ public:
     }
 
     virtual bool refine(std::vector<Block*>& blocks,
-                        std::map<InputPort*, vector<InputPort*> >& ipMap,
-                        std::map<OutputPort*, OutputPort*>& opMap) const;
+                        ConnectionDB& conns) const;
     
     virtual bool internalRefine(Design::Refinery::StopCondition* sc = NULL);
 };

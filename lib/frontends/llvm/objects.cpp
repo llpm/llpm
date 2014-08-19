@@ -64,7 +64,7 @@ llvm::Type* LLVMBasicBlock::buildInputs(llvm::BasicBlock* bb) {
 
     }
 
-    return llvm::StructType::create(inputs);
+    return llvm::StructType::get(bb->getContext(), inputs);
 }
 
 llvm::Type* LLVMBasicBlock::buildOutputs(llvm::BasicBlock* bb) {
@@ -105,7 +105,7 @@ llvm::Type* LLVMBasicBlock::buildOutputs(llvm::BasicBlock* bb) {
         }
     }
 
-    return llvm::StructType::create(outputs);
+    return llvm::StructType::get(bb->getContext(), outputs);
 }
 
 LLVMControl::LLVMControl(LLVMFunction* func, LLVMBasicBlock* bb) :
@@ -141,7 +141,7 @@ void LLVMControl::construct() {
             outputMap.push_back(_basicBlock->mapOutput(ins));
         }
 
-        llvm::Type* outType = llvm::StructType::create(outputTypes);
+        llvm::Type* outType = llvm::StructType::get(bb->getContext(), outputTypes);
         successorMaps.push_back(outputMap);
         successors.push_back(new OutputPort(this, outType));
         _function->connect(successors.back(), successorPort);
@@ -190,7 +190,7 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Instructi
         }
     }
 
-    InputPort* ip = new InputPort(this, llvm::StructType::create(inputTypes));
+    InputPort* ip = new InputPort(this, llvm::StructType::get(bb->getContext(), inputTypes));
     predecessors.push_back(ip);
     return ip;
 }
@@ -217,7 +217,7 @@ InputPort* LLVMControl::entryPort() {
         }
     }
 
-    InputPort* ip = new InputPort(this, llvm::StructType::create(inputTypes));
+    InputPort* ip = new InputPort(this, llvm::StructType::get(bb->getContext(), inputTypes));
     predecessors.push_back(ip);
     return ip;
 }
@@ -272,7 +272,7 @@ void LLVMFunction::build(llvm::Function* func) {
     for (unsigned i=0; i<params->getNumParams(); i++) {
         argTypes.push_back(params->getParamType(i));
     }
-    _entry = new LLVMEntry(llvm::StructType::create(argTypes));
+    _entry = new LLVMEntry(llvm::StructType::get(func->getContext(), argTypes));
     llvm::BasicBlock* entryBlock = &func->getEntryBlock();
     LLVMControl* entryControl = _controlMap[entryBlock];
     connect(_entry->dout(), entryControl->entryPort());
@@ -281,6 +281,7 @@ void LLVMFunction::build(llvm::Function* func) {
 void LLVMFunction::connectReturn(OutputPort* retPort) {
     _returnPorts.push_back(retPort);
 }
+
 
 } // namespace llpm
 

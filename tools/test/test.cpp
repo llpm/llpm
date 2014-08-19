@@ -5,9 +5,12 @@
 #include <llpm/std_library.hpp>
 #include <refinery/refinery.hpp>
 
+using namespace llpm;
+
 int main(void) {
     std::vector<llpm::Block*> vec;
     llpm::Refinery<llpm::Block> r;
-    r.refine(vec);
+    ConnectionDB conn(NULL);
+    r.refine(vec, conn);
     return 0;
 }

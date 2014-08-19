@@ -6,6 +6,7 @@
 #include <set>
 #include <llpm/ports.hpp>
 #include <llpm/exceptions.hpp>
+#include <llpm/connection.hpp>
 #include <util/macros.hpp>
 #include <boost/foreach.hpp>
 
@@ -89,8 +90,7 @@ public:
      *            output ports in new blocks
      */
     virtual bool refine(std::vector<Block*>& blocks,
-                        std::map<InputPort*, vector<InputPort*> >& ipMap,
-                        std::map<OutputPort*, OutputPort*>& opMap) const {
+                        ConnectionDB& conns) const {
         if (refinable())
             throw ImplementationError("Block needs to implement refine method!");
         return false;
@@ -101,7 +101,7 @@ public:
  * A purely functional block.
  * Takes one input and produces one output. No state
  */
-class Function : public Block {
+class Function : public virtual Block {
 protected:
     InputPort _din;
     OutputPort _dout;

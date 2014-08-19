@@ -8,6 +8,7 @@
 #include <boost/foreach.hpp>
 
 #include <llpm/block.hpp>
+#include <llpm/connection.hpp>
 #include <refinery/priority_collection.hpp>
 
 namespace llpm {
@@ -31,7 +32,9 @@ public:
         virtual ~Refiner() { }
 
         virtual bool handles(Block*) const = 0;
-        virtual bool refine(Crude* c, std::vector<Crude*>& newCrude) const = 0;
+        virtual bool refine(const Crude* c,
+                            std::vector<Crude*>& newCrude,
+                            ConnectionDB& conns) const = 0;
 
     };
 
@@ -59,7 +62,9 @@ public:
         refiners().prependLibrary(lib);
     }
 
-    unsigned refine(std::vector<Crude*>& crude, StopCondition* sc = NULL);
+    unsigned refine(std::vector<Crude*>& crude,
+                    ConnectionDB& conns,
+                    StopCondition* sc = NULL);
 };
 
 
@@ -71,9 +76,8 @@ public:
     virtual bool refine(
         const Block* block,
         std::vector<Block*>& blocks,
-        std::map<InputPort*, vector<InputPort*> >& ipMap,
-        std::map<OutputPort*, OutputPort*>& opMap) const = 0;
-    virtual bool refine(Block* c, std::vector<Block*>& newCrude) const;
+        ConnectionDB& conns) const = 0;
+    virtual bool refine(Block* c) const;
 };
 
 class BlockDefaultRefiner: public BlockRefiner {
@@ -82,13 +86,14 @@ public:
     virtual bool refine(
         const Block* block,
         std::vector<Block*>& blocks,
-        std::map<InputPort*, vector<InputPort*> >& ipMap,
-        std::map<OutputPort*, OutputPort*>& opMap) const;
+        ConnectionDB& conns) const;
 };
 
 
 template<class Crude>
-unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude, StopCondition* sc) {
+unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude,
+                                 ConnectionDB& conns,
+                                 StopCondition* sc) {
     if (sc && sc->stop(crude))
         return false;
 
@@ -101,7 +106,7 @@ unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude, StopCondition* sc) 
             const vector<Refiner*>& possible_refiners = _refiners(c);
             bool refined = false;
             BOOST_FOREACH(auto r, possible_refiners) {
-                if(r->refine(c, newCrude)) {
+                if(r->refine(c, newCrude, conns)) {
                     refined = true;
                     break;
                 }

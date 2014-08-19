@@ -15,7 +15,7 @@ llvm::Type* IntAddition::InType(std::vector<llvm::Type*> tVec) {
         if (!t->isIntegerTy())
             throw InvalidArgument("All inputs to Int* blocks must be ints!");
     }
-    return StructType::create(tVec);
+    return StructType::get(tVec[0]->getContext(), tVec);
 }
 
 llvm::Type* IntAddition::OutType(std::vector<llvm::Type*> tVec) {

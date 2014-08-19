@@ -6,6 +6,7 @@
 #include <util/macros.hpp>
 
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -21,7 +22,14 @@ public:
         _sink(sink)
     { }
 
-    Connection() { }
+    Connection() :
+        _source(NULL),
+        _sink(NULL)
+    { }
+
+    bool valid() const {
+        return _source != NULL && _sink != NULL;
+    }
 
     DEF_GET_NP(source);
     DEF_SET_NONULL(source);
@@ -44,6 +52,8 @@ class Module;
 class ConnectionDB {
     Module* _module;
     set<Connection> _connections;
+    std::map<const InputPort*, vector<InputPort*> > _inputRewrites;
+    std::map<const OutputPort*, OutputPort*> _outputRewrites;
 
 public:
     ConnectionDB(Module* m) :
@@ -52,16 +62,10 @@ public:
 
     DEF_GET(module);
 
-    void connect(OutputPort* o, InputPort* i) {
-        if (o->type() != i->type())
-            throw TypeError("Ports being connected must have matching types!");
-        _connections.insert(Connection(o, i));
-    }
-
-    void disconnect(OutputPort* o, InputPort* i) {
-        auto f = _connections.find(Connection(o, i));
-        if (f != _connections.end())
-            _connections.erase(f);
+    void connect(OutputPort* o, InputPort* i);
+    void disconnect(OutputPort* o, InputPort* i);
+    void disconnect(Connection c) {
+        disconnect(c.source(), c.sink());
     }
 
     size_t numConnections() {
@@ -71,8 +75,19 @@ public:
     void findSinks(const OutputPort* op, std::vector<InputPort*>& out) const;
     OutputPort* findSource(const InputPort* ip) const;
 
-    Connection& find(const InputPort* ip);
-    void find(const OutputPort* op, std::vector<Connection&>& out);
+    bool find(const InputPort* ip, Connection& c);
+    void find(const OutputPort* op, std::vector<Connection>& out);
+
+    void update(const ConnectionDB& newdb);
+    
+    /*****
+     * Remaps an input port or output port to point to new
+     * locations. If the input or output ports are unknown to this
+     * connection database, the remaps are stored so they may be
+     * processed later by an update or a connect.
+     */
+    void remap(const InputPort* origPort, const vector<InputPort*>& newPorts);
+    void remap(const OutputPort* origPort, OutputPort* newPort);
 };
 
 } // namespace llpm

@@ -11,7 +11,7 @@
 
 namespace llpm {
 
-class CommunicationIntrinsic: public Block {
+class CommunicationIntrinsic: public virtual Block {
 protected:
     virtual bool hasState() const {
         return false;
@@ -19,30 +19,29 @@ protected:
 };
 
 // Identity function. Does nothing
-class Identity: public CommunicationIntrinsic {
-    InputPort _din;
-    OutputPort _dout;
+class Identity: public CommunicationIntrinsic, public Function {
 public:
     Identity(llvm::Type*);
     virtual ~Identity() { }
 
-    DEF_GET(din);
-    DEF_GET(dout);
+    virtual bool hasState() const {
+        return false;
+    }
 };
 
 // Convert one data type to another. Usually compiles down to a
 // no-op
-class Cast : public CommunicationIntrinsic {
-    InputPort _din;
-    OutputPort _dout;
+class Cast : public CommunicationIntrinsic, public Function {
     llvm::CastInst* _cast;
 public:
     Cast(llvm::CastInst* cast);
     virtual ~Cast() { }
 
-    DEF_GET(din);
     DEF_GET(cast);
-    DEF_GET(dout);
+
+    virtual bool hasState() const {
+        return false;
+    }
 };
 
 // Takes N inputs and concatenates them into one output
@@ -51,6 +50,7 @@ class Join : public CommunicationIntrinsic {
     OutputPort _dout;
 public:
     Join(const vector<llvm::Type*>& inputs);
+    Join(llvm::Type* output);
     virtual ~Join() { }
 
     DEF_ARRAY_GET(din);
@@ -84,7 +84,6 @@ public:
     DEF_GET(dout);
 };
 
-
 // Splits a single input into N constituent parts
 class Split : public CommunicationIntrinsic {
     InputPort _din;
@@ -96,6 +95,19 @@ public:
 
     DEF_GET(din);
     DEF_ARRAY_GET(dout);
+};
+
+// Extract a single element from a message
+class Extract : public CommunicationIntrinsic, public Function {
+    vector<unsigned> path;
+
+public:
+    Extract(llvm::Type* t, vector<unsigned> path);
+    virtual ~Extract() { }
+
+    virtual bool hasState() const {
+        return false;
+    }
 };
 
 // Selects one of N inputs and outputs it. Non-selected messages are

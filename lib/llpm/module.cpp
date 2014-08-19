@@ -11,13 +11,15 @@ void ContainerModule::addOutputPort(OutputPort* op) {
 }
 
 bool ContainerModule::refine(std::vector<Block*>& blocks,
-                             std::map<InputPort*, vector<InputPort*> >& ipMap,
-                             std::map<OutputPort*, OutputPort*>& opMap) const
+                             ConnectionDB& conns) const
 {
     this->blocks(blocks);
+    assert(false && "Not implemented");
 
+#if 0
     BOOST_FOREACH(InputPort* ip, _inputs) {
         auto driver = getDriver(ip);
+        _conns.
         _conns.findSinks(driver, ipMap[ip]);
     }
 
@@ -26,20 +28,15 @@ bool ContainerModule::refine(std::vector<Block*>& blocks,
         opMap[op] = _conns.findSource(sink);
     }
 
+#endif
     return true;
 }
 
 bool ContainerModule::internalRefine(Design::Refinery::StopCondition* sc) {
-    std::vector<Block*> blocks(_blocks.begin(), _blocks.end());
-    auto rc = design().refinery().refine(blocks);
-    std::set<Block*> blockSet(blocks.begin(), blocks.end());
-    _blocks.swap(blockSet);
-    BOOST_FOREACH(auto block, blockSet) {
-        if (_blocks.find(block) == _blocks.end()) {
-            delete block;
-        }
-    }
-    return rc > 0;
+    vector<Block*> blocks(_blocks.begin(), _blocks.end());
+    auto passes = design().refinery().refine(blocks, _conns, sc);
+    _blocks = set<Block*>(blocks.begin(), blocks.end());
+    return passes > 0;
 }
 
 } // namespace llpm

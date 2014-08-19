@@ -56,7 +56,7 @@ public:
 
 
 
-class LLVMBasicBlock {
+class LLVMBasicBlock: public virtual Block {
 protected:
     LLVMFunction* _function;
     llvm::BasicBlock* _basicBlock;
@@ -85,21 +85,35 @@ public:
     DEF_GET_NP(numInputs);
 
     virtual InputPort* input() = 0;
+    virtual const InputPort* input() const = 0;
     virtual OutputPort* output() = 0;
+    virtual const OutputPort* output() const = 0;
 
-    unsigned mapInput(llvm::Value* ins) {
+    unsigned mapInput(llvm::Value* ins) const {
         auto f = _inputMap.find(ins);
         assert(f != _inputMap.end());
         return f->second;
     }
 
-    unsigned mapOutput(llvm::Instruction* ins) {
+    bool isInput(llvm::Value* v) const {
+        return _inputMap.count(v) > 0;
+    }
+
+    const std::map<llvm::Value*, unsigned>& inputMap() const {
+        return _inputMap;
+    }
+
+    unsigned mapOutput(llvm::Instruction* ins) const {
         auto f = _outputMap.find(ins);
         assert(f != _outputMap.end());
         return f->second;
     }
 
-    unsigned mapSuccessor(llvm::BasicBlock* bb) {
+    const std::map<llvm::Value*, unsigned>& outputMap() const {
+        return _outputMap;
+    }
+
+    unsigned mapSuccessor(llvm::BasicBlock* bb) const {
         auto f = _successorMap.find(bb);
         assert(f != _successorMap.end());
         return f->second;
@@ -118,7 +132,13 @@ class LLVMPureBasicBlock: public Function, public LLVMBasicBlock {
     virtual InputPort* input() {
         return &_din;
     }
+    virtual const InputPort* input() const {
+        return &_din;
+    }
     virtual OutputPort* output() {
+        return &_dout;
+    }
+    virtual const OutputPort* output() const {
         return &_dout;
     }
 };

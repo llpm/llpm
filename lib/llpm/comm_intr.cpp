@@ -2,6 +2,7 @@
 
 #include <boost/foreach.hpp>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
 
 namespace llpm {
 using namespace llvm;
@@ -16,23 +17,34 @@ static unsigned clog2(uint64_t n) {
 }
 
 Identity::Identity(llvm::Type* type) :
-    _din(this, type),
-    _dout(this, type)
+    Function(type, type)
 {
 }
 
 Cast::Cast(llvm::CastInst* cast) :
-    _din(this, cast->getSrcTy()),
-    _dout(this, cast->getDestTy()),
+    Function(cast->getSrcTy(), cast->getDestTy()),
     _cast(cast)
 {
 }
 
 Join::Join(const vector<llvm::Type*>& inputs) :
-    _dout(this, StructType::create(inputs))
+    _dout(this, StructType::get(inputs[0]->getContext(), inputs))
 {
     BOOST_FOREACH(auto input, inputs) {
         _din.push_back(new InputPort(this, input));
+    }
+}
+
+Join::Join(llvm::Type* output) :
+    _dout(this, output)
+{
+    llvm::CompositeType* ct = llvm::dyn_cast<llvm::CompositeType>(output);
+    if (ct == NULL)
+        throw InvalidArgument("When specifying an output type for Join, it must be a CompositeType");
+    
+    unsigned idx = 0;
+    while (ct->indexValid(idx)) {
+        _din.push_back(new InputPort(this, ct->getTypeAtIndex(idx)));
     }
 }
 
@@ -45,12 +57,16 @@ Select::Select(unsigned N, llvm::Type* type) :
 }
 
 Split::Split(const vector<llvm::Type*>& outputs) :
-    _din(this, StructType::create(outputs))
+    _din(this, StructType::get(outputs[0]->getContext(), outputs))
 {
     BOOST_FOREACH(auto output, outputs) {
         _dout.push_back(new OutputPort(this, output));
     }
 }
+
+Extract::Extract(llvm::Type* t, vector<unsigned> path) :
+    Function(t,llvm::ExtractValueInst::getIndexedType(t, path))
+{ }
 
 Multiplexer::Multiplexer(unsigned N, llvm::Type* type) :
     _sel(this, llvm::Type::getIntNTy(type->getContext(), clog2(N))),
