@@ -32,11 +32,11 @@ bool ContainerModule::refine(std::vector<Block*>& blocks,
     return true;
 }
 
-bool ContainerModule::internalRefine(Design::Refinery::StopCondition* sc) {
+unsigned ContainerModule::internalRefine(Design::Refinery::StopCondition* sc) {
     vector<Block*> blocks(_blocks.begin(), _blocks.end());
     auto passes = design().refinery().refine(blocks, _conns, sc);
     _blocks = set<Block*>(blocks.begin(), blocks.end());
-    return passes > 0;
+    return passes;
 }
 
 } // namespace llpm

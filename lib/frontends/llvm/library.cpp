@@ -117,7 +117,7 @@ public:
         conns.remap(lbb->input(), inputs);
         conns.remap(lbb->output(), output->dout());
 
-        return false;
+        return true;
     }
 };
 

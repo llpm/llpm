@@ -11,10 +11,15 @@
 namespace llpm {
 
 llvm::Type* LLVMInstruction::getInput(llvm::Instruction* ins) {
+
     if (ins->getNumOperands() == 0)
         return llvm::Type::getVoidTy(ins->getContext());
-    if (ins->getNumOperands() == 1)
-        return ins->getOperand(0)->getType();
+    if (ins->getNumOperands() == 1) {
+        for (unsigned i=0; i<ins->getNumOperands(); i++) {
+            return ins->getOperand(i)->getType();
+        }
+    }
+
     vector<llvm::Type*> ty;
     for (unsigned i=0; i<ins->getNumOperands(); i++) {
         ty.push_back(ins->getOperand(i)->getType());
@@ -53,8 +58,20 @@ public:
 class FlowInstruction: public LLVMPureInstruction {
 public:
     FlowInstruction(llvm::Instruction* ins) :
-        LLVMPureInstruction(ins)
+        LLVMPureInstruction(ins, getInput(ins), getOutput(ins))
     { }
+
+    static llvm::Type* getInput(llvm::Instruction* ins) {
+        switch (ins->getOpcode()) {
+        case llvm::Instruction::Br:
+            if (llvm::dyn_cast<llvm::BranchInst>(ins)->isUnconditional())
+                return llvm::Type::getVoidTy(ins->getContext());
+            else
+                return ins->getOperand(0)->getType();
+        default:
+            return LLVMInstruction::getInput(ins);
+        }
+    }
 
     static FlowInstruction* Create(llvm::Instruction* ins) {
         return new FlowInstruction(ins);
@@ -89,6 +106,7 @@ public:
 typedef boost::function<LLVMInstruction* (llvm::Instruction*)> InsConstructor;
 std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::PHI, WrapperInstruction<Identity>::Create},
+    {llvm::Instruction::Select, WrapperInstruction<Multiplexer>::Create},
 
     // Integer binary operators
     {llvm::Instruction::Add, IntWrapperInstruction<IntAddition>::Create},
@@ -98,6 +116,7 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::SDiv, IntWrapperInstruction<IntDivide>::Create},
     {llvm::Instruction::URem, IntWrapperInstruction<IntRemainder>::Create},
     {llvm::Instruction::SRem, IntWrapperInstruction<IntRemainder>::Create},
+    {llvm::Instruction::ICmp, IntWrapperInstruction<IntCompare>::Create},
 
     // Logical operators (integer operands)
     {llvm::Instruction::Shl, IntWrapperInstruction<Shift>::Create}, // Shift left  (logical)

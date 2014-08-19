@@ -35,12 +35,20 @@ public:
     }
 };
 
-class LLVMPureInstruction: public Function, public LLVMInstruction {
+class LLVMPureInstruction: public LLVMInstruction, public Function {
 protected:
     LLVMPureInstruction(llvm::Instruction* ins) :
-        Function(getInput(ins), getOutput(ins)),
-        LLVMInstruction(ins)
+        LLVMInstruction(ins),
+        Function(getInput(ins), getOutput(ins))
     { }
+
+    LLVMPureInstruction(llvm::Instruction* ins,
+                        llvm::Type* inputType,
+                        llvm::Type* outputType) :
+        LLVMInstruction(ins),
+        Function(inputType, outputType)
+    { }
+
 
 public:
     virtual InputPort* input() {

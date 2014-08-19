@@ -36,7 +36,7 @@ public:
     }
 
     virtual void blocks(vector<Block*>&) const = 0;
-    virtual bool internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
+    virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
 };
 
 // A module which a third party can edit
@@ -175,7 +175,7 @@ public:
     virtual bool refine(std::vector<Block*>& blocks,
                         ConnectionDB& conns) const;
     
-    virtual bool internalRefine(Design::Refinery::StopCondition* sc = NULL);
+    virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL);
 };
 
 } // namespace llpm
