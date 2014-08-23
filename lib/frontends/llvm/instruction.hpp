@@ -9,8 +9,8 @@ namespace llpm {
 
 class LLVMInstruction: public virtual Block {
 protected:
-    static llvm::Type* getInput(llvm::Instruction*);
-    static llvm::Type* getOutput(llvm::Instruction*);
+    static llvm::Type* GetInput(llvm::Instruction*);
+    static llvm::Type* GetOutput(llvm::Instruction*);
 
     llvm::Instruction* _ins;
 
@@ -23,6 +23,8 @@ public:
 
     virtual InputPort* input() = 0;
     virtual OutputPort* output() = 0;
+    virtual const InputPort* input() const = 0;
+    virtual const OutputPort* output() const = 0;
 
     static LLVMInstruction* Create(llvm::Instruction*);
 
@@ -39,7 +41,7 @@ class LLVMPureInstruction: public LLVMInstruction, public Function {
 protected:
     LLVMPureInstruction(llvm::Instruction* ins) :
         LLVMInstruction(ins),
-        Function(getInput(ins), getOutput(ins))
+        Function(GetInput(ins), GetOutput(ins))
     { }
 
     LLVMPureInstruction(llvm::Instruction* ins,
@@ -54,7 +56,14 @@ public:
     virtual InputPort* input() {
         return &_din;
     }
-    virtual OutputPort* output() {
+    virtual OutputPort* output(){
+        return &_dout;
+    }
+
+    virtual const InputPort* input() const {
+        return &_din;
+    }
+    virtual const OutputPort* output() const {
         return &_dout;
     }
 };

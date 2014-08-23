@@ -87,6 +87,10 @@ public:
      * processed later by an update or a connect.
      */
     void remap(const InputPort* origPort, const vector<InputPort*>& newPorts);
+    void remap(const InputPort* origPort, InputPort* newPort) {
+        vector<InputPort*> newPorts = {newPort};
+        remap(origPort, newPorts);
+    }
     void remap(const OutputPort* origPort, OutputPort* newPort);
 };
 

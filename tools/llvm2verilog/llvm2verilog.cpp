@@ -31,10 +31,20 @@ int main(int argc, const char** argv) {
             // Refine each module until it cannot be further refined
             unsigned passes = m->internalRefine(&sc);
             printf("%u refinement passes on '%s'\n", passes, m->name().c_str());
+
+            vector<Block*> blocks;
+            m->blocks(blocks);
+
             if (m->refined(&sc))
                 printf("Finished refinement\n");
-            else
-                printf("Error: could not finish refining\n");
+            else {
+                printf("Error: could not finish refining!\n");
+                printf("Remaining blocks to be refined: \n");
+                sc.unrefined(blocks);
+                for(Block* b: blocks) {
+                    printf("\t%s\n", typeid(*b).name());
+                }
+            }
         }
     } catch (Exception& e) {
         fprintf(stderr, "Caught exception!\n\t%s\n", e.msg.c_str());

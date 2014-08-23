@@ -42,7 +42,14 @@ public:
     class StopCondition {
     public:
         virtual bool stopRefine(Crude*) = 0;
-
+        virtual void unrefined(vector<Crude*>& crude) {
+            vector<Crude*> unref;
+            for(Crude* c: crude) {
+                if (!stopRefine(c))
+                    unref.push_back(c);
+            }
+            unref.swap(crude);
+        }
         virtual bool refined(const vector<Crude*>& crude) {
             for (Crude* c: crude) {
                 if (this->stopRefine(c) == false)

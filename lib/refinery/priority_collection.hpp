@@ -103,7 +103,7 @@ public:
         std::type_index ti = typeid(*k);
         auto f = _cache.find(ti);
         if (f == _cache.end()) {
-            std::cout << "Non cache for: " << typeid(*k).name() << std::endl;
+            // std::cout << "Non cache for: " << typeid(*k).name() << std::endl;
             std::vector<V*>& vvec = _cache[ti];
             for(auto&& v: _entries) {
                 if (v->handles(k)) {

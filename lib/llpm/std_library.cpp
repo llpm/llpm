@@ -18,7 +18,11 @@ void StdLibStops(BaseLibraryStopCondition<Block>& sc) {
     sc.addClass<IntRemainder>();
     sc.addClass<Bitwise>();
     sc.addClass<IntCompare>();
+    sc.addClass<IntTruncate>();
+    sc.addClass<IntExtend>();
 
+    sc.addClass<Constant>();
+    sc.addClass<BooleanLogic>();
     sc.addClass<CommunicationIntrinsic>();
 }
 
@@ -106,6 +110,52 @@ Shift::Shift(llvm::Type* a, llvm::Type* shift, Direction dir, Style style) :
     _style(style)
 {
 }
+
+llvm::Type* IntTruncate::InType(unsigned N, llvm::Type* t) {
+    if (!t->isIntegerTy())
+        throw InvalidArgument("Input to IntTruncate must be int!");
+    return t;
+}
+
+llvm::Type* IntTruncate::OutType(unsigned N, llvm::Type* t) {
+    if (!t->isIntegerTy())
+        throw InvalidArgument("Input to IntTruncate must be int!");
+    if (N > t->getScalarSizeInBits())
+        throw InvalidArgument("Cannot truncate by more bits than input has!");
+
+    return llvm::Type::getIntNTy(t->getContext(), t->getScalarSizeInBits() - N);
+}
+
+IntTruncate::IntTruncate(unsigned N, llvm::Type* t) :
+    Function(InType(N, t), OutType(N, t))
+{ }
+
+IntTruncate::IntTruncate(llvm::Type* a, llvm::Type* b) :
+    Function(a, b)
+{
+    if (!a->isIntegerTy() || !b->isIntegerTy())
+        throw InvalidArgument("Input and outputs to IntTruncate must be ints!");
+    if (a->getScalarSizeInBits() < b->getScalarSizeInBits())
+        throw InvalidArgument("Input to IntTrunc must be wider than output!");
+}
+
+llvm::Type* IntExtend::InType(unsigned N, llvm::Type* t) {
+    if (!t->isIntegerTy())
+        throw InvalidArgument("Input to IntExtend must be int!");
+    return t;
+}
+
+llvm::Type* IntExtend::OutType(unsigned N, llvm::Type* t) {
+    if (!t->isIntegerTy())
+        throw InvalidArgument("Input to IntExtend must be int!");
+
+    return llvm::Type::getIntNTy(t->getContext(), t->getScalarSizeInBits() + N);
+}
+
+IntExtend::IntExtend(unsigned N, bool signExtend, llvm::Type* t) :
+    Function(InType(N, t), OutType(N, t)),
+    _signExtend(signExtend)
+{ }
 
 llvm::Type* IntMultiply::InType(std::vector<llvm::Type*> t) {
     return IntAddition::InType(t);

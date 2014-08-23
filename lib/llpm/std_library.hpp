@@ -99,6 +99,25 @@ namespace llpm {
         DEF_GET(style);
     };
 
+    // Truncate by removing some of the most significant bits
+    class IntTruncate : public Function {
+    public:
+        static llvm::Type* InType(unsigned N, llvm::Type*);
+        static llvm::Type* OutType(unsigned N, llvm::Type*);
+        IntTruncate(unsigned N, llvm::Type* t);
+        IntTruncate(llvm::Type* a, llvm::Type* b);
+    };
+
+    // Extend an int, adding some MSBs, possibly with sign extension
+    class IntExtend: public Function {
+        bool _signExtend;
+    public:
+        static llvm::Type* InType(unsigned N, llvm::Type*);
+        static llvm::Type* OutType(unsigned N, llvm::Type*);
+        IntExtend(unsigned N, bool signExtend, llvm::Type* t);
+
+        DEF_GET(signExtend);
+    };
 
     // Multiply a bunch of integers
     class IntMultiply : public Function {
@@ -171,6 +190,7 @@ namespace llpm {
         Cmp _op;
         bool _isSigned;
 
+    public:
         IntCompare(llvm::Type* a, llvm::Type* b,
                    Cmp op, bool isSigned);
 
