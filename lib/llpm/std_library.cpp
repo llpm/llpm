@@ -8,6 +8,20 @@
 namespace llpm {
 using namespace llvm;
 
+void StdLibStops(BaseLibraryStopCondition<Block>& sc) {
+    sc.addClass<IntAddition>();
+    sc.addClass<IntSubtraction>();
+    sc.addClass<ConstShift>();
+    sc.addClass<Shift>();
+    sc.addClass<IntMultiply>();
+    sc.addClass<IntDivide>();
+    sc.addClass<IntRemainder>();
+    sc.addClass<Bitwise>();
+    sc.addClass<IntCompare>();
+
+    sc.addClass<CommunicationIntrinsic>();
+}
+
 llvm::Type* IntAddition::InType(std::vector<llvm::Type*> tVec) {
     if (tVec.size() == 0)
         throw InvalidArgument("Type vector must not be empty");

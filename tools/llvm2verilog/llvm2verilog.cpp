@@ -24,10 +24,17 @@ int main(int argc, const char** argv) {
             modules.push_back(trans.translate(argv[i]));
         }
 
-        BOOST_FOREACH(auto m, modules) {
+        BaseLibraryStopCondition<> sc;
+        StdLibStops(sc);
+
+        for(auto&& m: modules) {
             // Refine each module until it cannot be further refined
-            unsigned passes = m->internalRefine();
+            unsigned passes = m->internalRefine(&sc);
             printf("%u refinement passes on '%s'\n", passes, m->name().c_str());
+            if (m->refined(&sc))
+                printf("Finished refinement\n");
+            else
+                printf("Error: could not finish refining\n");
         }
     } catch (Exception& e) {
         fprintf(stderr, "Caught exception!\n\t%s\n", e.msg.c_str());

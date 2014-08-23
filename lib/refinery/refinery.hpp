@@ -5,7 +5,8 @@
 #include <typeindex>
 #include <vector>
 #include <cassert>
-#include <boost/foreach.hpp>
+#include <boost/function.hpp>
+#include <unordered_set>
 
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
@@ -40,7 +41,15 @@ public:
 
     class StopCondition {
     public:
-        virtual bool stop(const std::vector<Crude*>&) = 0;
+        virtual bool stopRefine(Crude*) = 0;
+
+        virtual bool refined(const vector<Crude*>& crude) {
+            for (Crude* c: crude) {
+                if (this->stopRefine(c) == false)
+                    return false;
+            }
+            return true;
+        }
     };
 
 private:
@@ -65,6 +74,49 @@ public:
     unsigned refine(std::vector<Crude*>& crude,
                     ConnectionDB& conns,
                     StopCondition* sc = NULL);
+};
+
+
+template<typename Crude = Block>
+class BaseLibraryStopCondition: public Refinery<Crude>::StopCondition
+{
+    std::unordered_map<std::type_index, bool> _classes;
+    std::map<std::type_index, boost::function<bool (Crude* c)> > _tests;
+
+    template<typename C>
+    static bool Test(Crude* c) {
+        return dynamic_cast<C*>(c) != NULL;
+    }
+
+public:
+    BaseLibraryStopCondition() { }
+    virtual ~BaseLibraryStopCondition() { }
+
+    virtual bool stopRefine(Crude* c) {
+        std::type_index idx = typeid(*c);
+        auto f = _classes.find(idx);
+        if (f != _classes.end())
+            return f->second;
+
+        for(auto&& test: _tests) {
+            if (test.second(c)) {
+                _classes[idx] = true;
+                return true;
+            }
+        }
+
+        _classes[idx] = false;
+        return false;
+    }
+
+    template<typename C>
+    void addClass() {
+        // Invalidate the cache
+        _classes.clear();
+
+        // Add the test
+        _tests[typeid(C)] = Test<C>;
+    }
 };
 
 
@@ -94,18 +146,18 @@ template<class Crude>
 unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude,
                                  ConnectionDB& conns,
                                  StopCondition* sc) {
-    if (sc && sc->stop(crude))
-        return false;
-
     unsigned passes = 0;
     bool foundRefinement;
     do {
         std::vector<Crude*> newCrude;
         foundRefinement = false;
-        BOOST_FOREACH(Crude* c, crude) {
+        for(Crude*& c: crude) {
+            if (sc && sc->stopRefine(c))
+                continue;
             const vector<Refiner*>& possible_refiners = _refiners(c);
+
             bool refined = false;
-            BOOST_FOREACH(auto r, possible_refiners) {
+            for(auto& r: possible_refiners) {
                 if(r->refine(c, newCrude, conns)) {
                     refined = true;
                     break;
@@ -120,7 +172,7 @@ unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude,
         crude.swap(newCrude);
         if (foundRefinement)
             passes += 1;
-    } while (foundRefinement && sc && !sc->stop(crude));
+    } while (foundRefinement);
 
     return passes;
 }

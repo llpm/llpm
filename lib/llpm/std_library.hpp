@@ -13,8 +13,11 @@
 #include <llpm/comm_intr.hpp>
 #include <llpm/mem_intr.hpp>
 #include <llpm/logic_intr.hpp>
+#include <refinery/refinery.hpp>
 
 namespace llpm {
+
+    void StdLibStops(BaseLibraryStopCondition<Block>& sc);
 
 /*****************
  *   Integer operations

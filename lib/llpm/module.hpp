@@ -37,6 +37,11 @@ public:
 
     virtual void blocks(vector<Block*>&) const = 0;
     virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
+    virtual bool refined(Design::Refinery::StopCondition* sc) {
+        vector<Block*> crude;
+        this->blocks(crude);
+        return sc->refined(crude);
+    }
 };
 
 // A module which a third party can edit
