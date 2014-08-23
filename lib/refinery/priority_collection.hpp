@@ -105,7 +105,7 @@ public:
         if (f == _cache.end()) {
             std::cout << "Non cache for: " << typeid(*k).name() << std::endl;
             std::vector<V*>& vvec = _cache[ti];
-            BOOST_FOREACH(auto v, _entries) {
+            for(auto&& v: _entries) {
                 if (v->handles(k)) {
                     vvec.push_back(v);
                 }

@@ -6,7 +6,7 @@ namespace llpm {
 // TODO -- This is slow. Rewrite w/ an index
 void ConnectionDB::findSinks(const OutputPort* op, std::vector<InputPort*>& out) const
 {
-    BOOST_FOREACH(auto c, _connections) {
+    for(auto&& c: _connections) {
         const OutputPort* source = c.source();
         if (source == op)
             out.push_back(c.sink());
@@ -16,7 +16,7 @@ void ConnectionDB::findSinks(const OutputPort* op, std::vector<InputPort*>& out)
 // TODO -- This is slow. Rewrite w/ an index
 OutputPort* ConnectionDB::findSource(const InputPort* ip) const
 {
-    BOOST_FOREACH(auto c, _connections) {
+    for(auto&& c: _connections) {
         const InputPort* sink = c.sink();
         if (sink == ip)
             return c.source();
@@ -26,7 +26,7 @@ OutputPort* ConnectionDB::findSource(const InputPort* ip) const
 }
 
 bool ConnectionDB::find(const InputPort* ip, Connection& cOut) {
-    BOOST_FOREACH(auto c, _connections) {
+    for(auto&& c: _connections) {
         const InputPort* sink = c.sink();
         if (sink == ip) {
             cOut = c;
@@ -38,7 +38,7 @@ bool ConnectionDB::find(const InputPort* ip, Connection& cOut) {
 }
 
 void ConnectionDB::find(const OutputPort* op, std::vector<Connection>& out) {
-    BOOST_FOREACH(auto c, _connections) {
+    for(auto&& c: _connections) {
         const OutputPort* source = c.source();
         if (source == op)
             out.push_back(c);
@@ -72,7 +72,7 @@ void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& ne
     Connection c;
     if (find(origPort, c)) {
         disconnect(c);
-        BOOST_FOREACH(InputPort* ip, newPorts) {
+        for(InputPort* ip: newPorts) {
             connect(c.source(), ip);
         }
     }
@@ -83,7 +83,7 @@ void ConnectionDB::remap(const OutputPort* origPort, OutputPort* newPort) {
 
     std::vector<Connection> conns;
     find(origPort, conns);
-    BOOST_FOREACH(Connection c, conns) {
+    for(Connection& c: conns) {
         disconnect(c);
         connect(newPort, c.sink());
     }

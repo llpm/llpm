@@ -17,13 +17,13 @@ bool ContainerModule::refine(std::vector<Block*>& blocks,
     assert(false && "Not implemented");
 
 #if 0
-    BOOST_FOREACH(InputPort* ip, _inputs) {
+    for(InputPort* ip: _inputs) {
         auto driver = getDriver(ip);
         _conns.
         _conns.findSinks(driver, ipMap[ip]);
     }
 
-    BOOST_FOREACH(OutputPort* op, _outputs) {
+    for(OutputPort* op: _outputs) {
         auto sink = getSink(op);
         opMap[op] = _conns.findSource(sink);
     }

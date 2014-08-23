@@ -30,7 +30,7 @@ Cast::Cast(llvm::CastInst* cast) :
 Join::Join(const vector<llvm::Type*>& inputs) :
     _dout(this, StructType::get(inputs[0]->getContext(), inputs))
 {
-    BOOST_FOREACH(auto input, inputs) {
+    for(auto input: inputs) {
         _din.push_back(new InputPort(this, input));
     }
 }
@@ -60,7 +60,7 @@ Select::Select(unsigned N, llvm::Type* type) :
 Split::Split(const vector<llvm::Type*>& outputs) :
     _din(this, StructType::get(outputs[0]->getContext(), outputs))
 {
-    BOOST_FOREACH(auto output, outputs) {
+    for(auto output: outputs) {
         _dout.push_back(new OutputPort(this, output));
     }
 }

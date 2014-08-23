@@ -22,7 +22,7 @@ llvm::Type* LLVMBasicBlock::buildInputs(llvm::BasicBlock* bb) {
     inputs.push_back(llvm::Type::getVoidTy(bb->getContext()));
 
     _numInputs = 1;
-    BOOST_FOREACH(llvm::Instruction& ins, bb->getInstList()) {
+    for(llvm::Instruction& ins: bb->getInstList()) {
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
@@ -88,7 +88,7 @@ llvm::Type* LLVMBasicBlock::buildOutputs(llvm::BasicBlock* bb) {
         }
     }
 
-    BOOST_FOREACH(llvm::Instruction& ins, bb->getInstList()) {
+    for(llvm::Instruction& ins: bb->getInstList()) {
         bool usedOutside = false;
         for (auto use_iter = ins.use_begin(); use_iter != ins.use_end(); use_iter++) {
             llvm::User* user = use_iter->getUser();
@@ -135,7 +135,7 @@ void LLVMControl::construct() {
         vector<llvm::Type*> outputTypes;
         outputTypes.push_back(llvm::Type::getVoidTy(bb->getContext()));
 
-        BOOST_FOREACH(auto ins, outputInsts) {
+        for(auto& ins: outputInsts) {
             assert(ins->getParent() == bb);
             outputTypes.push_back(ins->getType());
             outputMap.push_back(_basicBlock->mapOutput(ins));
@@ -160,7 +160,7 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Instructi
 
     llvm::BasicBlock* bb = _basicBlock->basicBlock();
 
-    BOOST_FOREACH(llvm::Instruction& ins, bb->getInstList()) {
+    for(llvm::Instruction& ins: bb->getInstList()) {
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
@@ -201,7 +201,7 @@ InputPort* LLVMControl::entryPort() {
 
     llvm::BasicBlock* bb = _basicBlock->basicBlock();
 
-    BOOST_FOREACH(llvm::Instruction& ins, bb->getInstList()) {
+    for(llvm::Instruction& ins: bb->getInstList()) {
         if (llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             assert(false && "Entry blocks cannot have PHIs!");
@@ -232,9 +232,9 @@ LLVMFunction::~LLVMFunction() {
 }
 
 void LLVMFunction::build(llvm::Function* func) {
-    BOOST_FOREACH(auto& bb, func->getBasicBlockList()) {
+    for(auto& bb: func->getBasicBlockList()) {
         bool touchesMemory = false;
-        BOOST_FOREACH(auto& ins, bb.getInstList()) {
+        for(auto& ins: bb.getInstList()) {
             if (ins.mayReadOrWriteMemory())
                 touchesMemory = true;
         }
@@ -254,7 +254,7 @@ void LLVMFunction::build(llvm::Function* func) {
         this->connect(&control->_bbOutput, bbBlock->output());
     }
 
-    BOOST_FOREACH(auto cp, _controlMap) {
+    for(auto cp: _controlMap) {
         auto control = cp.second;
         control->construct();
     }

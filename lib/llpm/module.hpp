@@ -155,12 +155,12 @@ public:
     }
 
     virtual bool hasState() const {
-        BOOST_FOREACH(Block* b, _blocks) {
+        for(Block* b: _blocks) {
             if (b->hasState())
                 return true;
         }
 
-        BOOST_FOREACH(Module* m, _modules) {
+        for(Module* m: _modules) {
             if (m->hasState())
                 return true;
         }

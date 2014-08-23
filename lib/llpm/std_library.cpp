@@ -25,7 +25,7 @@ void StdLibStops(BaseLibraryStopCondition<Block>& sc) {
 llvm::Type* IntAddition::InType(std::vector<llvm::Type*> tVec) {
     if (tVec.size() == 0)
         throw InvalidArgument("Type vector must not be empty");
-    BOOST_FOREACH(auto t, tVec) {
+    for(auto&& t: tVec) {
         if (!t->isIntegerTy())
             throw InvalidArgument("All inputs to Int* blocks must be ints!");
     }
@@ -34,7 +34,7 @@ llvm::Type* IntAddition::InType(std::vector<llvm::Type*> tVec) {
 
 llvm::Type* IntAddition::OutType(std::vector<llvm::Type*> tVec) {
     vector<unsigned> widths;
-    BOOST_FOREACH(auto t, tVec) {
+    for(auto&& t: tVec) {
         if (!t->isIntegerTy())
             throw InvalidArgument("All inputs to IntAddition must be ints!");
         unsigned tw = t->getScalarSizeInBits();
@@ -43,7 +43,7 @@ llvm::Type* IntAddition::OutType(std::vector<llvm::Type*> tVec) {
 
     sort(widths.begin(), widths.end());
     unsigned width = 0;
-    BOOST_FOREACH(auto tw, widths) {
+    for(auto&& tw: widths) {
         if (tw > width)
             width = tw + 1;
         else
@@ -115,7 +115,7 @@ llvm::Type* IntMultiply::OutType(std::vector<llvm::Type*> tVec) {
     if (tVec.size() == 0)
         throw InvalidArgument("There must be at least one input to IntMultiply");
     unsigned width = 0;
-    BOOST_FOREACH(auto t, tVec) {
+    for(auto&& t: tVec) {
         if (!t->isIntegerTy())
             throw InvalidArgument("All inputs to IntMultiply must be ints!");
         width += t->getScalarSizeInBits();

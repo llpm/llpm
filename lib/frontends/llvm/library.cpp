@@ -33,7 +33,7 @@ public:
         map<llvm::Value*, OutputPort*> valueMap;
 
         // Construct each block
-        BOOST_FOREACH(llvm::Instruction& ins, bb->getInstList()) {
+        for(llvm::Instruction& ins: bb->getInstList()) {
             auto block = LLVMInstruction::Create(&ins);
             blockMap[&ins] = block;
             valueMap[&ins] = block->output();
@@ -43,7 +43,7 @@ public:
         // Add an extractor for each input and add it to the value
         // map
         auto inputMap = lbb->inputMap();
-        BOOST_FOREACH(auto p, inputMap) {
+        for(auto p: inputMap) {
             llvm::Value* v = p.first;
             unsigned inputNum = p.second;
             Extract* e = new Extract(lbb->input()->type(), {inputNum});
@@ -53,7 +53,7 @@ public:
         }
 
         // Connect the inputs to each block
-        BOOST_FOREACH(llvm::Instruction& ins, bb->getInstList()) {
+        for(llvm::Instruction& ins: bb->getInstList()) {
             LLVMInstruction* li = blockMap[&ins];
             assert(li != NULL);
 
@@ -105,7 +105,7 @@ public:
         Join* output = new Join(lbb->output()->type());
         blocks.push_back(output);
         auto outputMap = lbb->outputMap();
-        BOOST_FOREACH(auto p, outputMap) {
+        for(auto p: outputMap) {
             llvm::Value* v = p.first;
             unsigned i = p.second;
             auto f = valueMap.find(v);
