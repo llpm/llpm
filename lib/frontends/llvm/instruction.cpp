@@ -364,6 +364,20 @@ public:
             return false;
         }
     }
+
+    virtual bool refinable() const {
+        return true;
+    }
+
+    virtual bool refine(std::vector<Block*>& blocks,
+                        ConnectionDB& conns) const
+    {
+        auto b = new Identity(_ins->getOperand(0)->getType());
+        blocks.push_back(b);
+        conns.remap(input(), b->din());
+        conns.remap(output(), b->dout());
+        return true;
+    }
 };
 
 
@@ -373,9 +387,9 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::Select, WrapperInstruction<Multiplexer>::Create},
 
     // Integer binary operators
-    {llvm::Instruction::Add, TruncatingIntWrapperInstruction<IntAddition>::Create},
-    {llvm::Instruction::Sub, TruncatingIntWrapperInstruction<IntSubtraction>::Create},
-    {llvm::Instruction::Mul, TruncatingIntWrapperInstruction<IntMultiply>::Create},
+    {llvm::Instruction::Add,  TruncatingIntWrapperInstruction<IntAddition>::Create},
+    {llvm::Instruction::Sub,  TruncatingIntWrapperInstruction<IntSubtraction>::Create},
+    {llvm::Instruction::Mul,  TruncatingIntWrapperInstruction<IntMultiply>::Create},
     {llvm::Instruction::UDiv, TruncatingIntWrapperInstruction<IntDivide>::Create},
     {llvm::Instruction::SDiv, TruncatingIntWrapperInstruction<IntDivide>::Create},
     {llvm::Instruction::URem, TruncatingIntWrapperInstruction<IntRemainder>::Create},
@@ -393,6 +407,7 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     // Control flow operators
     {llvm::Instruction::Ret, WrapperInstruction<Identity>::Create},
     {llvm::Instruction::Br, FlowInstruction::Create},
+    {llvm::Instruction::Switch, FlowInstruction::Create},
 };
 
 LLVMInstruction* LLVMInstruction::Create(llvm::Instruction* ins) {
