@@ -155,10 +155,10 @@ class LLVMControl: public Block {
     OutputPort _bbInput;
     InputPort _bbOutput;
 
-    std::vector<InputPort*>  predecessors;
-    std::vector< std::vector<unsigned> > predecessorMaps;
-    std::vector<OutputPort*> successors;
-    std::vector< std::vector<unsigned> > successorMaps;
+    std::vector<InputPort*>  _predecessors;
+    std::vector< std::vector<unsigned> > _predecessorMaps;
+    std::vector<OutputPort*> _successors;
+    std::vector< std::vector<unsigned> > _successorMaps;
 
     LLVMControl(LLVMFunction* func, LLVMBasicBlock* basicBlock);
 
@@ -167,6 +167,14 @@ public:
 
     DEF_GET_NP(function);
     DEF_GET_NP(basicBlock);
+
+    DEF_ARRAY_GET(predecessors);
+    DEF_ARRAY_GET(predecessorMaps);
+    DEF_ARRAY_GET(successors);
+    DEF_ARRAY_GET(successorMaps);
+
+    DEF_GET(bbInput);
+    DEF_GET(bbOutput);
 
     virtual bool hasState() const {
         return false;

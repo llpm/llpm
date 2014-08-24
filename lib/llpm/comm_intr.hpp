@@ -6,7 +6,7 @@
 
 /*********
  * Communication intrinsics govern the flow of information in an
- * LLPM design.
+ * LLPM design. All backends must directly support these intrinsics.
  */
 
 namespace llpm {
@@ -91,6 +91,7 @@ class Split : public CommunicationIntrinsic {
 
 public:
     Split(const vector<llvm::Type*>& outputs);
+    Split(llvm::Type* input);
     virtual ~Split() { }
 
     DEF_GET(din);

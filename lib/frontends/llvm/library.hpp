@@ -19,6 +19,14 @@ public:
     }
 };
 
+template<typename T>
+class LLVMRefiner : public BlockRefiner {
+public:
+    virtual bool handles(Block* b) const {
+        return dynamic_cast<T*>(b) != NULL;
+    }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_LLVM_LIBRARAY_HPP__

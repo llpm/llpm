@@ -1,19 +1,15 @@
 #include "library.hpp"
 
-#include <llvm/IR/Instruction.h>
-#include <llvm/IR/BasicBlock.h>
+
 #include <llpm/logic_intr.hpp>
 #include <frontends/llvm/instruction.hpp>
+#include <libraries/util/types.hpp>
+
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/BasicBlock.h>
+
 
 namespace llpm {
-
-template<typename T>
-class LLVMRefiner : public BlockRefiner {
-public:
-    virtual bool handles(Block* b) const {
-        return dynamic_cast<LLVMBasicBlock*>(b) != NULL;
-    }
-};
 
 class LLVMBasicBlockRefiner : public LLVMRefiner<LLVMBasicBlock> {
 public:
@@ -121,8 +117,51 @@ public:
     }
 };
 
+class LLVMControlRefiner : public LLVMRefiner<LLVMControl>
+{
+public:
+    virtual bool refine(
+            const Block* block,
+            std::vector<Block*>& blocks,
+            ConnectionDB& conns) const
+    {
+        const LLVMControl* c = dynamic_cast<const LLVMControl*>(block);
+        assert(c != NULL);
+
+        printf("BB input type:\n");
+        c->bbInput()->type()->dump();
+        printf("\n");
+ 
+        Select* inputSelect = new Select(c->predecessors_size(), c->bbInput()->type());
+        for(unsigned i=0; i<c->predecessors_size(); i++) {
+            auto predMap = c->predecessorMaps(i);
+            printf("Predecessor: \n");
+            c->predecessors(i)->type()->dump();
+            printf("\n");
+            printf("Predmap: ");
+            for(auto p: predMap) {
+                printf("%u ", p);
+            }
+            printf("\n");
+            c->basicBlock()->basicBlock()->dump();
+            StructTwiddler* twd = new StructTwiddler(c->predecessors(i)->type(),
+                                                     predMap);
+            conns.connect(twd->dout(), inputSelect->din(i));
+            blocks.push_back(twd);
+            conns.remap(c->predecessors(i), twd->din());
+        }
+        conns.remap(c->bbInput(), inputSelect->dout());
+
+        printf("BB output type:\n");
+        c->bbOutput()->type()->dump();
+        printf("\n");
+        return true;
+    }
+};
+
 std::vector<Refinery<Block>::Refiner*> LLVMBaseLibrary::BuildCollection() {
     return {
+        new LLVMControlRefiner(),
         new LLVMBasicBlockRefiner(),
     };
 }

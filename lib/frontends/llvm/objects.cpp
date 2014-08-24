@@ -142,14 +142,14 @@ void LLVMControl::construct() {
         }
 
         llvm::Type* outType = llvm::StructType::get(bb->getContext(), outputTypes);
-        successorMaps.push_back(outputMap);
-        successors.push_back(new OutputPort(this, outType));
-        _function->connect(successors.back(), successorPort);
+        _successorMaps.push_back(outputMap);
+        _successors.push_back(new OutputPort(this, outType));
+        _function->connect(_successors.back(), successorPort);
     }
 
     if (_basicBlock->returns()) {
-        successors.push_back(new OutputPort(this, _basicBlock->output()->type()));
-        _function->connectReturn(successors.back());
+        _successors.push_back(new OutputPort(this, _basicBlock->output()->type()));
+        _function->connectReturn(_successors.back());
     }
 }
 
@@ -161,6 +161,22 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Instructi
     llvm::BasicBlock* bb = _basicBlock->basicBlock();
 
     for(llvm::Instruction& ins: bb->getInstList()) {
+        // Verify all inputs come from predecessor
+        unsigned numOperands = ins.getNumOperands();
+        for (unsigned i=0; i<numOperands; i++) {
+            llvm::Instruction* operand = llvm::dyn_cast<llvm::Instruction>(ins.getOperand(i));
+            llvm::Argument*    arg     = llvm::dyn_cast<llvm::Argument>(ins.getOperand(i));
+            if (arg != NULL|| 
+                (operand != NULL &&
+                 operand->getParent() != pred->_basicBlock->basicBlock()))
+            {
+                throw ImplementationError("All LLVM basic blocks being translated must take"
+                                          "all of their inputs from predecessors. A conversion"
+                                          "pass must be run first for normal LLVM IR to fulfill"
+                                          "this requirement");
+            }
+        }
+
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
@@ -191,7 +207,8 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Instructi
     }
 
     InputPort* ip = new InputPort(this, llvm::StructType::get(bb->getContext(), inputTypes));
-    predecessors.push_back(ip);
+    _predecessors.push_back(ip);
+    _predecessorMaps.push_back(predMap);
     return ip;
 }
 
@@ -218,7 +235,8 @@ InputPort* LLVMControl::entryPort() {
     }
 
     InputPort* ip = new InputPort(this, llvm::StructType::get(bb->getContext(), inputTypes));
-    predecessors.push_back(ip);
+    _predecessors.push_back(ip);
+    _predecessorMaps.push_back(predMap);
     return ip;
 }
 

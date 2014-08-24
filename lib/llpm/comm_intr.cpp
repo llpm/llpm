@@ -65,6 +65,20 @@ Split::Split(const vector<llvm::Type*>& outputs) :
     }
 }
 
+Split::Split(llvm::Type* input) :
+    _din(this, input)
+{
+    llvm::CompositeType* ct = llvm::dyn_cast<llvm::CompositeType>(input);
+    if (ct == NULL)
+        throw InvalidArgument("When specifying an output type for Join, it must be a CompositeType");
+    
+    unsigned idx = 0;
+    while (ct->indexValid(idx)) {
+        _dout.push_back(new OutputPort(this, ct->getTypeAtIndex(idx)));
+        idx += 1;
+    }
+}
+
 Extract::Extract(llvm::Type* t, vector<unsigned> path) :
     Function(t,llvm::ExtractValueInst::getIndexedType(t, path))
 { }

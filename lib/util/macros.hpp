@@ -18,7 +18,7 @@
     auto F() -> decltype(_##F) { return _##F; }
 
 #define DEF_ARRAY_GET(F) \
-    unsigned F##_size() { return _##F.size(); } \
+    unsigned F##_size() const { return _##F.size(); } \
     auto F(unsigned i) const -> const decltype(_##F)::value_type { return _##F[i]; }
 
 
