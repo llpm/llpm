@@ -4,6 +4,7 @@
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
 #include <refinery/refinery.hpp>
+#include <libraries/util/types.hpp>
 
 namespace llpm {
 
@@ -11,10 +12,12 @@ namespace llpm {
 class LLVMBasicBlock;
 class LLVMControl;
 
-class LLVMEntry: public Identity {
+class LLVMEntry: public StructTwiddler {
+    static llvm::Type* FunctionType(llvm::Function*);
+    static std::vector<unsigned> ValueMap(llvm::Function*, const std::vector<llvm::Value*>&);
 public:
-    LLVMEntry(llvm::Type* type) :
-        Identity(type) { }
+    LLVMEntry(llvm::Function* func, const std::vector<llvm::Value*>& map) :
+        StructTwiddler(FunctionType(func), ValueMap(func, map)) { }
     virtual ~LLVMEntry() { }
 };
 
@@ -52,42 +55,78 @@ public:
     }
 
     void connectReturn(OutputPort* retPort);
+    LLVMBasicBlock* blockMap(llvm::BasicBlock* bb) const {
+        auto f = _blockMap.find(bb);
+        if (f == _blockMap.end())
+            return NULL;
+        return f->second;
+    }
 };
 
 
 
 class LLVMBasicBlock: public virtual Block {
+    friend class LLVMFunction;
 protected:
     LLVMFunction* _function;
     llvm::BasicBlock* _basicBlock;
+
     std::map<llvm::Value*, unsigned> _inputMap;
+    std::map<llvm::Value*, set<llvm::BasicBlock*> > _valueSources;
     std::map<llvm::Value*, unsigned> _outputMap;
     std::map<llvm::BasicBlock*, unsigned> _successorMap;
+    std::set<llvm::Value*> _passthroughs;
+
     bool _returns;
     unsigned _numInputs;
+    unsigned _numOutputs;
 
-    LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
-        _function(f),
-        _basicBlock(bb),
-        _returns(false),
-        _numInputs(0)
-    { }
+    void addInput(llvm::Value* v) {
+        if (_inputMap.find(v) != _inputMap.end())
+            return;
+        _inputMap[v] = _numInputs++;
+    }
 
-    llvm::Type* buildInputs(llvm::BasicBlock* bb);
-    llvm::Type* buildOutputs(llvm::BasicBlock* bb);
+    void addOutput(llvm::Value* v) {
+        if (_outputMap.find(v) != _outputMap.end())
+            return;
+        _outputMap[v] = _numOutputs++;
+    }
+
+    LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb);
+
+    void requestOutput(llvm::Value*);
+
+    virtual void resetTypes(llvm::Type* input, llvm::Type* output) = 0;
 
 public:
     virtual ~LLVMBasicBlock() { }
+
+    void buildRequests();
+    void buildIO();
 
     DEF_GET_NP(function);
     DEF_GET_NP(basicBlock);
     DEF_GET_NP(returns);
     DEF_GET_NP(numInputs);
+    DEF_GET_NP(numOutputs);
+    DEF_GET_NP(passthroughs);
 
     virtual InputPort* input() = 0;
     virtual const InputPort* input() const = 0;
     virtual OutputPort* output() = 0;
     virtual const OutputPort* output() const = 0;
+
+    const std::set<llvm::BasicBlock*>& valueSources(
+        llvm::Value* v) const
+    {
+        static const std::set<llvm::BasicBlock*> emptySet;
+        auto f = _valueSources.find(v);
+        if (f == _valueSources.end())
+            return emptySet;
+        return f->second;
+    }
+
 
     unsigned mapInput(llvm::Value* ins) const {
         auto f = _inputMap.find(ins);
@@ -103,7 +142,7 @@ public:
         return _inputMap;
     }
 
-    unsigned mapOutput(llvm::Instruction* ins) const {
+    unsigned mapOutput(llvm::Value* ins) const {
         auto f = _outputMap.find(ins);
         assert(f != _outputMap.end());
         return f->second;
@@ -127,6 +166,8 @@ class LLVMPureBasicBlock: public Function, public LLVMBasicBlock {
     friend class LLVMFunction;
 
     LLVMPureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb);
+
+public:
     virtual ~LLVMPureBasicBlock() { }
 
     virtual InputPort* input() {
@@ -140,6 +181,10 @@ class LLVMPureBasicBlock: public Function, public LLVMBasicBlock {
     }
     virtual const OutputPort* output() const {
         return &_dout;
+    }
+
+    virtual void resetTypes(llvm::Type* input, llvm::Type* output) {
+        Function::resetTypes(input, output);
     }
 };
 
@@ -156,7 +201,6 @@ class LLVMControl: public Block {
     InputPort _bbOutput;
 
     std::vector<InputPort*>  _predecessors;
-    std::vector< std::vector<unsigned> > _predecessorMaps;
     std::vector<OutputPort*> _successors;
     std::vector< std::vector<unsigned> > _successorMaps;
 
@@ -169,7 +213,6 @@ public:
     DEF_GET_NP(basicBlock);
 
     DEF_ARRAY_GET(predecessors);
-    DEF_ARRAY_GET(predecessorMaps);
     DEF_ARRAY_GET(successors);
     DEF_ARRAY_GET(successorMaps);
 
@@ -181,8 +224,8 @@ public:
     }
 
     void construct();
-    InputPort* addPredecessor(LLVMControl* pred, vector<llvm::Instruction*>& inputData);
-    InputPort* entryPort();
+    InputPort* addPredecessor(LLVMControl* pred, vector<llvm::Value*>& inputData);
+    InputPort* entryPort(vector<llvm::Value*>& inputData);
 };
 
 } // namespace llpm

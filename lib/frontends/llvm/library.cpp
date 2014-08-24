@@ -134,27 +134,15 @@ public:
  
         Select* inputSelect = new Select(c->predecessors_size(), c->bbInput()->type());
         for(unsigned i=0; i<c->predecessors_size(); i++) {
-            auto predMap = c->predecessorMaps(i);
-            printf("Predecessor: \n");
-            c->predecessors(i)->type()->dump();
-            printf("\n");
-            printf("Predmap: ");
-            for(auto p: predMap) {
-                printf("%u ", p);
-            }
-            printf("\n");
-            c->basicBlock()->basicBlock()->dump();
-            StructTwiddler* twd = new StructTwiddler(c->predecessors(i)->type(),
-                                                     predMap);
-            conns.connect(twd->dout(), inputSelect->din(i));
-            blocks.push_back(twd);
-            conns.remap(c->predecessors(i), twd->din());
+            conns.remap(c->predecessors(i), inputSelect->din(i));
         }
         conns.remap(c->bbInput(), inputSelect->dout());
 
         printf("BB output type:\n");
         c->bbOutput()->type()->dump();
         printf("\n");
+
+        assert(false);
         return true;
     }
 };
