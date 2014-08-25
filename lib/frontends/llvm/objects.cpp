@@ -1,5 +1,7 @@
 #include "objects.hpp"
 
+#include <frontends/llvm/instruction.hpp>
+
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/CFG.h>
@@ -28,10 +30,8 @@ static bool isLocalArg(llvm::BasicBlock* bb, llvm::Value* v) {
 }
 
 static bool isLocalInstruction(llvm::BasicBlock* bb, llvm::Value* v) {
-    llvm::Instruction* operand = llvm::dyn_cast<llvm::Instruction>(v);
-    bool nonLocal = 
-        (operand && operand->getParent() != bb);
-    return !nonLocal;
+    llvm::Instruction* ins = llvm::dyn_cast<llvm::Instruction>(v);
+    return ins && ins->getParent() == bb;
 }
 
 static void checkValue(llvm::Value* operand) {
@@ -42,17 +42,6 @@ static void checkValue(llvm::Value* operand) {
 
     operand->dump();
     throw InvalidArgument("I don't know how to deal with value type!");
-}
-
-static bool skipOperand(llvm::Instruction& i, unsigned idx) {
-    switch(i.getOpcode()) {
-    case llvm::Instruction::Br:
-        if (llvm::dyn_cast<llvm::BranchInst>(&i)->isConditional())
-            return idx > 0;
-        return true;
-    default:
-        return false;
-    }
 }
 
 LLVMBasicBlock::LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
@@ -66,6 +55,8 @@ LLVMBasicBlock::LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
     if (ti == NULL) {
         throw InvalidArgument("A basic block does not appear to have a terminator!");
     }
+
+    addOutput(ti);
 
     if (ti->getOpcode() == llvm::Instruction::Ret) {
         _returns = true;
@@ -82,6 +73,31 @@ LLVMPureBasicBlock::LLVMPureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb)
         LLVMBasicBlock(func, bb)
 { }
 
+void LLVMBasicBlock::addInput(llvm::Value* v) {
+    if (_inputMap.find(v) != _inputMap.end())
+        return;
+    _inputMap[v] = _numInputs++;
+    unsigned pred_count = 0;
+    for(auto iter = llvm::pred_begin(_basicBlock);
+        iter != llvm::pred_end(_basicBlock); iter++) {
+
+        auto pred = *iter;
+        auto predBlock = _function->blockMap(pred);
+        assert(predBlock);
+        predBlock->requestOutput(v);
+        _valueSources[v].insert(pred);
+        pred_count += 1;
+    }
+
+    if (isLocalArg(_basicBlock, v)) {
+        _valueSources[v].insert(NULL);
+    } else if (pred_count == 0) {
+        _basicBlock->dump();
+        v->dump();
+        assert(pred_count > 0);
+    }
+}
+
 void LLVMBasicBlock::buildRequests() {
     std::set<llvm::BasicBlock*> predecessors(llvm::pred_begin(_basicBlock), llvm::pred_end(_basicBlock));
 
@@ -90,7 +106,7 @@ void LLVMBasicBlock::buildRequests() {
     for(llvm::Instruction& ins: _basicBlock->getInstList()) {
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
-            inputTypes.push_back(phi->getType());
+            inputTypes.push_back(LLVMInstruction::GetOutput(phi));
             assert(phi->getNumIncomingValues() > 0);
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
                 llvm::Value* v = phi->getIncomingValue(i);
@@ -107,7 +123,7 @@ void LLVMBasicBlock::buildRequests() {
         } else {
             unsigned numOperands = ins.getNumOperands();
             for (unsigned i=0; i<numOperands; i++) {
-                if (skipOperand(ins, i))
+                if (LLVMInstruction::HWIgnoresOperand(&ins, i))
                     continue;
 
                 llvm::Value* operand = ins.getOperand(i);
@@ -116,20 +132,6 @@ void LLVMBasicBlock::buildRequests() {
 
                 if (!isLocalOrConst(_basicBlock, operand)) {
                     addInput(operand);
-                    for(auto pred: predecessors) {
-                        auto predBlock = _function->blockMap(pred);
-                        assert(predBlock);
-                        predBlock->requestOutput(operand);
-                        _valueSources[operand].insert(pred);
-                    }
-
-                    if (isLocalArg(_basicBlock, operand))
-                        _valueSources[operand].insert(NULL);
-                    else if (predecessors.size() == 0) {
-                        _basicBlock->dump();
-                        operand->dump();
-                        assert(predecessors.size() > 0);
-                    }
                 }
             }
         }
@@ -141,7 +143,12 @@ void LLVMBasicBlock::requestOutput(llvm::Value* v) {
         return;
 
     addOutput(v);
-    if (!isLocalInstruction(_basicBlock, v)) {
+    if (isLocalInstruction(_basicBlock, v))
+        return;
+
+    if (llvm::Constant* cnst = llvm::dyn_cast<llvm::Constant>(v)) {
+        _constants.insert(cnst);
+    } else {
         _passthroughs.insert(v);
         addInput(v);
         if (!isLocalArg(_basicBlock, v)) {
@@ -154,6 +161,13 @@ void LLVMBasicBlock::requestOutput(llvm::Value* v) {
     }
 }
 
+llvm::Type* LLVMBasicBlock::GetHWType(llvm::Value* v) {
+    if (llvm::Instruction* i = llvm::dyn_cast<llvm::Instruction>(v)) {
+        return LLVMInstruction::GetOutput(i);
+    }
+    return v->getType();
+}
+
 void LLVMBasicBlock::buildIO() {
     
     /**
@@ -161,22 +175,13 @@ void LLVMBasicBlock::buildIO() {
      */
     std::vector<llvm::Type*> inputs(_numInputs);
 
-    // One control signal from each predecessor block
-    // printf("\n");
     for (auto& pr: _inputMap) {
         auto value = pr.first;
         auto idx = pr.second;
-
-#if 0
-        printf("%u: %s\n",
-               idx,
-               value->getName().str().c_str());
-#endif
-
         if (inputs[idx] != NULL) {
-            assert(inputs[idx] == value->getType());
+            assert(inputs[idx] == GetHWType(value));
         } else {
-            inputs[idx] = value->getType();
+            inputs[idx] = GetHWType(value);
         }
     }
 
@@ -192,15 +197,14 @@ void LLVMBasicBlock::buildIO() {
      */
     std::vector<llvm::Type*> outputs(_numOutputs);
 
-    // One control signal from each predecessor block
     for (auto& pr: _outputMap) {
         auto value = pr.first;
         auto idx = pr.second;
 
         if (outputs[idx] != NULL) {
-            assert(outputs[idx] == value->getType());
+            assert(outputs[idx] == GetHWType(value));
         } else {
-            outputs[idx] = value->getType();
+            outputs[idx] = GetHWType(value);
         }
     }
 
@@ -242,7 +246,7 @@ void LLVMControl::construct() {
         vector<llvm::Type*> outputTypes;
 
         for(auto& v: outputValues) {
-            outputTypes.push_back(v->getType());
+            outputTypes.push_back(LLVMBasicBlock::GetHWType(v));
             outputMap.push_back(_basicBlock->mapOutput(v));
         }
 
@@ -253,6 +257,7 @@ void LLVMControl::construct() {
     }
 
     if (_basicBlock->returns()) {
+        _successorMaps.push_back({0});
         _successors.push_back(new OutputPort(this, _basicBlock->output()->type()));
         _function->connectReturn(_successors.back());
     }

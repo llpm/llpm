@@ -8,10 +8,13 @@
 namespace llpm {
 
 class LLVMInstruction: public virtual Block {
-protected:
+public:
     static llvm::Type* GetInput(llvm::Instruction*);
     static llvm::Type* GetOutput(llvm::Instruction*);
+    static unsigned GetNumHWOperands(llvm::Instruction*);
+    static bool HWIgnoresOperand(llvm::Instruction*, unsigned);
 
+protected:
     llvm::Instruction* _ins;
 
     LLVMInstruction(llvm::Instruction* ins) :
@@ -29,11 +32,11 @@ public:
     static LLVMInstruction* Create(llvm::Instruction*);
 
     virtual unsigned getNumHWOperands() const {
-        return _ins->getNumOperands();
+        return GetNumHWOperands(_ins);
     }
 
-    virtual bool hwIgnoresOperand(unsigned) const {
-        return false;
+    virtual bool hwIgnoresOperand(unsigned i) const {
+        return HWIgnoresOperand(_ins, i);
     }
 };
 

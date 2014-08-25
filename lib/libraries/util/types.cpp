@@ -35,7 +35,7 @@ bool StructTwiddler::refine(std::vector<Block*>& blocks,
 
     unsigned ji = 0;
     for (unsigned si: _mapping) {
-        conns.connect(split->dout(si), join->din(si));
+        conns.connect(split->dout(si), join->din(ji));
         ji += 1;
     }
 

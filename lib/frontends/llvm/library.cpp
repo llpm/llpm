@@ -36,6 +36,13 @@ public:
             blocks.push_back(block);
         }
 
+        // Construct any constants it produces
+        for(llvm::Constant* c: lbb->constants()) {
+            Constant* block = new Constant(c);
+            blocks.push_back(block);
+            valueMap[c] = block->dout();
+        }
+
         // Add an extractor for each input and add it to the value
         // map
         auto inputMap = lbb->inputMap();
@@ -105,7 +112,15 @@ public:
             llvm::Value* v = p.first;
             unsigned i = p.second;
             auto f = valueMap.find(v);
-            assert(f != valueMap.end());
+            if (f == valueMap.end()) {
+                printf("Could not find output in value map:\n");
+                v->dump();
+                if (lbb->passthroughs().count(v) > 0)
+                    printf("It's a passthrough!\n");
+                printf("While processing this block:\n");
+                bb->dump();
+                assert(f != valueMap.end());
+            }
             conns.connect(f->second, output->din(i));
         }
 
@@ -127,6 +142,7 @@ public:
     {
         const LLVMControl* c = dynamic_cast<const LLVMControl*>(block);
         assert(c != NULL);
+        llvm::BasicBlock* bb = c->basicBlock()->basicBlock();
 
         printf("BB input type:\n");
         c->bbInput()->type()->dump();
@@ -142,7 +158,33 @@ public:
         c->bbOutput()->type()->dump();
         printf("\n");
 
-        assert(false);
+        llvm::TerminatorInst* ti = bb->getTerminator();
+        assert(ti != NULL);
+
+        if (c->successors_size() == 1) {
+            const auto& map = c->successorMaps(0);
+            StructTwiddler* st = new StructTwiddler(c->bbOutput()->type(), map);
+            conns.remap(c->bbOutput(), st->din());
+            conns.remap(c->successors(0), st->dout());
+        } else if (c->successors_size() > 1) {
+            printf("TI info:\n");
+            ti->dump();
+            ti->getType()->dump();
+            printf("\n");
+            unsigned sselIdx = c->basicBlock()->mapOutput(ti);
+            Extract* successorSel = new Extract(c->bbOutput()->type(), {sselIdx});
+            Router* rtr = new Router(c->successors_size(), c->bbOutput()->type());
+            conns.remap(c->bbOutput(), rtr->din());
+            conns.connect(successorSel->dout(), rtr->sel());
+
+            for(unsigned i=0; i<c->successors_size(); i++) {
+                const auto& map = c->successorMaps(i);
+                StructTwiddler* st = new StructTwiddler(c->bbOutput()->type(), map);
+                conns.connect(rtr->dout(i), st->din());
+                conns.remap(c->successors(i), st->dout());
+            }
+        }
+
         return true;
     }
 };

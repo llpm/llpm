@@ -10,34 +10,89 @@
 
 namespace llpm {
 
-llvm::Type* LLVMInstruction::GetInput(llvm::Instruction* ins) {
+unsigned LLVMInstruction::GetNumHWOperands(llvm::Instruction* ins) {
+    switch (ins->getOpcode()) {
+    case llvm::Instruction::PHI:
+        return 1;
+    case llvm::Instruction::Br:
+        if (llvm::dyn_cast<llvm::BranchInst>(ins)->isUnconditional())
+            return 0;
+        else
+            return 1;
+    default:
+        return ins->getNumOperands();
+    }
+}
 
-    if (ins->getNumOperands() == 0)
+bool LLVMInstruction::HWIgnoresOperand(llvm::Instruction* ins, unsigned idx) {
+    switch (ins->getOpcode()) {
+    case llvm::Instruction::PHI:
+        return idx > 0;
+    case llvm::Instruction::Br:
+        if (llvm::dyn_cast<llvm::BranchInst>(ins)->isUnconditional())
+            return true;
+        else
+            return idx > 0;
+    default:
+        return false;
+    }
+}
+
+llvm::Type* LLVMInstruction::GetInput(llvm::Instruction* ins) {
+    /**
+     * Special case inputs
+     */
+    switch(ins->getOpcode()) {
+    case llvm::Instruction::Br:
+        if (llvm::dyn_cast<llvm::BranchInst>(ins)->isUnconditional())
+            return llvm::Type::getVoidTy(ins->getContext());
+        else
+            return ins->getOperand(0)->getType();
+    case llvm::Instruction::PHI:
+        return ins->getOperand(0)->getType();
+    }
+
+    /**
+     * Default inputs
+     */
+    if (GetNumHWOperands(ins) == 0)
         return llvm::Type::getVoidTy(ins->getContext());
-    if (ins->getNumOperands() == 1) {
+    if (GetNumHWOperands(ins) == 1) {
         for (unsigned i=0; i<ins->getNumOperands(); i++) {
-            return ins->getOperand(i)->getType();
+            if (!HWIgnoresOperand(ins, i))
+                return ins->getOperand(i)->getType();
         }
     }
 
     vector<llvm::Type*> ty;
     for (unsigned i=0; i<ins->getNumOperands(); i++) {
-        ty.push_back(ins->getOperand(i)->getType());
+        if (!HWIgnoresOperand(ins, i))
+            ty.push_back(ins->getOperand(i)->getType());
     }
     return llvm::StructType::get(ins->getContext(), ty);
 }
 
 llvm::Type* LLVMInstruction::GetOutput(llvm::Instruction* ins) {
-    return ins->getType();
+    switch (ins->getOpcode()) {
+    case llvm::Instruction::Br:
+        if (llvm::dyn_cast<llvm::BranchInst>(ins)->isUnconditional())
+            return llvm::Type::getVoidTy(ins->getContext());
+        else
+            return ins->getOperand(0)->getType();
+    case llvm::Instruction::Ret:
+        if (ins->getNumOperands() > 0)
+            return ins->getOperand(0)->getType();
+        return llvm::Type::getVoidTy(ins->getContext());
+    default:
+        return ins->getType();
+    }
 }
 
 template<typename Inner>
 class WrapperInstruction: public LLVMPureInstruction {
-    static llvm::Type* GetInput(llvm::Instruction* ins);
-
 public:
     WrapperInstruction(llvm::Instruction* ins) :
-        LLVMPureInstruction(ins, GetInput(ins), ins->getType())
+        LLVMPureInstruction(ins, GetInput(ins), GetOutput(ins))
     { }
 
     static WrapperInstruction* Create(llvm::Instruction* ins) {
@@ -51,36 +106,16 @@ public:
     virtual bool refine(std::vector<Block*>& blocks,
                         ConnectionDB& conns) const;
 
-    virtual unsigned getNumHWOperands() const {
-        if (_ins->getOpcode() == llvm::Instruction::PHI)
-            return 1;
-        return _ins->getNumOperands();
-    }
 
-    virtual bool hwIgnoresOperand(unsigned idx) const {
-        if (_ins->getOpcode() == llvm::Instruction::PHI)
-            return idx > 0;
-        return false;
-    }
 };
 
-template<typename C>
-llvm::Type* WrapperInstruction<C>::GetInput(llvm::Instruction* ins) {
-    if (ins->getOpcode() == llvm::Instruction::PHI)
-        return ins->getOperand(0)->getType();
-    return LLVMInstruction::GetInput(ins);
-}
 
 template<>
 bool WrapperInstruction<Identity>::refine(
     std::vector<Block*>& blocks,
     ConnectionDB& conns) const
 {
-    Identity* b;
-    if (_ins->getOpcode() == llvm::Instruction::PHI)
-        b = new Identity(_ins->getType());
-    else
-        b = new Identity(_ins->getOperand(0)->getType());
+    auto b = new Identity(LLVMInstruction::GetOutput(_ins));
 
     blocks.push_back(b);
     conns.remap(input(), b->din());
@@ -105,6 +140,20 @@ bool WrapperInstruction<Multiplexer>::refine(
     conns.connect(split->dout(0), b->sel());
     conns.connect(split->dout(1), b->din(0));
     conns.connect(split->dout(2), b->din(1));
+    conns.remap(output(), b->dout());
+    return true;
+}
+
+template<typename C>
+bool WrapperInstruction<C>::refine(
+    std::vector<Block*>& blocks,
+    ConnectionDB& conns) const
+{
+    assert(_ins->getNumOperands() == 1);
+    C* b = new C(GetInput(_ins), GetOutput(_ins));
+
+    blocks.push_back(b);
+    conns.remap(input(), b->din());
     conns.remap(output(), b->dout());
     return true;
 }
@@ -143,7 +192,8 @@ template<>
 IntAddition* TruncatingIntWrapperInstruction<IntAddition>::New() const {
     std::vector<llvm::Type*> ops;
     for (unsigned i=0; i<_ins->getNumOperands(); i++) {
-        ops.push_back(_ins->getOperand(i)->getType());
+        if (!HWIgnoresOperand(_ins, i))
+            ops.push_back(_ins->getOperand(i)->getType());
     }
     return new IntAddition(ops);
 }
@@ -152,7 +202,8 @@ template<>
 IntMultiply* TruncatingIntWrapperInstruction<IntMultiply>::New() const {
     std::vector<llvm::Type*> ops;
     for (unsigned i=0; i<_ins->getNumOperands(); i++) {
-        ops.push_back(_ins->getOperand(i)->getType());
+        if (!HWIgnoresOperand(_ins, i))
+            ops.push_back(_ins->getOperand(i)->getType());
     }
     return new IntMultiply(ops);
 }
@@ -325,45 +376,10 @@ public:
         LLVMPureInstruction(ins, GetInput(ins), GetOutput(ins))
     { }
 
-    static llvm::Type* GetInput(llvm::Instruction* ins) {
-        switch (ins->getOpcode()) {
-        case llvm::Instruction::Br:
-            if (llvm::dyn_cast<llvm::BranchInst>(ins)->isUnconditional())
-                return llvm::Type::getVoidTy(ins->getContext());
-            else
-                return ins->getOperand(0)->getType();
-        default:
-            return LLVMInstruction::GetInput(ins);
-        }
-    }
-
     static FlowInstruction* Create(llvm::Instruction* ins) {
         return new FlowInstruction(ins);
     }
 
-    virtual unsigned getNumHWOperands() const {
-        switch (_ins->getOpcode()) {
-        case llvm::Instruction::Br:
-            if (llvm::dyn_cast<llvm::BranchInst>(_ins)->isUnconditional())
-                return 0;
-            else
-                return 1;
-        default:
-            return _ins->getNumOperands();
-        }
-    }
-
-    virtual bool hwIgnoresOperand(unsigned idx) const {
-        switch (_ins->getOpcode()) {
-        case llvm::Instruction::Br:
-            if (llvm::dyn_cast<llvm::BranchInst>(_ins)->isUnconditional())
-                return true;
-            else
-                return idx > 0;
-        default:
-            return false;
-        }
-    }
 
     virtual bool refinable() const {
         return true;
@@ -372,7 +388,7 @@ public:
     virtual bool refine(std::vector<Block*>& blocks,
                         ConnectionDB& conns) const
     {
-        auto b = new Identity(_ins->getOperand(0)->getType());
+        auto b = new Identity(GetOutput(_ins));
         blocks.push_back(b);
         conns.remap(input(), b->din());
         conns.remap(output(), b->dout());
@@ -395,6 +411,9 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::URem, TruncatingIntWrapperInstruction<IntRemainder>::Create},
     {llvm::Instruction::SRem, TruncatingIntWrapperInstruction<IntRemainder>::Create},
     {llvm::Instruction::ICmp, IntWrapperInstruction<IntCompare>::Create},
+
+    // Conversion operators
+    {llvm::Instruction::Trunc, WrapperInstruction<IntTruncate>::Create},
 
     // Logical operators (integer operands)
     {llvm::Instruction::Shl, IntWrapperInstruction<Shift>::Create}, // Shift left  (logical)

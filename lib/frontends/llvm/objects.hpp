@@ -76,16 +76,13 @@ protected:
     std::map<llvm::Value*, unsigned> _outputMap;
     std::map<llvm::BasicBlock*, unsigned> _successorMap;
     std::set<llvm::Value*> _passthroughs;
+    std::set<llvm::Constant*> _constants;
 
     bool _returns;
     unsigned _numInputs;
     unsigned _numOutputs;
 
-    void addInput(llvm::Value* v) {
-        if (_inputMap.find(v) != _inputMap.end())
-            return;
-        _inputMap[v] = _numInputs++;
-    }
+    void addInput(llvm::Value* v);
 
     void addOutput(llvm::Value* v) {
         if (_outputMap.find(v) != _outputMap.end())
@@ -102,6 +99,7 @@ protected:
 public:
     virtual ~LLVMBasicBlock() { }
 
+    static llvm::Type* GetHWType(llvm::Value*);
     void buildRequests();
     void buildIO();
 
@@ -111,6 +109,7 @@ public:
     DEF_GET_NP(numInputs);
     DEF_GET_NP(numOutputs);
     DEF_GET_NP(passthroughs);
+    DEF_GET_NP(constants);
 
     virtual InputPort* input() = 0;
     virtual const InputPort* input() const = 0;

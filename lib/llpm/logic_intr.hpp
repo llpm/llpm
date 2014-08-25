@@ -3,6 +3,7 @@
 
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Constant.h>
 
 namespace llpm {
 
@@ -19,10 +20,19 @@ public:
 
 // Constant value. Should probably be treated specially by backends.
 class Constant : public Block {
-    llvm::Value* _value;
+    llvm::Constant* _value;
     OutputPort   _dout;
 public:
     Constant(llvm::Value* value) :
+        _dout(this, value->getType())
+    {
+        _value = llvm::dyn_cast<llvm::Constant>(value);
+        if (_value == NULL) {
+            throw InvalidArgument("Value passed to constant must be Constant!");
+        }
+    }
+
+    Constant(llvm::Constant* value) :
         _value(value),
         _dout(this, value->getType())
     { }

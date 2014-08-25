@@ -9,6 +9,14 @@ int add(int a, int b) {
     return a + b;
 }
 
+long foo(long a, unsigned n) {
+    unsigned i;
+    for (i=0; i<n; i++) {
+        a *= i;
+    }
+    return a;
+}
+
 int main(int argc, const char** argv) {
     return 0;
 }
