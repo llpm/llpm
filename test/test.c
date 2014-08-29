@@ -17,6 +17,20 @@ long foo(long a, unsigned n) {
     return a;
 }
 
+long array(int n) {
+    int arr[128];
+
+    for (unsigned i=0; i<128; i++) {
+        arr[i] = n * i;
+    }
+
+    long total = 0;
+    for (unsigned i=0; i<128; i++) {
+        total += arr[i];
+    }
+    return total / 128;
+}
+
 int main(int argc, const char** argv) {
     return 0;
 }
