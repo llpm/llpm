@@ -144,19 +144,11 @@ public:
         assert(c != NULL);
         llvm::BasicBlock* bb = c->basicBlock()->basicBlock();
 
-        printf("BB input type:\n");
-        c->bbInput()->type()->dump();
-        printf("\n");
- 
         Select* inputSelect = new Select(c->predecessors_size(), c->bbInput()->type());
         for(unsigned i=0; i<c->predecessors_size(); i++) {
             conns.remap(c->predecessors(i), inputSelect->din(i));
         }
         conns.remap(c->bbInput(), inputSelect->dout());
-
-        printf("BB output type:\n");
-        c->bbOutput()->type()->dump();
-        printf("\n");
 
         llvm::TerminatorInst* ti = bb->getTerminator();
         assert(ti != NULL);
@@ -167,10 +159,6 @@ public:
             conns.remap(c->bbOutput(), st->din());
             conns.remap(c->successors(0), st->dout());
         } else if (c->successors_size() > 1) {
-            printf("TI info:\n");
-            ti->dump();
-            ti->getType()->dump();
-            printf("\n");
             unsigned sselIdx = c->basicBlock()->mapOutput(ti);
             Extract* successorSel = new Extract(c->bbOutput()->type(), {sselIdx});
             blocks.push_back(successorSel);
