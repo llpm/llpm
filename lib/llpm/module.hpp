@@ -12,6 +12,8 @@
 namespace llpm {
 
 class Design;
+class Schedule;
+class Pipeline;
 
 class Module : public Block {
 protected:
@@ -37,17 +39,25 @@ public:
 
     virtual void blocks(vector<Block*>&) const = 0;
     virtual void submodules(vector<Module*>&) const = 0;
+    virtual void submodules(vector<Block*>& vec) const = 0;
+
     virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
     virtual bool refined(Design::Refinery::StopCondition* sc) {
         vector<Block*> crude;
         this->blocks(crude);
         return sc->refined(crude);
     }
+    virtual Schedule* schedule() = 0;
+    virtual Pipeline* pipeline() = 0;
+    virtual void validityCheck() const = 0;
 };
 
 // A module which a third party can edit
 class MutableModule: public Module {
 public:
+    MutableModule(Design& design, std::string name) :
+        Module(design, name) { }
+
     virtual ConnectionDB* conns() = 0;
     virtual void addBlock(Block* b) = 0;
     virtual void addSubmodule(Module* m) = 0;
@@ -58,7 +68,7 @@ public:
  * common module class and a good default module base class. Should
  * be sub-classed to define input and output ports.
  */
-class ContainerModule : public Module {
+class ContainerModule : public MutableModule {
     // The blocks which I directly contain
     set<Block*> _blocks;
 
@@ -74,19 +84,30 @@ class ContainerModule : public Module {
     map<InputPort*, Identity> _inputMap;
     map<OutputPort*, Identity> _outputMap;
 
+    // Schedule
+    Schedule* _schedule;
+    Pipeline* _pipeline;
+
 protected:
     void addInputPort(InputPort* ip);
     void addOutputPort(OutputPort* op);
 
 public:
     ContainerModule(Design& design, std::string name) :
-        Module(design, name),
-        _conns(this)
-    { }
+        MutableModule(design, name),
+        _conns(this),
+        _schedule(NULL)
+    {
+        design.addModule(this);
+    }
+
+    virtual ~ContainerModule();
 
     ConnectionDB* conns() {
         return &_conns;
     }
+
+    virtual void validityCheck() const;
 
     const OutputPort* getDriver(InputPort* ip) const {
         auto f = _inputMap.find(ip);
@@ -104,6 +125,11 @@ public:
 
     void addBlock(Block* b) {
         assert(b != NULL);
+
+        Module* m = b->module();
+        if (m != NULL && m != this)
+            throw InvalidArgument("Cannot add already owned block to module!");
+
         if (Module* m = dynamic_cast<Module*>(b)) {
             addSubmodule(m);
         } else {
@@ -118,10 +144,10 @@ public:
         m->module(this);
     }
 
-    void connect(const InputPort* sink, const OutputPort* source) {
+    void connect(InputPort* sink, OutputPort* source) {
         connect(source, sink);
     }
-    void connect(const OutputPort* source, const InputPort* sink) {
+    void connect(OutputPort* source, InputPort* sink) {
         if (source == NULL || sink == NULL)
             throw InvalidArgument("Neither source nor sink can be NULL!");
 
@@ -137,22 +163,14 @@ public:
         }
 
         if (sourceB->module() == NULL) {
-            sourceB->module(this);
-            if (Module* sub = dynamic_cast<Module*>(sourceB)) {
-                this->addSubmodule(sub);
-            } else {
-                this->addBlock(sourceB);
-            }
+            this->addBlock(sourceB);
         }
 
         if (sinkB->module() == NULL) {
-            sinkB->module(this);
-            if (Module* sub = dynamic_cast<Module*>(sinkB)) {
-                this->addSubmodule(sub);
-            } else {
-                this->addBlock(sinkB);
-            }
+            this->addBlock(sinkB);
         }
+
+        _conns.connect(source, sink);
     }
 
     virtual bool hasState() const {
@@ -170,6 +188,10 @@ public:
     }
 
     virtual void blocks(vector<Block*>& vec) const {
+        vec.insert(vec.end(), _blocks.begin(), _blocks.end());
+    }
+
+    virtual void submodules(vector<Block*>& vec) const {
         vec.insert(vec.end(), _modules.begin(), _modules.end());
     }
 
@@ -185,6 +207,9 @@ public:
                         ConnectionDB& conns) const;
     
     virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL);
+
+    virtual Schedule* schedule();
+    virtual Pipeline* pipeline();
 };
 
 } // namespace llpm

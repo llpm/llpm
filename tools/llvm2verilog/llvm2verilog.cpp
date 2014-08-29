@@ -5,6 +5,7 @@
 #include <llpm/std_library.hpp>
 #include <frontends/llvm/translate.hpp>
 #include <refinery/refinery.hpp>
+#include <backends/verilog/synthesize.hpp>
 
 using namespace llpm;
 
@@ -45,7 +46,13 @@ int main(int argc, const char** argv) {
                     printf("\t%s\n", typeid(*b).name());
                 }
             }
+
+            m->validityCheck();
         }
+
+        VerilogSynthesizer vs(d);
+        vs.write(std::cout);
+
     } catch (Exception& e) {
         fprintf(stderr, "Caught exception!\n\t%s\n", e.msg.c_str());
         return 1;

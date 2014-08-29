@@ -40,9 +40,12 @@ public:
         return c._sink == this->_sink && c._source == this->_source;
     }
 
+    uint64_t hash() const {
+        return ((uint64_t)_source) ^ ((uint64_t)_sink);
+    }
+
     int operator<(const Connection& c) const {
-        return ((uint64_t)c._source ^ (uint64_t)c._sink) -
-               ((uint64_t)_source   ^ (uint64_t)_sink);
+        return this->hash() < c.hash();
     }
 };
 
@@ -62,10 +65,25 @@ public:
 
     DEF_GET(module);
 
+    const set<Connection>& raw() const {
+        return _connections;
+    }
+
+    void findAllBlocks(set<Block*>& blocks) const {
+        for(const Connection& c: _connections) {
+            blocks.insert(c.source()->owner());
+            blocks.insert(c.sink()->owner());
+        }
+    }
+
     void connect(OutputPort* o, InputPort* i);
     void disconnect(OutputPort* o, InputPort* i);
     void disconnect(Connection c) {
         disconnect(c.source(), c.sink());
+    }
+
+    bool exists(Connection c) {
+        return _connections.count(c) > 0;
     }
 
     size_t numConnections() {
