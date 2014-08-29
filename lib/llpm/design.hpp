@@ -1,6 +1,7 @@
 #ifndef __LLPM_DESIGN_HPP__
 #define __LLPM_DESIGN_HPP__
 
+#include <llpm/llpm.hpp>
 #include <llvm/IR/LLVMContext.h>
 #include <refinery/refinery.hpp>
 

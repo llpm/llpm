@@ -1,6 +1,7 @@
 #ifndef __LLPM_BLOCK_HPP__
 #define __LLPM_BLOCK_HPP__
 
+#include <llpm/llpm.hpp>
 #include <vector>
 #include <map>
 #include <set>
@@ -29,7 +30,7 @@ class Module;
  * Can sometimes be refined into smaller, more granular functions
  * via "refine" method.
  */
-class Block {
+class Block : public gc_cleanup {
 
 protected:
     Module* _module;

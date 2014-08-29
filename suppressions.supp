@@ -1,0 +1,10 @@
+{
+    ignore_libgc
+    Memcheck:Value8
+    obj:*libgc.so*
+}
+{
+    ignore_libgc
+    Memcheck:Cond
+    obj:*libgc.so*
+}

@@ -20,11 +20,11 @@ env = Environment(CXX="clang++",
                   CC="clang",
                   CPPPATH=['./lib', './bin/llvm/include/'],
                   CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
-                            -Wall -g -std=c++11 -stdlib=libc++
+                            -Wall -g -std=c++1y -stdlib=libc++
                             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
                             -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split(),
                   LDFLAGS="""-stdlib=libc++""".split(),
-                  LIBS="""rt c dl z tinfo""".split() + llvm_libraries,
+                  LIBS="""rt c dl z tinfo gc gccpp""".split() + llvm_libraries,
                   LIBPATH=LibPaths + ["bin/llvm/lib/"],
                   LINKFLAGS=['-pthread', '-stdlib=libc++'] + map(lambda x: "-Wl,-rpath=%s" % x, LibPaths))
 
