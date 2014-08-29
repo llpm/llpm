@@ -18,7 +18,8 @@ public:
     virtual ~BooleanLogic() { }
 };
 
-// Constant value. Should probably be treated specially by backends.
+// Constant value. Should probably be treated specially by backends
+// and optimizers.
 class Constant : public Block {
     llvm::Constant* _value;
     OutputPort   _dout;

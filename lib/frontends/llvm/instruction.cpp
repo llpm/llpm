@@ -105,8 +105,6 @@ public:
 
     virtual bool refine(std::vector<Block*>& blocks,
                         ConnectionDB& conns) const;
-
-
 };
 
 
@@ -134,13 +132,16 @@ bool WrapperInstruction<Multiplexer>::refine(
         _ins->getOperand(2)->getType()
     };
     auto split = new Split(inpTypes);
-    auto b = new Multiplexer(2, _ins->getOperand(1)->getType());
+    auto m = new Multiplexer(2, _ins->getOperand(1)->getType());
+    blocks.push_back(m);
+    auto b = new Join( m->din()->type() );
+    conns.connect(b->dout(), m->din());
     blocks.push_back(b);
     conns.remap(input(), split->din());
-    conns.connect(split->dout(0), b->sel());
-    conns.connect(split->dout(1), b->din(0));
-    conns.connect(split->dout(2), b->din(1));
-    conns.remap(output(), b->dout());
+    conns.connect(split->dout(0), b->din(0));
+    conns.connect(split->dout(1), b->din(1));
+    conns.connect(split->dout(2), b->din(2));
+    conns.remap(output(), m->dout());
     return true;
 }
 

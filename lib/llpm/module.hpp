@@ -36,6 +36,7 @@ public:
     }
 
     virtual void blocks(vector<Block*>&) const = 0;
+    virtual void submodules(vector<Module*>&) const = 0;
     virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
     virtual bool refined(Design::Refinery::StopCondition* sc) {
         vector<Block*> crude;
@@ -169,7 +170,10 @@ public:
     }
 
     virtual void blocks(vector<Block*>& vec) const {
-        vec.insert(vec.end(), _blocks.begin(),  _blocks.end());
+        vec.insert(vec.end(), _modules.begin(), _modules.end());
+    }
+
+    virtual void submodules(vector<Module*>& vec) const {
         vec.insert(vec.end(), _modules.begin(), _modules.end());
     }
     

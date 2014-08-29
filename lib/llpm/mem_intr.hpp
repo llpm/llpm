@@ -10,10 +10,10 @@ namespace llpm {
 // input when a request arrives. Also supports a reset signal,
 // which invalidates the contents. Requests on invalid data are held
 // until input data arrives.
+// Input data layout:
+// union: { reset_req: void, read_req: void, write: (data) }
 class Register : public Block {
     InputPort _din;
-    InputPort _reset;
-    InputPort _req;
     OutputPort _dout;
 
 public:
@@ -25,8 +25,6 @@ public:
     }
 
     DEF_GET(din);
-    DEF_GET(reset);
-    DEF_GET(req);
     DEF_GET(dout);
 };
 

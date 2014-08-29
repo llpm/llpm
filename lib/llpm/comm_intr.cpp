@@ -83,18 +83,27 @@ Extract::Extract(llvm::Type* t, vector<unsigned> path) :
     Function(t,llvm::ExtractValueInst::getIndexedType(t, path))
 { }
 
+llvm::Type* Multiplexer::GetInput(unsigned N, llvm::Type* type) {
+    vector<llvm::Type*> types;
+    types.push_back(llvm::Type::getIntNTy(type->getContext(), clog2(N)));
+    for (unsigned i=0; i<N; i++)
+        types.push_back(type);
+    return llvm::StructType::get(type->getContext(), types);
+}
+
 Multiplexer::Multiplexer(unsigned N, llvm::Type* type) :
-    _sel(this, llvm::Type::getIntNTy(type->getContext(), clog2(N))),
-    _dout(this, type)
-{
-    for (unsigned i = 0; i<N; i++) {
-        _din.push_back(new InputPort(this, type));
-    }
+    Function(GetInput(N, type), type)
+{ }
+
+llvm::Type* Router::GetInput(unsigned N, llvm::Type* type) {
+    return llvm::StructType::get(
+        type->getContext(),
+        {llvm::Type::getIntNTy(type->getContext(), clog2(N)),
+         type});
 }
 
 Router::Router(unsigned N, llvm::Type* type) :
-    _din(this, type),
-    _sel(this, llvm::Type::getIntNTy(type->getContext(), clog2(N)))
+    _din(this, GetInput(N, type))
 {
     for (unsigned i = 0; i<N; i++) {
         _dout.push_back(new OutputPort(this, type));

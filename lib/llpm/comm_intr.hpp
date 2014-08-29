@@ -113,24 +113,26 @@ public:
 
 // Selects one of N inputs and outputs it. Non-selected messages are
 // destroyed
-class Multiplexer : public CommunicationIntrinsic {
-    vector<InputPort*> _din;
-    InputPort _sel;
-    OutputPort _dout;
+// Input data type:
+// { sel : Log2 (#  inputs), Input 1, Input 2, ... Input N }
+class Multiplexer : public CommunicationIntrinsic, public Function {
+    static llvm::Type* GetInput(unsigned N, llvm::Type* type);
 
 public:
     Multiplexer(unsigned N, llvm::Type* type);
     virtual ~Multiplexer() { }
 
-    DEF_ARRAY_GET(din);
-    DEF_GET(sel);
-    DEF_GET(dout);
+    virtual bool hasState() const {
+        return false;
+    }
 };
 
 // Sends a single input to one of N outputs
+// Input data type:
+// { sel: Log2 (# outputs), Input Data }
 class Router : public CommunicationIntrinsic {
+    static llvm::Type* GetInput(unsigned N, llvm::Type* type);
     InputPort _din;
-    InputPort _sel;
     vector<OutputPort*> _dout;
 
 public:
@@ -138,7 +140,6 @@ public:
     virtual ~Router() { }
 
     DEF_GET(din);
-    DEF_GET(sel);
     DEF_ARRAY_GET(dout);
 };
 

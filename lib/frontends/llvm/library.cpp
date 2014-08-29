@@ -173,9 +173,15 @@ public:
             printf("\n");
             unsigned sselIdx = c->basicBlock()->mapOutput(ti);
             Extract* successorSel = new Extract(c->bbOutput()->type(), {sselIdx});
+            blocks.push_back(successorSel);
             Router* rtr = new Router(c->successors_size(), c->bbOutput()->type());
-            conns.remap(c->bbOutput(), rtr->din());
-            conns.connect(successorSel->dout(), rtr->sel());
+            blocks.push_back(rtr);
+            Join*   rtrJ = new Join(rtr->din()->type());
+            blocks.push_back(rtrJ);
+            conns.connect(rtrJ->dout(), rtr->din());
+            conns.remap(c->bbOutput(), rtrJ->din(1));
+            conns.connect(successorSel->dout(), rtrJ->din(0));
+
 
             for(unsigned i=0; i<c->successors_size(); i++) {
                 const auto& map = c->successorMaps(i);
