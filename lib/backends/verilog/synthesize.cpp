@@ -1,5 +1,8 @@
 #include "synthesize.hpp"
 
+#include <synthesis/schedule.hpp>
+#include <synthesis/pipeline.hpp>
+
 namespace llpm {
 
 VerilogSynthesizer::VerilogSynthesizer(Design& d) :
@@ -18,6 +21,17 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     Schedule* s = mod->schedule();
     printf("Pipelining...\n");
     Pipeline* p = mod->pipeline();
+
+    for (StaticRegion* region: s->regions()) {
+        vector< StaticRegion::Layer > region_sched;
+        region->schedule(p, region_sched);
+
+        printf("-- region sched --\n");
+        for (unsigned i=0; i<region_sched.size(); i++) {
+            printf("   %u: %lu\n", i, region_sched[i].blocks().size());
+        }
+        printf("\n");
+    }
 }
 
 } // namespace llpm

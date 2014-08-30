@@ -26,7 +26,7 @@ OutputPort* ConnectionDB::findSource(const InputPort* ip) const
 }
 
 // TODO -- This is slow. Rewrite w/ an index
-bool ConnectionDB::find(const InputPort* ip, Connection& cOut) {
+bool ConnectionDB::find(const InputPort* ip, Connection& cOut) const {
     for(auto&& c: _connections) {
         const InputPort* sink = c.sink();
         if (sink == ip) {
@@ -39,10 +39,19 @@ bool ConnectionDB::find(const InputPort* ip, Connection& cOut) {
 }
 
 // TODO -- This is slow. Rewrite w/ an index
-void ConnectionDB::find(const OutputPort* op, std::vector<Connection>& out) {
+void ConnectionDB::find(const OutputPort* op, std::vector<Connection>& out) const {
     for(auto&& c: _connections) {
         const OutputPort* source = c.source();
         if (source == op)
+            out.push_back(c);
+    }
+}
+
+// TODO -- This is slow. Rewrite w/ an index
+void ConnectionDB::find(Block* b, std::vector<Connection>& out) const {
+    for(auto&& c: _connections) {
+        if (c.source()->owner() == b ||
+            c.sink()->owner() == b)
             out.push_back(c);
     }
 }

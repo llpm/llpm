@@ -92,9 +92,9 @@ public:
 
     void findSinks(const OutputPort* op, std::vector<InputPort*>& out) const;
     OutputPort* findSource(const InputPort* ip) const;
-
-    bool find(const InputPort* ip, Connection& c);
-    void find(const OutputPort* op, std::vector<Connection>& out);
+    void find(Block* b, vector<Connection>&) const;
+    bool find(const InputPort* ip, Connection& c) const;
+    void find(const OutputPort* op, std::vector<Connection>& out)const ;
 
     void update(const ConnectionDB& newdb);
     

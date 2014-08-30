@@ -25,8 +25,11 @@ void Pipeline::buildMinimum() {
         StaticRegion* srb = _schedule->findRegion(b);
 
         if (sra == srb) {
+            // Don't insert a stage if they're in the same region
             _stages[c] = 0;
         } else {
+            // Insert a stage if the connection crosses a region
+            // boundary
             _stages[c] = 1;
         }
     }
