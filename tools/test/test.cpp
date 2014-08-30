@@ -9,7 +9,7 @@ using namespace llpm;
 
 int main(void) {
     std::vector<llpm::Block*> vec;
-    llpm::Refinery<llpm::Block> r;
+    llpm::Refinery r;
     ConnectionDB conn(NULL);
     r.refine(vec, conn);
     return 0;

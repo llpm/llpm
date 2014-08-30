@@ -95,7 +95,7 @@ public:
     }
 
     void prependLibrary(Library<V>* lib) {
-        _libraries.push_front(lib);
+        _libraries.insert(_libraries.begin(), lib);
         prependEntries(lib->collection());
     }
 

@@ -41,8 +41,8 @@ public:
     virtual void submodules(vector<Module*>&) const = 0;
     virtual void submodules(vector<Block*>& vec) const = 0;
 
-    virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL) = 0;
-    virtual bool refined(Design::Refinery::StopCondition* sc) {
+    virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL) = 0;
+    virtual bool refined(Refinery::StopCondition* sc) {
         vector<Block*> crude;
         this->blocks(crude);
         return sc->refined(crude);
@@ -203,10 +203,9 @@ public:
         return true;
     }
 
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const;
+    virtual bool refine(ConnectionDB& conns) const;
     
-    virtual unsigned internalRefine(Design::Refinery::StopCondition* sc = NULL);
+    virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);
 
     virtual Schedule* schedule();
     virtual Pipeline* pipeline();

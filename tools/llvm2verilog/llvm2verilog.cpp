@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
             modules.push_back(trans.translate(argv[i]));
         }
 
-        BaseLibraryStopCondition<> sc;
+        BaseLibraryStopCondition sc;
         StdLibStops(sc);
 
         for(auto&& m: modules) {

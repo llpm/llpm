@@ -23,8 +23,7 @@ public:
         return false;
     }
 
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const;
+    virtual bool refine(ConnectionDB& conns) const;
 };
 
 } // namespace llpm

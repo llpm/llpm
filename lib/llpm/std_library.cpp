@@ -8,7 +8,7 @@
 namespace llpm {
 using namespace llvm;
 
-void StdLibStops(BaseLibraryStopCondition<Block>& sc) {
+void StdLibStops(BaseLibraryStopCondition& sc) {
     sc.addClass<IntAddition>();
     sc.addClass<IntSubtraction>();
     sc.addClass<ConstShift>();

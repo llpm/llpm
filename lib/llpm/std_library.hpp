@@ -17,7 +17,7 @@
 
 namespace llpm {
 
-    void StdLibStops(BaseLibraryStopCondition<Block>& sc);
+    void StdLibStops(BaseLibraryStopCondition& sc);
 
 /*****************
  *   Integer operations

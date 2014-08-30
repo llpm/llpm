@@ -103,19 +103,15 @@ public:
         return true;
     }
 
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const;
+    virtual bool refine(ConnectionDB& conns) const;
 };
 
 
 template<>
-bool WrapperInstruction<Identity>::refine(
-    std::vector<Block*>& blocks,
-    ConnectionDB& conns) const
+bool WrapperInstruction<Identity>::refine(ConnectionDB& conns) const
 {
     auto b = new Identity(LLVMInstruction::GetOutput(_ins));
 
-    blocks.push_back(b);
     conns.remap(input(), b->din());
     conns.remap(output(), b->dout());
     return true;
@@ -123,7 +119,6 @@ bool WrapperInstruction<Identity>::refine(
 
 template<>
 bool WrapperInstruction<Multiplexer>::refine(
-    std::vector<Block*>& blocks,
     ConnectionDB& conns) const
 {
     vector<llvm::Type*> inpTypes = {
@@ -133,10 +128,8 @@ bool WrapperInstruction<Multiplexer>::refine(
     };
     auto split = new Split(inpTypes);
     auto m = new Multiplexer(2, _ins->getOperand(1)->getType());
-    blocks.push_back(m);
     auto b = new Join( m->din()->type() );
     conns.connect(b->dout(), m->din());
-    blocks.push_back(b);
     conns.remap(input(), split->din());
     conns.connect(split->dout(0), b->din(0));
     conns.connect(split->dout(1), b->din(1));
@@ -147,13 +140,11 @@ bool WrapperInstruction<Multiplexer>::refine(
 
 template<typename C>
 bool WrapperInstruction<C>::refine(
-    std::vector<Block*>& blocks,
     ConnectionDB& conns) const
 {
     assert(_ins->getNumOperands() == 1);
     C* b = new C(GetInput(_ins), GetOutput(_ins));
 
-    blocks.push_back(b);
     conns.remap(input(), b->din());
     conns.remap(output(), b->dout());
     return true;
@@ -176,13 +167,10 @@ public:
         return true;
     }
 
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const {
+    virtual bool refine(ConnectionDB& conns) const {
         Inner* b = New();
-        blocks.push_back(b);
         conns.remap(input(), b->din());
         IntTruncate* trunc = new IntTruncate(b->dout()->type(), output()->type());
-        blocks.push_back(trunc);
         conns.connect(b->dout(), trunc->din());
         conns.remap(output(), trunc->dout());
         return true;
@@ -257,10 +245,8 @@ public:
         return true;
     }
 
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const {
+    virtual bool refine(ConnectionDB& conns) const {
         Inner* b = New();
-        blocks.push_back(b);
         conns.remap(input(), b->din());
         conns.remap(output(), b->dout());
         return true;
@@ -386,11 +372,9 @@ public:
         return true;
     }
 
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const
+    virtual bool refine(ConnectionDB& conns) const
     {
         auto b = new Identity(GetOutput(_ins));
-        blocks.push_back(b);
         conns.remap(input(), b->din());
         conns.remap(output(), b->dout());
         return true;

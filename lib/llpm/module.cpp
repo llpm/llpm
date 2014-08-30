@@ -21,10 +21,8 @@ void ContainerModule::addOutputPort(OutputPort* op) {
     _outputMap.insert(make_pair(op, Identity(op->type())));
 }
 
-bool ContainerModule::refine(std::vector<Block*>& blocks,
-                             ConnectionDB& conns) const
+bool ContainerModule::refine(ConnectionDB& conns) const
 {
-    this->blocks(blocks);
     assert(false && "Not implemented");
 
 #if 0
@@ -43,7 +41,7 @@ bool ContainerModule::refine(std::vector<Block*>& blocks,
     return true;
 }
 
-unsigned ContainerModule::internalRefine(Design::Refinery::StopCondition* sc) {
+unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
     vector<Block*> blocksTmp(_blocks.begin(), _blocks.end());
 
     auto passes = design().refinery().refine(blocksTmp, _conns, sc);

@@ -13,10 +13,6 @@ namespace llpm {
 class Module;
 
 class Design {
-public:
-    typedef llpm::Refinery<Block> Refinery;
-
-private:
     llvm::LLVMContext& _context;
     Refinery* _refinery;
     std::vector<Module*> _modules;

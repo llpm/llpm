@@ -15,7 +15,6 @@ class LLVMBasicBlockRefiner : public LLVMRefiner<LLVMBasicBlock> {
 public:
     virtual bool refine(
             const Block* block,
-            std::vector<Block*>& blocks,
             ConnectionDB& conns) const
     {
         const LLVMBasicBlock* lbb = dynamic_cast<const LLVMBasicBlock*>(block);
@@ -33,13 +32,11 @@ public:
             auto block = LLVMInstruction::Create(&ins);
             blockMap[&ins] = block;
             valueMap[&ins] = block->output();
-            blocks.push_back(block);
         }
 
         // Construct any constants it produces
         for(llvm::Constant* c: lbb->constants()) {
             Constant* block = new Constant(c);
-            blocks.push_back(block);
             valueMap[c] = block->dout();
         }
 
@@ -52,7 +49,6 @@ public:
             Extract* e = new Extract(lbb->input()->type(), {inputNum});
             inputs.push_back(e->din());
             valueMap[v] = e->dout();
-            blocks.push_back(e);
         }
 
         // Connect the inputs to each block
@@ -69,7 +65,6 @@ public:
                         inTypes.push_back(ins.getOperand(i)->getType());
                 }
                 Join* inJoin = new Join(inTypes);
-                blocks.push_back(inJoin);
                 conns.connect(inJoin->dout(), li->input());
                 unsigned hwNum =0;
                 for (unsigned i=0; i<ins.getNumOperands(); i++) {
@@ -97,7 +92,6 @@ public:
                     // If it's not local it better be a
                     // constant!
                     Constant* c = new Constant(operand);
-                    blocks.push_back(c);
                     conns.connect(c->dout(), inputPorts[hwNum]);
                 }
                 hwNum += 1;
@@ -106,7 +100,6 @@ public:
 
         // Create and connect up a basic block output
         Join* output = new Join(lbb->output()->type());
-        blocks.push_back(output);
         auto outputMap = lbb->outputMap();
         for(auto p: outputMap) {
             llvm::Value* v = p.first;
@@ -137,7 +130,6 @@ class LLVMControlRefiner : public LLVMRefiner<LLVMControl>
 public:
     virtual bool refine(
             const Block* block,
-            std::vector<Block*>& blocks,
             ConnectionDB& conns) const
     {
         const LLVMControl* c = dynamic_cast<const LLVMControl*>(block);
@@ -161,11 +153,8 @@ public:
         } else if (c->successors_size() > 1) {
             unsigned sselIdx = c->basicBlock()->mapOutput(ti);
             Extract* successorSel = new Extract(c->bbOutput()->type(), {sselIdx});
-            blocks.push_back(successorSel);
             Router* rtr = new Router(c->successors_size(), c->bbOutput()->type());
-            blocks.push_back(rtr);
             Join*   rtrJ = new Join(rtr->din()->type());
-            blocks.push_back(rtrJ);
             conns.connect(rtrJ->dout(), rtr->din());
             conns.remap(c->bbOutput(), rtrJ->din(1));
             conns.connect(successorSel->dout(), rtrJ->din(0));
@@ -183,7 +172,7 @@ public:
     }
 };
 
-std::vector<Refinery<Block>::Refiner*> LLVMBaseLibrary::BuildCollection() {
+std::vector<Refinery::Refiner*> LLVMBaseLibrary::BuildCollection() {
     return {
         new LLVMControlRefiner(),
         new LLVMBasicBlockRefiner(),

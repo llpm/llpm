@@ -27,8 +27,7 @@ StructTwiddler::StructTwiddler(llvm::Type* input,
     _mapping(mapping) 
 { }
 
-bool StructTwiddler::refine(std::vector<Block*>& blocks,
-                            ConnectionDB& conns) const
+bool StructTwiddler::refine(ConnectionDB& conns) const
 {
     Split* split = new Split(this->din()->type());
     Join*  join  = new Join(this->dout()->type());
@@ -39,8 +38,9 @@ bool StructTwiddler::refine(std::vector<Block*>& blocks,
         ji += 1;
     }
 
-    blocks.push_back(split);
-    blocks.push_back(split);
+    conns.remap(this->din(), {split->din()});
+    conns.remap(this->dout(), join->dout());
+
     return true;
 }
 

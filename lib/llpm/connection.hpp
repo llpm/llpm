@@ -32,9 +32,9 @@ public:
     }
 
     DEF_GET_NP(source);
-    DEF_SET_NONULL(source);
+    // DEF_SET_NONULL(source);
     DEF_GET_NP(sink);
-    DEF_SET_NONULL(sink);
+    // DEF_SET_NONULL(sink);
 
     bool operator==(const Connection& c) const {
         return c._sink == this->_sink && c._source == this->_source;

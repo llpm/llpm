@@ -14,7 +14,6 @@
 
 namespace llpm {
 
-template<class Crude>
 class Refinery {
 public:
     class Refiner;
@@ -22,36 +21,35 @@ public:
     typedef llpm::Library<Refiner> Library;
 
     class Refiner: public PCHandler<Block> {
-        Library* _library;
+        // Library* _library;
 
     protected:
-        Refiner(Library* lib = NULL) :
-            _library(lib)
+        Refiner(Library* lib = NULL)
+            // _library(lib)
         { }
 
     public:
         virtual ~Refiner() { }
 
         virtual bool handles(Block*) const = 0;
-        virtual bool refine(const Crude* c,
-                            std::vector<Crude*>& newCrude,
+        virtual bool refine(const Block* c,
                             ConnectionDB& conns) const = 0;
 
     };
 
     class StopCondition {
     public:
-        virtual bool stopRefine(Crude*) = 0;
-        virtual void unrefined(vector<Crude*>& crude) {
-            vector<Crude*> unref;
-            for(Crude* c: crude) {
+        virtual bool stopRefine(Block*) = 0;
+        virtual void unrefined(vector<Block*>& crude) {
+            vector<Block*> unref;
+            for(Block* c: crude) {
                 if (!stopRefine(c))
                     unref.push_back(c);
             }
             unref.swap(crude);
         }
-        virtual bool refined(const vector<Crude*>& crude) {
-            for (Crude* c: crude) {
+        virtual bool refined(const vector<Block*>& crude) {
+            for (Block* c: crude) {
                 if (this->stopRefine(c) == false)
                     return false;
             }
@@ -78,20 +76,19 @@ public:
         refiners().prependLibrary(lib);
     }
 
-    unsigned refine(std::vector<Crude*>& crude,
+    unsigned refine(std::vector<Block*> crude,
                     ConnectionDB& conns,
                     StopCondition* sc = NULL);
 };
 
 
-template<typename Crude = Block>
-class BaseLibraryStopCondition: public Refinery<Crude>::StopCondition
+class BaseLibraryStopCondition: public Refinery::StopCondition
 {
     std::unordered_map<std::type_index, bool> _classes;
-    std::map<std::type_index, boost::function<bool (Crude* c)> > _tests;
+    std::map<std::type_index, boost::function<bool (Block* c)> > _tests;
 
     template<typename C>
-    static bool Test(Crude* c) {
+    static bool Test(Block* c) {
         return dynamic_cast<C*>(c) != NULL;
     }
 
@@ -99,7 +96,7 @@ public:
     BaseLibraryStopCondition() { }
     virtual ~BaseLibraryStopCondition() { }
 
-    virtual bool stopRefine(Crude* c) {
+    virtual bool stopRefine(Block* c) {
         std::type_index idx = typeid(*c);
         auto f = _classes.find(idx);
         if (f != _classes.end())
@@ -130,11 +127,10 @@ public:
 /* Allows a refining class to define a non-modifying refine method.
  * Implements the modifying version based on it.
  */
-class BlockRefiner: public Refinery<Block>::Refiner {
+class BlockRefiner: public Refinery::Refiner {
 public:
     virtual bool refine(
         const Block* block,
-        std::vector<Block*>& blocks,
         ConnectionDB& conns) const = 0;
     virtual bool refine(Block* c) const;
 };
@@ -144,45 +140,8 @@ public:
     virtual bool handles(Block*) const;
     virtual bool refine(
         const Block* block,
-        std::vector<Block*>& blocks,
         ConnectionDB& conns) const;
 };
-
-
-template<class Crude>
-unsigned Refinery<Crude>::refine(std::vector<Crude*>& crude,
-                                 ConnectionDB& conns,
-                                 StopCondition* sc) {
-    unsigned passes = 0;
-    bool foundRefinement;
-    do {
-        std::vector<Crude*> newCrude;
-        foundRefinement = false;
-        for(Crude*& c: crude) {
-            if (sc && sc->stopRefine(c))
-                continue;
-            const vector<Refiner*>& possible_refiners = _refiners(c);
-
-            bool refined = false;
-            for(auto& r: possible_refiners) {
-                if(r->refine(c, newCrude, conns)) {
-                    refined = true;
-                    break;
-                }
-            }
-            if (!refined) {
-                newCrude.push_back(c);
-            } else {
-                foundRefinement = true;
-            }
-        }
-        crude.swap(newCrude);
-        if (foundRefinement)
-            passes += 1;
-    } while (foundRefinement);
-
-    return passes;
-}
 
 } // namespace llpm
 

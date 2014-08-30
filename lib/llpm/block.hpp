@@ -90,8 +90,7 @@ public:
      * @arg opMap Mapping of output ports in original block to
      *            output ports in new blocks
      */
-    virtual bool refine(std::vector<Block*>& blocks,
-                        ConnectionDB& conns) const {
+    virtual bool refine(ConnectionDB& conns) const {
         if (refinable())
             throw ImplementationError("Block needs to implement refine method!");
         return false;
