@@ -4,6 +4,7 @@
 #include <cassert>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
@@ -24,14 +25,18 @@ public:
     class Layer {
         friend class StaticRegion;
 
-        vector<Block*> _blocks;
+        unordered_set<Block*> _blocks;
 
         void addBlock(Block* b) {
-            _blocks.push_back(b);
+            _blocks.insert(b);
         }
 
     public:
         DEF_GET_NP(blocks);
+
+        bool contains(Block* b) const {
+            return _blocks.count(b) > 0;
+        }
     };
 
     enum ConnType {

@@ -17,6 +17,37 @@ namespace llpm {
 
 class VerilogSynthesizer {
 public:
+    class Context {
+        std::ostream& _os;
+        ObjectNamer& _namer;
+        Module* _ctxt;
+
+    public:
+        Context(std::ostream& os, Module* ctxt) :
+            _os(os),
+            _namer(ctxt->design().namer()),
+            _ctxt(ctxt)
+        { }
+
+        template<typename C>
+        std::string name(C c) {
+            return _namer.getName(c, _ctxt);
+        }
+
+        template<typename T>
+        Context& operator<<(T t) {
+            _os << t;
+            return *this;
+        }
+
+        std::string primBlockName(Block* b) {
+            return _namer.primBlockName(b);
+        }
+
+        DEF_GET_NP(namer);
+    };
+
+
     class Printer;
     typedef llpm::PriorityCollection<Block, Printer> PCollection;
 
@@ -28,7 +59,7 @@ public:
         virtual ~Printer() { }
 
         virtual bool handles(Block*) const = 0;
-        virtual void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const = 0;
+        virtual void print(Context& ctxt, Block* c) const = 0;
     };
 
 private:
@@ -46,7 +77,7 @@ public:
     void writeModule(std::ostream& os, Module* mod);
     void write(std::ostream& os);
 
-    void print(std::ostream& os, Block* b, Module* mod);
+    void print(Context& ctxt, Block* b);
 };
 
 } // namespace llpm

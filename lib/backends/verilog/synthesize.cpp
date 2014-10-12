@@ -27,75 +27,75 @@ void VerilogSynthesizer::write(std::ostream& os) {
 }
 
 void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
-    auto& namer = mod->design().namer();
+    Context ctxt(os, mod);
 
     printf("Scheduling...\n");
     Schedule* s = mod->schedule();
     printf("Pipelining...\n");
     Pipeline* p = mod->pipeline();
 
-    os << "module " << mod->name() << " (\n";
+    ctxt << "module " << mod->name() << " (\n";
 
 
-    namer.reserveName("clk", mod);
-    namer.reserveName("resetn", mod);
+    ctxt.namer().reserveName("clk", mod);
+    ctxt.namer().reserveName("resetn", mod);
 
     for (auto&& ip: mod->inputs()) {
-        auto inputName = namer.getName(ip, mod);
+        auto inputName = ctxt.name(ip);
         auto width = bitwidth(ip->type());
-        os << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
+        ctxt << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
                 % (width - 1)
                 % inputName
                 % typestr(ip->type());
     }
     for (auto&& op: mod->outputs()) {
-        auto outputName = namer.getName(op, mod);
+        auto outputName = ctxt.name(op);
         auto width = bitwidth(op->type());
-        os << boost::format("    output [%1%:0] %2%, //Type: %3%\n")
+        ctxt << boost::format("    output [%1%:0] %2%, //Type: %3%\n")
                 % (width - 1)
                 % outputName
                 % typestr(op->type());
     }
 
-    os << "\n"
-       << "    input clk,\n"
-       << "    input resetn\n"
-       << ");\n\n";
+    ctxt << "\n"
+        << "    input clk,\n"
+        << "    input resetn\n"
+        << ");\n\n";
 
 
     unsigned regCount = 0;
     for (StaticRegion* region: s->regions()) {
         regCount++;
+        ctxt << "// --- Static region " << regCount << " --- \n\n";
 
-        vector< StaticRegion::Layer > region_sched;
-        region->schedule(p, region_sched);
+        vector< StaticRegion::Layer > stages;
+        region->schedule(p, stages);
 
-        os << "// --- Static region " << regCount << " --- \n\n";
-        for (unsigned i=0; i<region_sched.size(); i++) {
-            StaticRegion::Layer& layer = region_sched[i];
+        for (unsigned i=0; i<stages.size(); i++) {
+            ctxt << "    // --- Pipeline stage " << i << " ---\n\n";
+
+            StaticRegion::Layer& layer = stages[i];
             auto blocks = layer.blocks();
             for (Block* b: blocks) {
-                print(os, b, mod);
+                print(ctxt, b);
             }
         }
-        os << "\n\n";
+        ctxt << "\n\n";
     }
 
-    os << "endmodule\n";
+    ctxt << "endmodule\n";
 }
 
-void VerilogSynthesizer::print(std::ostream& os, Block* b, Module* ctxt)
+void VerilogSynthesizer::print(Context& ctxt, Block* b)
 {
-    auto& namer = ctxt->design().namer();
-    
-    os << "    // Block \"" << namer.primBlockName(b) << "\" type " << typeid(*b).name() << "\n";
+    ctxt << "    // Block \"" << ctxt.primBlockName(b) << "\" type " << typeid(*b).name() << "\n";
 
     for (auto&& ip: b->inputs()) {
         if (ip->type()->isVoidTy())
             continue;
-        auto inputName = namer.getName(ip, ctxt);
+        auto inputName = ctxt.name(ip);
         auto width = bitwidth(ip->type());
-        os << boost::format("    reg [%1%:0] %2%; //Type: %3%\n")
+        ctxt << boost::format("    reg [%1%:0] %2%; //Type: %3%\n")
                 % (width - 1)
                 % inputName
                 % typestr(ip->type());
@@ -103,9 +103,9 @@ void VerilogSynthesizer::print(std::ostream& os, Block* b, Module* ctxt)
     for (auto&& op: b->outputs()) {
         if (op->type()->isVoidTy())
             continue;
-        auto outputName = namer.getName(op, ctxt);
+        auto outputName = ctxt.name(op);
         auto width = bitwidth(op->type());
-        os << boost::format("    reg [%1%:0] %2%; //Type: %3%\n")
+        ctxt << boost::format("    reg [%1%:0] %2%; //Type: %3%\n")
                 % (width - 1)
                 % outputName
                 % typestr(op->type());
@@ -113,24 +113,24 @@ void VerilogSynthesizer::print(std::ostream& os, Block* b, Module* ctxt)
 
     const vector<Printer*>& possible_printers = _printers(b);
     if (possible_printers.size() == 0) {
-        auto blockName = namer.getName(b, ctxt);
+        auto blockName = ctxt.name(b);
         throw ImplementationError(
             str(boost::format(" Cannot translate block %1% of type %2% into verilog.") 
                             % blockName
                             % typeid(*b).name()));
     } else {
-        possible_printers.front()->print(os, namer, b, ctxt);
+        possible_printers.front()->print(ctxt, b);
     }
-    os << "\n";
+    ctxt << "\n";
 }
 
-void print_function(std::ostream& os, ObjectNamer& namer, Block* c,
-                    Module* ctxt, const char* op, bool signedWrap) {
+void print_function(VerilogSynthesizer::Context& ctxt, Block* c,
+                    const char* op, bool signedWrap) {
     Function* b = dynamic_cast<Function*>(c);
-    os << "    assign " << namer.getName(b->dout(), ctxt) << " = ";
+    ctxt << "    assign " << ctxt.name(b->dout()) << " = ";
     auto dinType = b->din()->type();
     assert(dinType->isStructTy());
-    auto dinName = namer.getName(b->din(), ctxt);
+    auto dinName = ctxt.name(b->din());
     bool first = true;
     for (unsigned i = 0; i < dinType->getNumContainedTypes(); i++) {
         unsigned offset = bitoffset(dinType, i);
@@ -140,19 +140,19 @@ void print_function(std::ostream& os, ObjectNamer& namer, Block* c,
         if (first)
             first = false;
         else
-            os << " " << op << " ";
+            ctxt << " " << op << " ";
         if (signedWrap)
-            os << boost::format("$signed(%1%[%2%:%3%])") 
+            ctxt << boost::format("$signed(%1%[%2%:%3%])") 
                             % dinName
                             % (offset+width-1)
                             % offset;
         else 
-            os << boost::format("%1%[%2%:%3%]") 
+            ctxt << boost::format("%1%[%2%:%3%]") 
                             % dinName
                             % (offset+width-1)
                             % offset;
     }
-    os << ";\n";
+    ctxt << ";\n";
 }
 
 template<typename BlockType>
@@ -165,13 +165,13 @@ public:
         return dynamic_cast<BlockType*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         bool signedWrap = false;
         if (IntDivide* id = dynamic_cast<IntDivide*>(c))
             signedWrap = id->isSigned();
         if (IntRemainder* ir = dynamic_cast<IntRemainder*>(c))
             signedWrap = ir->isSigned();
-        print_function(os, namer, c, ctxt, _op, signedWrap);
+        print_function(ctxt, c, _op, signedWrap);
     }
 };
 
@@ -181,7 +181,7 @@ public:
         return dynamic_cast<IntCompare*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         const char* op = NULL;
         IntCompare* b = dynamic_cast<IntCompare*>(c);
 
@@ -199,7 +199,7 @@ public:
             op = ">=";
             break;
         }
-        print_function(os, namer, c, ctxt, op, b->isSigned());
+        print_function(ctxt, c, op, b->isSigned());
     }
 };
 
@@ -209,7 +209,7 @@ public:
         return dynamic_cast<Bitwise*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         const char* op = NULL;
         Bitwise* b = dynamic_cast<Bitwise*>(c);
         switch (b->op()) {
@@ -223,7 +223,7 @@ public:
             op = "^";
             break;
         }
-        print_function(os, namer, c, ctxt, op, false);
+        print_function(ctxt, c, op, false);
     }
 };
 
@@ -233,11 +233,11 @@ public:
         return dynamic_cast<IntTruncate*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Function* f = dynamic_cast<Function*>(c);
-        os << "    assign " << namer.getName(f->dout(), ctxt) << " = "
-           << boost::format("%1%[%2%:0];\n")
-                            % namer.getName(f->din(), ctxt)
+        ctxt << "    assign " << ctxt.name(f->dout()) << " = "
+             << boost::format("%1%[%2%:0];\n")
+                            % ctxt.name(f->din())
                             % (bitwidth(f->dout()->type()) - 1);
     }
 };
@@ -248,19 +248,19 @@ public:
         return dynamic_cast<IntExtend*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         IntExtend* f = dynamic_cast<IntExtend*>(c);
         unsigned ib = bitwidth(f->din()->type());
         unsigned ob = bitwidth(f->dout()->type());
         assert(ob > ib);
         string msb = str(boost::format("%1%[%2]")
-                            % namer.getName(f->din(), ctxt)
+                            % ctxt.name(f->din())
                             % (ib - 1));
-        os << "    assign " << namer.getName(f->dout(), ctxt) << " = { "
-           << boost::format("{%1%{%2%}}")
+        ctxt << "    assign " << ctxt.name(f->dout()) << " = { "
+             << boost::format("{%1%{%2%}}")
                 % (ob - ib)
                 % ( f->signExtend() ? msb : "1'b0")
-           << ", " << namer.getName(f->din(), ctxt) << "};\n";
+             << ", " << ctxt.name(f->din()) << "};\n";
     }
 };
 
@@ -271,11 +271,11 @@ public:
         return dynamic_cast<Op*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Function* f = dynamic_cast<Function*>(c);
         if (!f->din()->type()->isVoidTy())
-            os << "    assign " << namer.getName(f->dout(), ctxt) << " = "
-                << namer.getName(f->din(), ctxt) << ";\n";
+            ctxt << "    assign " << ctxt.name(f->dout()) << " = "
+                 << ctxt.name(f->din()) << ";\n";
     }
 };
 
@@ -296,10 +296,10 @@ public:
         }
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Constant* f = dynamic_cast<Constant*>(c);
-        os << "    assign " << namer.getName(f->dout(), ctxt) << " = "
-           << toString(f->value()) << ";";
+        ctxt << "    assign " << ctxt.name(f->dout()) << " = "
+             << toString(f->value()) << ";";
     }
 };
 
@@ -309,9 +309,9 @@ public:
         return dynamic_cast<Join*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Join* j = dynamic_cast<Join*>(c);
-        os << "    assign " << namer.getName(j->dout(), ctxt) << " = { ";
+        ctxt << "    assign " << ctxt.name(j->dout()) << " = { ";
         bool first = true;
         for (size_t i=0; i < j->din_size(); i++) {
             if (j->din(i)->type()->isVoidTy())
@@ -319,10 +319,10 @@ public:
             if (first)
                 first = false;
             else
-                os << ", ";
-            os << namer.getName(j->din(i), ctxt);
+                ctxt << ", ";
+            ctxt << ctxt.name(j->din(i));
         }
-        os << " };\n";
+        ctxt << " };\n";
     }
 };
 
@@ -332,16 +332,16 @@ public:
         return dynamic_cast<Split*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Split* s = dynamic_cast<Split*>(c);
-        auto dinName = namer.getName(s->din(), ctxt);
+        auto dinName = ctxt.name(s->din());
         for (unsigned i=0; i < s->dout_size(); i++) {
             if (s->dout(i)->type()->isVoidTy())
                 continue;
             unsigned offset = bitoffset(s->din()->type(), i);
             unsigned width = bitwidth(s->din()->type()->getContainedType(i));
-            os << "    assign " << namer.getName(s->dout(i), ctxt) << " = "
-               << boost::format("%1%[%2%:%3%];\n") 
+            ctxt << "    assign " << ctxt.name(s->dout(i)) << " = "
+                 << boost::format("%1%[%2%:%3%];\n") 
                         % dinName
                         % (offset+width-1)
                         % offset;
@@ -355,9 +355,9 @@ public:
         return dynamic_cast<Extract*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Extract* e = dynamic_cast<Extract*>(c);
-        auto dinName = namer.getName(e->din(), ctxt);
+        auto dinName = ctxt.name(e->din());
         unsigned offset = 0; 
         llvm::Type* type = e->din()->type();
         for (unsigned i: e->path()) {
@@ -367,8 +367,8 @@ public:
 
         unsigned width = bitwidth(e->dout()->type());
 
-        os << "    assign " << namer.getName(e->dout(), ctxt) << " = "
-           << boost::format("%1%[%2%:%3%];\n") 
+        ctxt << "    assign " << ctxt.name(e->dout()) << " = "
+             << boost::format("%1%[%2%:%3%];\n") 
                     % dinName
                     % (offset+width-1)
                     % offset;
@@ -381,31 +381,31 @@ public:
         return dynamic_cast<Multiplexer*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Multiplexer* m = dynamic_cast<Multiplexer*>(c);
-        auto doutName = namer.getName(m->dout(), ctxt);
+        auto doutName = ctxt.name(m->dout());
         auto dinType = m->din()->type();
-        auto dinName = namer.getName(m->din(), ctxt);
+        auto dinName = ctxt.name(m->din());
         unsigned nWidth = bitwidth(dinType->getContainedType(0));
         unsigned nOffset = bitoffset(dinType, 0);
 
-        os << "    always\n"
-           << "    begin\n"
-           << boost::format("        case (%1%[%2%:%3%])\n") 
+        ctxt << "    always\n"
+             << "    begin\n"
+             << boost::format("        case (%1%[%2%:%3%])\n") 
                     % dinName
                     % (nWidth + nOffset - 1)
                     % nOffset;
         for (size_t i=1; i<dinType->getNumContainedTypes(); i++) {
             auto offset = bitoffset(dinType, i);
-            os << boost::format("            %1% : %2% = %3%[%4%:%5%];\n")
+            ctxt << boost::format("            %1% : %2% = %3%[%4%:%5%];\n")
                         % (i - 1)
                         % doutName
                         % dinName
                         % (offset + bitwidth(dinType->getContainedType(i)) - 1)
                         % offset;
         }
-        os << "        endcase\n"
-           << "    end\n";
+        ctxt << "        endcase\n"
+             << "    end\n";
     }
 };
 
@@ -415,9 +415,9 @@ public:
         return dynamic_cast<Router*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Router* r = dynamic_cast<Router*>(c);
-        auto dinName = namer.getName(r->din(), ctxt);
+        auto dinName = ctxt.name(r->din());
         auto dinType = r->din()->type()->getContainedType(1);
         auto dinOffset = bitoffset(r->din()->type(), 1);
         auto dinWidth = bitwidth(dinType);
@@ -428,8 +428,8 @@ public:
 
         for (unsigned i=0; i<r->dout_size(); i++) {
             auto op = r->dout(i);
-            os << "    assign " << namer.getName(op, ctxt) << " = "
-               << boost::format("%1%[%2%:%3%] == %4% ? %1%[%5%:%6%] : {%7%{1'bx}};\n")
+            ctxt << "    assign " << ctxt.name(op) << " = "
+                 << boost::format("%1%[%2%:%3%] == %4% ? %1%[%5%:%6%] : {%7%{1'bx}};\n")
                     % dinName
                     % (selWidth + selOffset - 1)
                     % selOffset
@@ -447,7 +447,7 @@ public:
         return dynamic_cast<Select*>(b) != NULL;
     }
 
-    void print(std::ostream& os, ObjectNamer& namer, Block* c, Module* ctxt) const {
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Select* s = dynamic_cast<Select*>(c);
         
 
