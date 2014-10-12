@@ -40,7 +40,6 @@ protected:
 
     Block(): _module(NULL) { }
 
-private:
     friend class InputPort;
     friend class OutputPort;
 

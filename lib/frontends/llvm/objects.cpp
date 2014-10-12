@@ -384,6 +384,7 @@ LLVMFunction::LLVMFunction(llpm::Design& design, llvm::Function* func) :
 LLVMFunction::~LLVMFunction() {
 }
 
+
 void LLVMFunction::build(llvm::Function* func) {
     // First, we gotta build the blockMap
     for(auto& bb: func->getBasicBlockList()) {
@@ -439,6 +440,10 @@ void LLVMFunction::build(llvm::Function* func) {
     _entry = new LLVMEntry(func, entryMap);
 
     connect(_entry->dout(), entryPort);
+
+    // Connect input/output
+    definePort(_entry->din());
+    definePort(_exit->dout());
 }
 
 void LLVMFunction::connectReturn(OutputPort* retPort) {
