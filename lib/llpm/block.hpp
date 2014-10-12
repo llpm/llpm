@@ -34,6 +34,7 @@ class Block : public gc_cleanup {
 
 protected:
     Module* _module;
+    std::string _name;
     std::set<InputPort*>  _inputs;
     std::set<OutputPort*> _outputs;
 
@@ -61,6 +62,9 @@ public:
             throw InvalidArgument("Module cannot be NULL!");
         _module = m;
     }
+
+    DEF_GET_NP(name);
+    DEF_SET(name);
 
     std::set<InputPort*>&  inputs()  {
         return _inputs;

@@ -97,11 +97,6 @@ void StaticRegion::schedule(Pipeline* pipeline, vector<Layer>& layers) {
             Layer& layer = layers[layerNum];
             layer.addBlock(b);
 
-            auto outs = outputs[b];
-            for (Connection c: outs) {
-                layer.addOutputEdge(c);
-            }
-
             auto rdeps = revDeps[b];
             for (Connection c: rdeps) {
                 Block* rdep = c.sink()->owner();

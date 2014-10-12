@@ -15,20 +15,19 @@ namespace llpm {
 class Pipeline;
 class Schedule;
 
+/* A StaticRegion represents a region of blocks which can be
+ * statically scheduled. In other words, it is a feed-forward region
+ * of blocks.
+ */
 class StaticRegion {
 public:
     class Layer {
         friend class StaticRegion;
 
         vector<Block*> _blocks;
-        vector<Connection> _outputs;
 
         void addBlock(Block* b) {
             _blocks.push_back(b);
-        }
-
-        void addOutputEdge(Connection c) {
-            _outputs.push_back(c);
         }
 
     public:

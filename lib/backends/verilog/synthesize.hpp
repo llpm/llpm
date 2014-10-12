@@ -5,6 +5,7 @@
 #include <llpm/module.hpp>
 #include <refinery/refinery.hpp>
 #include <frontends/llvm/objects.hpp>
+#include <synthesis/object_namer.hpp>
 
 // fwd def
 namespace llvm {
@@ -14,7 +15,12 @@ namespace llvm {
 namespace llpm {
 
 class VerilogSynthesizer {
+public:
+    static void print(std::ostream& os, Block* b, Module* mod);
+
+private:
     Design& _design;
+
 public:
     VerilogSynthesizer(Design& design);
     virtual ~VerilogSynthesizer() { }
