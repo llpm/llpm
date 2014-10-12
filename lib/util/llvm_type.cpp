@@ -23,6 +23,16 @@ unsigned bitwidth(llvm::Type* t) {
     return size;
 }
 
+unsigned bitoffset(llvm::Type* ct, unsigned n) {
+    unsigned acc = 0;
+    if (n >= ct->getNumContainedTypes())
+        throw InvalidArgument("n must index into composite type and not beyond");
+    for (unsigned i=0; i<n; i++) {
+        acc += bitwidth(ct->getContainedType(i));
+    }
+    return acc;
+}
+
 std::string typestr(llvm::Type* t) {
     std::string s;
     llvm::raw_string_ostream os(s);

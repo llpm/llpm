@@ -80,7 +80,8 @@ Split::Split(llvm::Type* input) :
 }
 
 Extract::Extract(llvm::Type* t, vector<unsigned> path) :
-    Function(t,llvm::ExtractValueInst::getIndexedType(t, path))
+    Function(t,llvm::ExtractValueInst::getIndexedType(t, path)),
+    _path(path)
 { }
 
 llvm::Type* Multiplexer::GetInput(unsigned N, llvm::Type* type) {

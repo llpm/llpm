@@ -100,7 +100,7 @@ public:
 
 // Extract a single element from a message
 class Extract : public CommunicationIntrinsic, public Function {
-    vector<unsigned> path;
+    vector<unsigned> _path;
 
 public:
     Extract(llvm::Type* t, vector<unsigned> path);
@@ -109,6 +109,8 @@ public:
     virtual bool hasState() const {
         return false;
     }
+
+    DEF_GET_NP(path);
 };
 
 // Selects one of N inputs and outputs it. Non-selected messages are

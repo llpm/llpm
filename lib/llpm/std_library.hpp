@@ -59,8 +59,8 @@ namespace llpm {
         // shift is amount -- positive for shift left, 
         ConstShift(llvm::Type* a, int shift, Style style);
 
-        DEF_GET(shift);
-        DEF_GET(style);
+        DEF_GET_NP(shift);
+        DEF_GET_NP(style);
     };
 
     // Variable amount shift. Integers only. Truncating only
@@ -95,8 +95,8 @@ namespace llpm {
         Shift(llvm::Type* a, llvm::Type* shift, Direction dir,
               Style style);
 
-        DEF_GET(dir);
-        DEF_GET(style);
+        DEF_GET_NP(dir);
+        DEF_GET_NP(style);
     };
 
     // Truncate by removing some of the most significant bits
@@ -116,7 +116,7 @@ namespace llpm {
         static llvm::Type* OutType(unsigned N, llvm::Type*);
         IntExtend(unsigned N, bool signExtend, llvm::Type* t);
 
-        DEF_GET(signExtend);
+        DEF_GET_NP(signExtend);
     };
 
     // Multiply a bunch of integers
@@ -136,7 +136,7 @@ namespace llpm {
         static llvm::Type* OutType(llvm::Type* a, llvm::Type* b, bool isSigned);
         IntDivide(llvm::Type* a, llvm::Type* b, bool isSigned);
 
-        DEF_GET(isSigned);
+        DEF_GET_NP(isSigned);
     };
 
     // Remainder of int a divided by int b
@@ -169,7 +169,7 @@ namespace llpm {
 
     public:
         Bitwise(unsigned N, llvm::Type* t, Op op);
-        DEF_GET(op);
+        DEF_GET_NP(op);
     };
 
     class IntCompare : public Function {
@@ -194,7 +194,7 @@ namespace llpm {
         IntCompare(llvm::Type* a, llvm::Type* b,
                    Cmp op, bool isSigned);
 
-        DEF_GET(op);
+        DEF_GET_NP(op);
         DEF_GET(isSigned);
     };
 

@@ -14,6 +14,9 @@ namespace llpm {
     // certain type
     unsigned bitwidth(llvm::Type* t);
 
+    // Compute the offset of the n-th type in a composite type
+    unsigned bitoffset(llvm::Type* t, unsigned n);
+
     std::string typestr(llvm::Type* t);
 }
 
