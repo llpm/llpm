@@ -22,16 +22,19 @@ class ObjectNamer : boost::noncopyable {
     std::map<Block*, std::string> _blockNames;
     std::map<Port*, std::string> _portNames;
 
-    std::string primBlockName(Block* b);
-
 public:
     ObjectNamer() :
         anonBlockCounter(0)
     { }
 
+    virtual std::string primBlockName(Block* b);
     virtual std::string getName(Block* b, Module* ctxt);
     virtual std::string getName(InputPort* p, Module* ctxt);
     virtual std::string getName(OutputPort* p, Module* ctxt);
+
+    virtual void reserveName(std::string name, Module* ctxt) {
+        _existingNames.insert(make_pair(ctxt, name));
+    }
 };
 
 }

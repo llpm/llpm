@@ -41,7 +41,7 @@ public:
     virtual bool hasState() const { return false; }
 
     DEF_GET(dout);
-    DEF_GET(value);
+    DEF_GET_NP(value);
     DEF_SET_NONULL(value);
 };
 
