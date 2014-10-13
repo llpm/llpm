@@ -442,8 +442,8 @@ void LLVMFunction::build(llvm::Function* func) {
     connect(_entry->dout(), entryPort);
 
     // Connect input/output
-    definePort(_entry->din());
-    definePort(_exit->dout());
+    addInputPort(_entry->din());
+    addOutputPort(_exit->dout());
 }
 
 void LLVMFunction::connectReturn(OutputPort* retPort) {

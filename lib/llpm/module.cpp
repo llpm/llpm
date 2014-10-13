@@ -3,6 +3,8 @@
 #include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
 
+#include <boost/format.hpp>
+
 namespace llpm {
 
 ContainerModule::~ContainerModule() {
@@ -14,11 +16,17 @@ ContainerModule::~ContainerModule() {
 }
 
 void ContainerModule::addInputPort(InputPort* ip) {
-    _inputMap.insert(make_pair(ip, Identity(ip->type())));
+    auto dummy = new Identity(ip->type());
+    _inputMap.insert(make_pair(ip, dummy));
+    definePort(dummy->din());
+    dummy->name(str(boost::format("input%1%") % inputs().size()));
 }
 
 void ContainerModule::addOutputPort(OutputPort* op) {
-    _outputMap.insert(make_pair(op, Identity(op->type())));
+    auto dummy = new Identity(op->type());
+    _outputMap.insert(make_pair(op, dummy));
+    definePort(dummy->dout());
+    dummy->name(str(boost::format("output%1%") % outputs().size()));
 }
 
 bool ContainerModule::refine(ConnectionDB& conns) const

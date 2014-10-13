@@ -30,12 +30,13 @@ public:
     DEF_GET_NP(name);
     DEF_GET_NP(design);
 
-
-
     virtual bool hasState() const = 0;
     virtual bool isPure() const {
         return !hasState();
     }
+
+    // For opaque modules, this may return NULL
+    virtual ConnectionDB* conns() = 0;
 
     virtual void blocks(vector<Block*>&) const = 0;
     virtual void submodules(vector<Module*>&) const = 0;
@@ -81,8 +82,8 @@ class ContainerModule : public MutableModule {
     // Each container module input and output port have a pass
     // through block and a mapping to the internal output and input
     // port on the corresponding pass through block.
-    map<InputPort*, Identity> _inputMap;
-    map<OutputPort*, Identity> _outputMap;
+    map<InputPort*, Identity*> _inputMap;
+    map<OutputPort*, Identity*> _outputMap;
 
     // Schedule
     Schedule* _schedule;
@@ -112,14 +113,14 @@ public:
     const OutputPort* getDriver(InputPort* ip) const {
         auto f = _inputMap.find(ip);
         assert(f != _inputMap.end());
-        const OutputPort* internalIPDriver = f->second.dout();
+        const OutputPort* internalIPDriver = f->second->dout();
         return internalIPDriver;
     }
 
     const InputPort* getSink(OutputPort* op) const {
         auto f = _outputMap.find(op);
         assert(f != _outputMap.end());
-        const InputPort* internalOPSink = f->second.din();
+        const InputPort* internalOPSink = f->second->din();
         return internalOPSink;
     }
 
