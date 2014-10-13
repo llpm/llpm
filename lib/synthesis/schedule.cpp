@@ -24,9 +24,10 @@ void Schedule::buildBaseSchedule() {
     _module->blocks(blocks);
     _module->submodules(blocks);
 
+    unsigned idCounter = 1;
     for(Block* b: blocks) {
-        StaticRegion* sr = new StaticRegion(this, b);
-        _regions.insert(sr);
+        StaticRegion* sr = new StaticRegion(idCounter++, this, b);
+        _regions.push_back(sr);
     }
 
     buildBlockMap();

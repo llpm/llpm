@@ -7,6 +7,7 @@
 #include <frontends/llvm/objects.hpp>
 #include <synthesis/object_namer.hpp>
 #include <refinery/priority_collection.hpp>
+#include <synthesis/schedule.hpp>
 
 // fwd def
 namespace llvm {
@@ -22,12 +23,39 @@ public:
         ObjectNamer& _namer;
         Module* _ctxt;
 
+        std::map<OutputPort*, std::string> _mapping;
+
     public:
         Context(std::ostream& os, Module* ctxt) :
             _os(os),
             _namer(ctxt->design().namer()),
-            _ctxt(ctxt)
+            _ctxt(ctxt),
+            layer(NULL)
         { }
+
+        StaticRegion::Layer* layer;
+        unsigned layerNum;
+        StaticRegion* region;
+
+        void updateMapping(OutputPort* op, std::string name) {
+            _mapping[op] = name;
+        }
+
+        const std::string& findMapping(OutputPort* op) {
+            assert(op != NULL);
+            std::string& n = _mapping[op];
+            if (n == "")
+                throw InvalidArgument("Port does not have a mapping!");
+            return n;
+        }
+
+        void removeMapping(OutputPort* op) {
+            assert(op != NULL);
+            auto f = _mapping.find(op);
+            if (f == _mapping.end())
+                throw InvalidArgument("Cannot remove mapping that does not exist!");
+            _mapping.erase(f);
+        }
 
         template<typename C>
         std::string name(C c) {
@@ -45,6 +73,9 @@ public:
         }
 
         DEF_GET_NP(namer);
+        Module* module() const {
+            return _ctxt;
+        }
     };
 
 

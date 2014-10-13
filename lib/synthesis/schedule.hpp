@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <set>
+#include <list>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -35,7 +36,7 @@ public:
         DEF_GET_NP(blocks);
 
         bool contains(Block* b) const {
-            return _blocks.count(b) > 0;
+            return _blocks.find(b) != _blocks.end();
         }
     };
 
@@ -46,14 +47,18 @@ public:
     };
 
 private:
+    unsigned _id;
     Schedule*   _schedule;
     set<Block*> _blocks;
 
 public:
-    StaticRegion(Schedule* s, Block* b):
+    StaticRegion(unsigned id, Schedule* s, Block* b):
+        _id(id),
         _schedule(s) {
         _blocks.insert(b);
     }
+
+    DEF_GET_NP(id);
 
     void add(StaticRegion& a) {
         _blocks.insert(a._blocks.begin(), a._blocks.end());
@@ -78,7 +83,7 @@ public:
  */
 class Schedule {
     MutableModule* _module;
-    set<StaticRegion*> _regions;
+    list<StaticRegion*> _regions;
     unordered_map<Block*, StaticRegion*> _blockMap;
 
     void buildBlockMap();
@@ -91,7 +96,7 @@ public:
 
     void buildBaseSchedule();
 
-    const set<StaticRegion*>& regions() {
+    const list<StaticRegion*>& regions() {
         return _regions;
     }
 

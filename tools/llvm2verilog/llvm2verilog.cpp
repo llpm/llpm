@@ -33,9 +33,13 @@ int main(int argc, const char** argv) {
         StdLibStops(sc);
 
         for(auto&& m: modules) {
+            printf("Module inputs %lu, outputs %lu before refinement\n",
+                   m->inputs().size(), m->outputs().size());
             // Refine each module until it cannot be further refined
             unsigned passes = m->internalRefine(&sc);
             printf("%u refinement passes on '%s'\n", passes, m->name().c_str());
+            printf("Module inputs %lu, outputs %lu after refinement\n",
+                   m->inputs().size(), m->outputs().size());
 
             vector<Block*> blocks;
             m->blocks(blocks);
