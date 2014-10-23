@@ -1,3 +1,6 @@
 [submodule "llvm"]
 	path = llvm
 	url = http://llvm.org/git/llvm.git
+[submodule "ext/verilator"]
+	path = ext/verilator
+	url = http://git.veripool.org/git/verilator
