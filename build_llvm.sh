@@ -9,7 +9,10 @@ insdir=`pwd`
 cd ../../
 mkdir -p llvm_build
 cd llvm_build
-../llvm/configure --prefix=$insdir --enable-libcpp --enable-cxx11 --enable-keep-symbols --enable-jit --enable-doxygen
+../ext/llvm/configure --prefix=$insdir \
+    --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols \
+    --enable-cxx11 --enable-libcpp \
+    --enable-jit --enable-doxygen
 make -j16
 make install
 cd ..
