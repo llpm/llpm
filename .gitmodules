@@ -4,3 +4,6 @@
 [submodule "ext/verilator"]
 	path = ext/verilator
 	url = http://git.veripool.org/git/verilator
+[submodule "ext/clang"]
+	path = ext/clang
+	url = git@github.com:llvm-mirror/clang.git
