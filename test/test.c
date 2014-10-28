@@ -9,6 +9,16 @@ int add(int a, int b) {
     return a + b;
 }
 
+struct TestStruct {
+    unsigned int a;
+    unsigned long b;
+};
+
+struct TestStruct ts(struct TestStruct r) {
+    r.a += 1;
+    return r;
+}
+
 long foo(long a, unsigned n) {
     unsigned i;
     for (i=0; i<n; i++) {

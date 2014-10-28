@@ -110,8 +110,8 @@ protected:
     OutputPort _dout;
 
     Function(llvm::Type* input, llvm::Type* output) :
-        _din(this, input),
-        _dout(this, output)
+        _din(this, input, "x"),
+        _dout(this, output, "a")
     { }
 
     virtual ~Function() { }

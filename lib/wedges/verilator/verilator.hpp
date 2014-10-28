@@ -11,6 +11,8 @@ namespace llpm {
 class VerilatorWedge {
     VerilogSynthesizer* _verilog; 
 
+    void writeHeader(FileSet::File*, Module*);
+
 public:
     VerilatorWedge(Design& design) :
         _verilog(new VerilogSynthesizer(design))

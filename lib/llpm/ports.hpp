@@ -12,10 +12,14 @@ class Port {
 protected:
     Block* _owner;
     llvm::Type* _type;
+    std::string _name;
 
-    Port(Block* owner, llvm::Type* type) :
+    Port(Block* owner,
+         llvm::Type* type,
+         std::string name) :
         _owner(owner),
-        _type(type)
+        _type(type),
+        _name(name)
     { }
 
     virtual ~Port() { }
@@ -28,17 +32,19 @@ public:
     Block* owner() const {
         return _owner;
     }
+
+    DEF_GET_NP(name);
 };
 
 class InputPort : public Port {
 public:
-    InputPort(Block* owner, llvm::Type* type);
+    InputPort(Block* owner, llvm::Type* type, std::string name = "");
     ~InputPort();
 };
 
 class OutputPort : public Port {
 public:
-    OutputPort(Block* owner, llvm::Type* type);
+    OutputPort(Block* owner, llvm::Type* type, std::string name = "");
     ~OutputPort();
 };
 

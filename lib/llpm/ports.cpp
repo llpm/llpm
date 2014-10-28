@@ -4,16 +4,16 @@
 
 namespace llpm {
 
-InputPort::InputPort(Block* owner, llvm::Type* type) :
-    Port(owner, type)
+InputPort::InputPort(Block* owner, llvm::Type* type, std::string name) :
+    Port(owner, type, name)
 {
     owner->definePort(this);
 }
 
 InputPort::~InputPort() { }
 
-OutputPort::OutputPort(Block* owner, llvm::Type* type) :
-    Port(owner, type)
+OutputPort::OutputPort(Block* owner, llvm::Type* type, std::string name) :
+    Port(owner, type, name)
 {
     owner->definePort(this);
 }
