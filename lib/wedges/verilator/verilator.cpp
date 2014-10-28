@@ -5,7 +5,7 @@
 namespace llpm {
 
 static const char* globalOpts =
-    "--cc --compiler clang";
+    "--cc --compiler clang --stats -O3";
 
 void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     // Write verilog module

@@ -121,6 +121,10 @@ public:
             } else {
                 throw SysError("opening working directory '" + _dfltDir + "'");
             }
+        } else {
+            if (!S_ISDIR(s.st_mode)) {
+                throw InvalidCall("Working directory does not appear to be a directory!");
+            }
         }
     }
 
