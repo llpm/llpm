@@ -9,6 +9,8 @@
 #include <refinery/refinery.hpp>
 #include <backends/verilog/synthesize.hpp>
 
+#include <wedges/verilator/verilator.hpp>
+
 using namespace llpm;
 
 int main(int argc, const char** argv) {
@@ -59,12 +61,12 @@ int main(int argc, const char** argv) {
         }
 
         VerilogSynthesizer vs(d);
+        VerilatorWedge vw(&vs);
 
+        FileSet fs(true, dirName, true);
         for (Module* mod: d.modules()) {
-            std::ofstream f(dirName + "/" + mod->name() + ".v");
-            vs.writeModule(f, mod);
+            vw.writeModule(fs, mod);
         }
-
 
     } catch (Exception& e) {
         fprintf(stderr, "Caught exception!\n\t%s\n", e.msg.c_str());

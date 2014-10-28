@@ -1,6 +1,8 @@
 #ifndef __LLPM_VERILOG_SYNTHESIZE_HPP__
 #define __LLPM_VERILOG_SYNTHESIZE_HPP__
 
+#include <util/files.hpp>
+
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
 #include <refinery/refinery.hpp>
@@ -105,6 +107,7 @@ public:
 
     DEF_GET_NP(printers);
 
+    void writeModule(FileSet::File* fn, Module* mod);
     void writeModule(std::ostream& os, Module* mod);
     void write(std::ostream& os);
 

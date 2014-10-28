@@ -61,6 +61,11 @@ static const std::string header = R"STRING(
         end
 )STRING";
 
+void VerilogSynthesizer::writeModule(FileSet::File* f, Module* mod) {
+    writeModule(f->openStream(), mod);
+    f->close();
+}
+
 void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     Context ctxt(os, mod);
 

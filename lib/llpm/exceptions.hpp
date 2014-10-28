@@ -3,6 +3,7 @@
 
 #include <string>
 #include <exception>
+#include <errno.h>
 
 namespace llpm {
 
@@ -49,6 +50,12 @@ class IncompatibleException: public Exception {
 public:
     IncompatibleException(std::string msg = "") :
         Exception("An incompatibility was encountered." + msg) { }
+};
+
+class SysError: public Exception {
+public:
+    SysError(std::string action = "doing something unspecified") :
+        Exception("Error while " + action + ": " + std::string(strerror(errno))) { } 
 };
 
 } // namespace llpm
