@@ -12,6 +12,7 @@ class VerilatorWedge {
     VerilogSynthesizer* _verilog; 
 
     void writeHeader(FileSet::File*, Module*);
+    void writeImplementation(FileSet::File*, Module*);
 
 public:
     VerilatorWedge(Design& design) :

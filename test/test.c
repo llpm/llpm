@@ -1,5 +1,9 @@
 #include <stdio.h>
 
+long simple(long a, long b) {
+    return a + b;
+}
+
 long add(long a, long b) {
     if (a < 0)
         a *= -1;

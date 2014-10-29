@@ -1,5 +1,8 @@
 #include "verilator.hpp"
 
+#include <dirent.h>
+#include <sys/types.h>
+
 #include <llvm/IR/DerivedTypes.h>
 
 #include <boost/format.hpp>
@@ -12,6 +15,33 @@ namespace llpm {
 static const char* globalOpts =
     "--cc --compiler clang --stats -O3";
 
+static const char* verilatedCppOpts = 
+    "-DVL_PRINTF=printf -DVM_TRACE=0 -DVM_COVERAGE=0 -fbracket-depth=4096";
+
+// Helper function to get directory entries
+static int getdir (std::string dir, std::vector<std::string> &files)
+{
+    DIR *dp;
+    struct dirent *dirp;
+    if((dp  = opendir(dir.c_str())) == NULL) {
+        cout << "Error(" << errno << ") opening " << dir << endl;
+        return errno;
+    }
+
+    while ((dirp = readdir(dp)) != NULL) {
+        files.push_back(string(dirp->d_name));
+    }
+    closedir(dp);
+    return 0;
+}
+
+static void run(std::string command) {
+    printf("Running: %s\n", command.c_str());
+    int rc = system(command.c_str());
+    if (rc == -1)
+        throw SysError("running verilator");
+}
+
 void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     // Write verilog module
     FileSet::File* vModFile = fileset.create(mod->name() + ".v");
@@ -19,22 +49,79 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
 
     // Run Verilator, creating several files
     std::string tmpdir = fileset.tmpdir();
-    std::string command = str(
+    run(str(
         boost::format("%1%/verilator/bin/verilator_bin %2% --Mdir %3% %4%")
             % Directories::executablePath()
             % globalOpts
             % tmpdir
             % vModFile->name()
-            );
-    printf("Running: %s\n", command.c_str());
-    int rc = system(command.c_str());
-    if (rc == -1)
-        throw SysError("running verilator");
+            ));
 
+    // Don't need the verilog output anymore
     vModFile->erase();
+
+    std::list<FileSet::File*> cppFiles;
+
+
+    // Copy in some of the verilator outputs
+    std::vector<std::string> verilatorOutputs;
+    int rc = getdir(tmpdir, verilatorOutputs);
+    assert(rc == 0);
+    std::list<FileSet::File*> verilatedHppFiles;
+    for (auto f: verilatorOutputs) {
+        auto ext = f.substr(f.find_last_of("."));
+        if (ext == ".cpp") {
+            auto cppFile = fileset.copy(tmpdir + "/" + f);
+            cppFiles.push_back(cppFile);
+        }
+        if (ext == ".h") {
+            auto verilatedHpp = fileset.copy(tmpdir + "/" + f);
+            verilatedHppFiles.push_back(verilatedHpp);
+        }
+    }
+
+    // Copy in some of the verilator globals
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated.h"));
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilatedos.h"));
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_config.h"));
 
     FileSet::File* hpp = fileset.create(mod->name() + ".hpp");
     writeHeader(hpp, mod);
+    FileSet::File* cpp = fileset.create(mod->name() + ".cpp");
+    writeImplementation(cpp, mod);
+    cppFiles.push_back(cpp);
+
+    // Run clang++ on wedge, compiling to llvm
+    std::list<FileSet::File*> objFiles;
+    for (auto f: cppFiles) {
+        FileSet::File* objFile = f->deriveExt(".bc");
+        run(str(
+            boost::format("%1%/llvm/bin/clang++ -c -emit-llvm -O0 -o %2% %3% %4%")
+                % Directories::executablePath()
+                % objFile->name()
+                % f->name()
+                % verilatedCppOpts
+                ));
+        objFiles.push_back(objFile);
+    }
+
+    FileSet::File* wedgeBC = fileset.create(mod->name() + "_verilator.bc");
+    string fileList = "";
+    for (auto f: objFiles)
+        fileList += f->name() + " ";
+    run(str(
+        boost::format("%1%/llvm/bin/llvm-link -o %2% %3%")
+            % Directories::executablePath()
+            % wedgeBC->name()
+            % fileList));
+    
+    // Delete unnecessary files
+    fileset.erase(cppFiles);
+    fileset.erase(verilatedHppFiles);
+    fileset.erase(objFiles);
 }
 
 static const std::string HppHeader = R"STRING(
@@ -43,8 +130,6 @@ static const std::string HppHeader = R"STRING(
  *  DO NOT MODIFY MANUALLY!
  *  Manual changes will be overwritten.
  ******/
-
-#include <stdint.h>
 
 )STRING";
 
@@ -102,6 +187,10 @@ std::string typeSig(llvm::Type* type, bool pointerize) {
 void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     ostream& os = f->openStream();
     os << HppHeader;
+    os << "#ifndef __MOD_" << mod->name() << "_LLPM_WEDGE__\n";
+    os << "#define __MOD_" << mod->name() << "_LLPM_WEDGE__\n\n";
+
+    os << "#include <stdint.h>\n\n";
 
     os << "// Forward declaration for ugly verilator class\n";
     os << "class V" << mod->name() << ";\n";
@@ -144,12 +233,49 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
 
 
     os << "    // Simulation run control\n"
+       << "    void reset();\n"
        << "    void run(unsigned cycles = 1);\n";
 
 
     os << "\nprivate:\n";
     os << "    V" << mod->name() << "* simulator;\n";
-    os << "};\n\n";
+    os << "    uint64_t cycleCount;\n";
+    os << "};\n";
+
+    os << "\n"
+       << "#endif // __MOD_" << mod->name() << "_LLPM_WEDGE__\n\n";
+
+    f->close();
+}
+
+void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
+    ostream& os = f->openStream();
+    os << HppHeader;
+
+    os << "#include \"" << mod->name() << ".hpp\"\n"
+       << "#include \"V" << mod->name() << ".h\"\n"
+       << "\n";
+
+    os << "void " << mod->name() << "::run(unsigned cycles) {"
+       << R"STRING(
+    for (unsigned i=0; i<cycles; i++) {
+        simulator->clk = 0;
+        simulator->eval();
+        simulator->clk = 1;
+        simulator->eval();
+        this->cycleCount += 1;
+    }
+}
+)STRING";
+
+    os << "void " << mod->name() << "::reset() {"
+       << R"STRING(
+    simulator->resetn = 0;
+    this->run(5); // Five cycle reset -- totally arbitrary
+    simulator->resetn = 1;
+    this->run(5); // Five cycles after reset -- totally arbitrary
+}
+)STRING";
 
     f->close();
 }

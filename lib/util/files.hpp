@@ -39,6 +39,10 @@ public:
     public:
         DEF_GET_NP(name);
 
+        std::string baseName() {
+            return _name.substr(_name.find_last_of("/")+1);
+        }
+
         FILE* openFile(const char* mode) {
             if (_stream.is_open()) {
                 throw InvalidCall("Cannot open FILE* while file has an ofstream open!");
@@ -70,6 +74,11 @@ public:
 
         void erase() {
             _fileset.erase(this);
+        }
+
+        // Derive a new file with ext
+        File* deriveExt(std::string ext) {
+            return _fileset.create(this->baseName() + ext);
         }
     };
 
@@ -152,6 +161,39 @@ public:
             unlink(f->name().c_str());
             delete f;
         }
+    }
+
+    template<typename Container>
+    void erase(Container c) {
+        for (auto&& f: c) {
+            this->erase(f);
+        }
+    }
+
+    bool exists(std::string fn) {
+        fn = _dfltDir + "/" + fn;
+        struct stat s;
+        int rc = stat(_dfltDir.c_str(), &s);
+        if (rc == ENOENT)
+            return false;
+        return true;
+    }
+
+    File* copy(std::string fn, std::string newName = "") {
+        if (newName == "") {
+            auto loc = fn.find_last_of("/");
+            if (loc == std::string::npos)
+                newName = fn;
+            else
+                newName = fn.substr(loc+1);
+        }
+        auto dst = _dfltDir + "/" + newName;
+        if (exists(newName))
+            unlink(dst.c_str());
+        int rc = link(fn.c_str(), dst.c_str());
+        if (rc != 0)
+            throw SysError("Copying file to working set");
+        return create(newName);
     }
 };
 
