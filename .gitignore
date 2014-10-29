@@ -1,12 +1,19 @@
 # Binary outputs
 /bin
 
+# Working directory
+/working
+
 # Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
 *.pyc
+
+# LLVM bitcode object/disassembled files
+*.bc
+*.ll
 
 # Compiled Dynamic libraries
 *.so

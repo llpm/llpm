@@ -12,11 +12,11 @@
 
 namespace llpm {
 
-static const char* globalOpts =
-    "--cc --compiler clang --stats -O3";
+static const char* verilatorGlobalOpts =
+    "--cc --compiler clang --stats -O3 --trace";
 
 static const char* verilatedCppOpts = 
-    "-DVL_PRINTF=printf -DVM_TRACE=0 -DVM_COVERAGE=0 -fbracket-depth=4096";
+    "-DVL_PRINTF=printf -DVM_TRACE=1 -DVM_COVERAGE=0 -fbracket-depth=4096";
 
 // Helper function to get directory entries
 static int getdir (std::string dir, std::vector<std::string> &files)
@@ -52,7 +52,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     run(str(
         boost::format("%1%/verilator/bin/verilator_bin %2% --Mdir %3% %4%")
             % Directories::executablePath()
-            % globalOpts
+            % verilatorGlobalOpts
             % tmpdir
             % vModFile->name()
             ));
@@ -87,6 +87,18 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilatedos.h"));
     verilatedHppFiles.push_back(
         fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_config.h"));
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_vcd_c.h"));
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_imp.h"));
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_heavy.h"));
+    verilatedHppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_syms.h"));
+    cppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated.cpp"));
+    cppFiles.push_back(
+        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_vcd_c.cpp"));
 
     FileSet::File* hpp = fileset.create(mod->name() + ".hpp");
     writeHeader(hpp, mod);
@@ -270,6 +282,10 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
     os << "#include \"" << mod->name() << ".hpp\"\n"
        << "#include \"V" << mod->name() << ".h\"\n"
        << "\n";
+
+    os << mod->name() << "::" << mod->name() << "() {\n"
+       << "    simulator = new V" << mod->name() << "();\n"
+       << "};\n";
 
     os << "void " << mod->name() << "::run(unsigned cycles) {"
        << R"STRING(

@@ -51,12 +51,12 @@ static const std::string header = R"STRING(
         always@(posedge clk, negedge resetn)\
         begin\
             if (resetn)\
-                V_OUT <= 1'b0;\
+                V_OUT``_reg <= 1'b0;\
             else begin\
                 if (!BP_IN)\
-                    V_OUT <= 1'b0;\
+                    V_OUT``_reg <= 1'b0;\
                 if (V_IN)\
-                    V_OUT <= 1'b1;\
+                    V_OUT``_reg <= 1'b1;\
             end\
         end
 )STRING";
