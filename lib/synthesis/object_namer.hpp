@@ -28,9 +28,9 @@ public:
     { }
 
     virtual std::string primBlockName(Block* b);
-    virtual std::string getName(Block* b, Module* ctxt);
-    virtual std::string getName(InputPort* p, Module* ctxt);
-    virtual std::string getName(OutputPort* p, Module* ctxt);
+    virtual std::string getName(Block* b, Module* ctxt, bool ignore=false);
+    virtual std::string getName(InputPort* p, Module* ctxt, bool io=false);
+    virtual std::string getName(OutputPort* p, Module* ctxt, bool io=false);
 
     virtual void reserveName(std::string name, Module* ctxt) {
         _existingNames.insert(make_pair(ctxt, name));

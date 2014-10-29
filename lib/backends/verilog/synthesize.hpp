@@ -57,11 +57,13 @@ public:
             if (f == _mapping.end())
                 throw InvalidArgument("Cannot remove mapping that does not exist!");
             _mapping.erase(f);
+
         }
 
+
         template<typename C>
-        std::string name(C c) {
-            return _namer.getName(c, _ctxt);
+        std::string name(C c, bool io = false) {
+            return _namer.getName(c, _ctxt, io);
         }
 
         template<typename T>

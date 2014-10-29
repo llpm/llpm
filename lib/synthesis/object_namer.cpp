@@ -39,39 +39,49 @@ std::string ObjectNamer::primBlockName(Block* b) {
     return base;
 }
 
-std::string ObjectNamer::getName(Block* b, Module* ctxt) {
+std::string ObjectNamer::getName(Block* b, Module* ctxt, bool ignore) {
     std::string base = primBlockName(b);
     return addContext(base, b, ctxt);
 }
 
-std::string ObjectNamer::getName(InputPort* p, Module* ctxt) {
+std::string ObjectNamer::getName(InputPort* p, Module* ctxt, bool io) {
     std::string& base = _portNames[p];
     if (base == "") {
-        unsigned count = 0;
-        for (auto&& ip: p->owner()->inputs()) {
-            if (ip == p)
-                break;
-            count++;
+        base = p->name();
+        if (base == "") {
+            unsigned count = 0;
+            for (auto&& ip: p->owner()->inputs()) {
+                if (ip == p)
+                    break;
+                count++;
+            }
+            assert(count < p->owner()->inputs().size());
+            base = str(boost::format("%1%") % count);
         }
-        assert(count < p->owner()->inputs().size());
 
-        base = str(boost::format("%1%_input%2%") % primBlockName(p->owner()) % count);
+        if (!io)
+            base = str(boost::format("%1%_input%2%") % primBlockName(p->owner()) % base);
     }
     return addContext(base, p->owner(), ctxt);
 }
 
-std::string ObjectNamer::getName(OutputPort* p, Module* ctxt) {
+std::string ObjectNamer::getName(OutputPort* p, Module* ctxt, bool io) {
     std::string& base = _portNames[p];
     if (base == "") {
-        unsigned count = 0;
-        for (auto&& op: p->owner()->outputs()) {
-            if (op == p)
-                break;
-            count++;
+        base = p->name();
+        if (base == "") {
+            unsigned count = 0;
+            for (auto&& op: p->owner()->outputs()) {
+                if (op == p)
+                    break;
+                count++;
+            }
+            assert(count < p->owner()->outputs().size());
+            base = str(boost::format("%1%") % count);
         }
-        assert(count < p->owner()->outputs().size());
 
-        base = str(boost::format("%1%_output%2%") % primBlockName(p->owner()) % count);
+        if (!io)
+            base = str(boost::format("%1%_output%2%") % primBlockName(p->owner()) % base);
     }
     return addContext(base, p->owner(), ctxt);
 }

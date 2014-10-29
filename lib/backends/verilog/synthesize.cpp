@@ -86,7 +86,7 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     ctxt.namer().reserveName("resetn", mod);
 
     for (auto&& ip: mod->inputs()) {
-        auto inputName = ctxt.name(ip);
+        auto inputName = ctxt.name(ip, true);
         auto width = bitwidth(ip->type());
         ctxt << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
                 % (width - 1)
@@ -97,7 +97,7 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     }
     ctxt << "\n";
     for (auto&& op: mod->outputs()) {
-        auto outputName = ctxt.name(op);
+        auto outputName = ctxt.name(op, true);
         auto width = bitwidth(op->type());
         ctxt << boost::format("    output [%1%:0] %2%, //Type: %3%\n")
                 % (width - 1)

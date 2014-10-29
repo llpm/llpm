@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int add(int a, int b) {
+long add(long a, long b) {
     if (a < 0)
         a *= -1;
     if (b < 0) {
