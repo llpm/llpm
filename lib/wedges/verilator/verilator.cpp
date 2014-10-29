@@ -133,9 +133,15 @@ static const std::string HppHeader = R"STRING(
 
 )STRING";
 
+std::string argName(int i) {
+    if (i < 0)
+        return "";
+    return str(boost::format("arg%1%") % i);
+}
+
 std::string typeSigPlain(llvm::Type* type, bool pointerize) {
     if (pointerize) {
-        return typeSigPlain(type, false) + "*";
+        return typeSigPlain(type, false) + "* ";
     }
 
     switch (type->getTypeID()) {
@@ -171,17 +177,26 @@ std::string typeSigPlain(llvm::Type* type, bool pointerize) {
     return typestr(type);
 }
 
-std::string typeSig(llvm::Type* type, bool pointerize) {
+std::string typeSig(llvm::Type* type, bool pointerize, bool names) {
     if (type->isStructTy()) {
         llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
         std::string sig = "\n";
         for (auto i: boost::irange<size_t>(0, st->getNumElements())) {
-            sig = sig + "        " + typeSigPlain(st->getContainedType(i), pointerize) 
+            auto arg = names ? (" " + argName(i)) : "";
+            sig = sig + "        " + typeSigPlain(st->getContainedType(i), pointerize) + arg +
                   + (i == (st->getNumElements() - 1) ? "  // " : ", // ") + typestr(st->getContainedType(i)) + "\n";
         }
         return sig;
     }
-    return typeSigPlain(type, pointerize);
+    return typeSigPlain(type, pointerize) + (names ? (" " + argName(0)) : "");
+}
+
+unsigned numArgs(llvm::Type* type) {
+    if (type->isStructTy()) {
+        llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
+        return st->getNumElements();
+    }
+    return 1;
 }
 
 void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
@@ -209,7 +224,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
 
     for (InputPort* ip: mod->inputs()) {
         os << "    // Input port '" << ip->name() << "'\n";
-        auto sig = typeSig(ip->type(), false);
+        auto sig = typeSig(ip->type(), false, false);
         os << boost::format("    bool %1%_nonblock(%2%    );\n")
                     % ip->name()
                     % sig;
@@ -221,7 +236,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
 
     for (OutputPort* op: mod->outputs()) {
         os << "    // Output port '" << op->name() << "'\n";
-        auto sig = typeSig(op->type(), true);
+        auto sig = typeSig(op->type(), true, false);
         os << boost::format("    bool %1%_nonblock(%2%    );\n")
                     % op->name()
                     % sig;
@@ -272,11 +287,163 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
        << R"STRING(
     simulator->resetn = 0;
     this->run(5); // Five cycle reset -- totally arbitrary
+
     simulator->resetn = 1;
+)STRING";
+    for (auto op: mod->outputs()) {
+        os << "    simulator->" << op->name() << "_bp = 1;\n";
+    }
+    os << R"STRING(
     this->run(5); // Five cycles after reset -- totally arbitrary
 }
 )STRING";
 
+
+    // Code for packing inputs
+    for (InputPort* ip: mod->inputs()) {
+        os << "// Input port '" << ip->name() << "'\n";
+        auto sig = typeSig(ip->type(), false, true);
+        os << boost::format("bool %3%::%1%_nonblock(%2%    ) {\n")
+                    % ip->name()
+                    % sig
+                    % mod->name();
+        os << boost::format(
+R"STRING(
+    if ((simulator->%1%_bp & 1) == 1)
+        return false;
+    simulator->%1%_valid = 1;
+)STRING") % ip->name();
+
+        auto type = ip->type();
+        auto args = numArgs(type);
+        if (args == 1) {
+            os << boost::format("    simulator->%1% = arg0;\n")
+                    % ip->name();
+        } else {
+            unsigned numbits = bitwidth(type);
+            unsigned numwords = (numbits + 31) / 32;
+
+            // TODO: I don't think this'll work for oddball structs due to
+            // alignment issues. Should be replaced with something which relies
+            // less on the C++ compiler, I think.
+            
+            os << "    union {\n"
+               << boost::format("        uint32_t arr[%1%];\n") % numwords
+               << "        struct {\n";
+            for (unsigned arg=0; arg<args; arg++) {
+                auto argType = type->getContainedType(arg);
+                auto sig = typeSig(argType, false, false);
+                os << "            " << sig << " " << argName(arg) << ";\n";
+            }
+            os << "        };\n"
+               << "    } arg;\n";
+
+            for (unsigned arg=0; arg<args; arg++) {
+                os << "    arg." << argName(arg) << " = " << argName(arg) << ";\n";
+            }
+
+            os << boost::format("    memcpy(simulator->%1%, arg.arr, %2%);\n")
+                        % ip->name()
+                        % numwords;
+        }
+
+        os << "    this->run(1);\n"
+           << "    return true;\n";
+        os << "}\n";
+
+        os << boost::format("void %3%::%1%(%2%    ) {\n")
+                    % ip->name()
+                    % sig
+                    % mod->name();
+        os << boost::format("    while(!this->%1%_nonblock(") % ip->name();
+        for (unsigned arg=0; arg<args; arg++) {
+            os << argName(arg);
+            if (arg < (args-1))
+                os << ", ";
+        }
+        os << ")) { this->run(1); }\n"
+           << "}\n";
+    }
+
+    // Code for unpacking outputs
+    for (OutputPort* op: mod->outputs()) {
+        os << "// Input port '" << op->name() << "'\n";
+        auto sig = typeSig(op->type(), true, true);
+        os << boost::format("bool %3%::%1%_nonblock(%2%    ) {\n")
+                    % op->name()
+                    % sig
+                    % mod->name();
+        os << boost::format(
+R"STRING(
+    simulator->%1%_bp = 0;
+    bool pulsed = false;
+    if ((simulator->%1%_valid & 1) == 0) {
+        this->run(1);
+        pulsed = true;
+        simulator->%1%_bp = 1;
+        if ((simulator->%1%_valid & 1) == 0) {
+            return false;
+        }
+    }
+)STRING") % op->name();
+
+        auto type = op->type();
+        auto args = numArgs(type);
+        if (args == 1) {
+            os << boost::format("    *arg0 = simulator->%1%;\n")
+                    % op->name();
+        } else {
+            unsigned numbits = bitwidth(type);
+            unsigned numwords = (numbits + 31) / 32;
+
+            // TODO: I don't think this'll work for oddball structs due to
+            // alignment issues. Should be replaced with something which relies
+            // less on the C++ compiler, I think.
+            
+            os << "    union {\n"
+               << boost::format("        uint32_t arr[%1%];\n") % numwords
+               << "        struct {\n";
+            for (unsigned arg=0; arg<args; arg++) {
+                auto argType = type->getContainedType(arg);
+                auto sig = typeSig(argType, false, false);
+                os << "            " << sig << " " << argName(arg) << ";\n";
+            }
+            os << "        };\n"
+               << "    } arg;\n";
+
+            os << boost::format("    memcpy(arg.arr, simulator->%1%, %2%);\n")
+                        % op->name()
+                        % numwords;
+
+            for (unsigned arg=0; arg<args; arg++) {
+                os << "    " << argName(arg) << " = arg." << argName(arg) << ";\n";
+            }
+        }
+
+        os << boost::format(
+R"STRING(
+    if (!pulsed)
+        this->run(1);
+    simulator->%1%_bp = 1;
+    return true;
+}
+)STRING") % op->name();
+
+        os << boost::format("void %3%::%1%(%2%    ) {\n")
+                    % op->name()
+                    % sig
+                    % mod->name();
+        os << boost::format("    while(!this->%1%_nonblock(") % op->name();
+        for (unsigned arg=0; arg<args; arg++) {
+            os << argName(arg);
+            if (arg < (args-1))
+                os << ", ";
+        }
+        os << ")) { }\n"
+           << "}\n";
+    }
+
+    os << "\n";
     f->close();
 }
 
