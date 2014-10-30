@@ -1,7 +1,18 @@
 #include "connection.hpp"
+#include <llpm/block.hpp>
 #include <boost/foreach.hpp>
 
 namespace llpm {
+
+void ConnectionDB::registerBlock(Block* block) {
+    if (_blockUseCounts.find(block) == _blockUseCounts.end()) {
+        _newBlocks.insert(block);
+        block->module(_module);
+    }
+
+    uint64_t& count = _blockUseCounts[block];
+    count += 1;
+}
 
 // TODO -- This is slow. Rewrite w/ an index
 void ConnectionDB::findSinks(const OutputPort* op, std::vector<InputPort*>& out) const
@@ -68,13 +79,16 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     if (_inputRewrites.find(i) != _inputRewrites.end())
         throw InvalidArgument("The input port being connected has been rewritten!");
 
-    _connections.insert(Connection(o, i));
+    bool blacklisted = 
+        _blacklist.count(o->owner()) > 0 || 
+        _blacklist.count(i->owner()) > 0;
+    _connections.insert(Connection(o, i, blacklisted));
     registerBlock(o->owner());
     registerBlock(i->owner());
 }
 
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
-    auto f = _connections.find(Connection(o, i));
+    auto f = _connections.find(Connection(o, i, false));
     if (f != _connections.end())
         _connections.erase(f);
     deregisterBlock(o->owner());

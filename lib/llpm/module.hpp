@@ -51,6 +51,9 @@ public:
     virtual Schedule* schedule() = 0;
     virtual Pipeline* pipeline() = 0;
     virtual void validityCheck() const = 0;
+
+    virtual OutputPort* getDriver(InputPort* ip)  = 0;
+    virtual InputPort* getSink(OutputPort* op) = 0;
 };
 
 // A module which a third party can edit
@@ -93,6 +96,13 @@ protected:
     void addInputPort(InputPort* ip);
     void addOutputPort(OutputPort* op);
 
+    virtual void definePort(InputPort* ip) {
+        assert(false);
+    }
+    virtual void definePort(OutputPort* op) {
+        assert(false);
+    }
+
 public:
     ContainerModule(Design& design, std::string name) :
         MutableModule(design, name),
@@ -110,17 +120,17 @@ public:
 
     virtual void validityCheck() const;
 
-    const OutputPort* getDriver(InputPort* ip) const {
+    OutputPort* getDriver(InputPort* ip) {
         auto f = _inputMap.find(ip);
         assert(f != _inputMap.end());
-        const OutputPort* internalIPDriver = f->second->dout();
+        OutputPort* internalIPDriver = f->second->dout();
         return internalIPDriver;
     }
 
-    const InputPort* getSink(OutputPort* op) const {
+    InputPort* getSink(OutputPort* op) {
         auto f = _outputMap.find(op);
         assert(f != _outputMap.end());
-        const InputPort* internalOPSink = f->second->din();
+        InputPort* internalOPSink = f->second->din();
         return internalOPSink;
     }
 

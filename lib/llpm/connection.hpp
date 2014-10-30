@@ -16,11 +16,13 @@ namespace llpm {
 class Connection {
     OutputPort* _source;
     InputPort* _sink;
+    bool _modIO;
 
 public:
-    Connection(OutputPort* source, InputPort* sink) :
+    Connection(OutputPort* source, InputPort* sink, bool moduleIO) :
         _source(source),
-        _sink(sink)
+        _sink(sink),
+        _modIO(moduleIO)
     { }
 
     Connection() :
@@ -36,6 +38,7 @@ public:
     // DEF_SET_NONULL(source);
     DEF_GET_NP(sink);
     // DEF_SET_NONULL(sink);
+    DEF_GET_NP(modIO); 
 
     bool operator==(const Connection& c) const {
         return c._sink == this->_sink && c._source == this->_source;
@@ -55,20 +58,14 @@ class Module;
 
 class ConnectionDB {
     Module* _module;
-    set<Connection> _connections;
+    std::set<Connection> _connections;
+    std::set<Block*> _blacklist;
     std::unordered_map<Block*, uint64_t> _blockUseCounts;
     std::set<Block*> _newBlocks;
     std::map<const InputPort*, vector<InputPort*> > _inputRewrites;
     std::map<const OutputPort*, OutputPort*> _outputRewrites;
 
-    void registerBlock(Block* block) {
-        if (_blockUseCounts.find(block) == _blockUseCounts.end())
-            _newBlocks.insert(block);
-
-        uint64_t& count = _blockUseCounts[block];
-        count += 1;
-    }
-
+    void registerBlock(Block* block);
     void deregisterBlock(Block* block) {
         uint64_t& count = _blockUseCounts[block];
         assert(count >= 1);
@@ -86,6 +83,10 @@ public:
         return _connections;
     }
 
+    void blacklist(Block* b) {
+        _blacklist.insert(b);
+    }
+
     void readAndClearNewBlocks(std::set<Block*>& nb) {
         nb.clear();
         nb.swap(_newBlocks);
@@ -98,7 +99,7 @@ public:
 
     void findAllBlocks(set<Block*>& blocks) const {
         for (auto pr: _blockUseCounts) {
-            if (pr.second >= 1)
+            if (pr.second >= 1 && _blacklist.count(pr.first) == 0)
                 blocks.insert(pr.first);
         }
     }

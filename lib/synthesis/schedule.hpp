@@ -48,17 +48,25 @@ public:
 
 private:
     unsigned _id;
+    bool _io;
     Schedule*   _schedule;
     set<Block*> _blocks;
 
 public:
-    StaticRegion(unsigned id, Schedule* s, Block* b):
+    StaticRegion(unsigned id, Schedule* s, Block* b, bool io=false):
         _id(id),
+        _io(io),
         _schedule(s) {
         _blocks.insert(b);
     }
 
+    StaticRegion(unsigned id, Schedule* s, bool io=false):
+        _id(id),
+        _io(io),
+        _schedule(s) { }
+
     DEF_GET_NP(id);
+    DEF_GET_NP(io);
 
     void add(StaticRegion& a) {
         _blocks.insert(a._blocks.begin(), a._blocks.end());
@@ -99,6 +107,8 @@ public:
     const list<StaticRegion*>& regions() {
         return _regions;
     }
+
+    StaticRegion* createModuleIORegion();
 
     StaticRegion* findRegion(Block* b) const {
         auto f = _blockMap.find(b);

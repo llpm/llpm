@@ -19,12 +19,18 @@ Schedule::~Schedule() {
     }
 }
 
+StaticRegion* Schedule::createModuleIORegion() {
+    auto sr = new StaticRegion(_regions.size(), this, true);
+    _regions.push_back(sr);
+    return sr;
+}
+
 void Schedule::buildBaseSchedule() {
     vector<Block*> blocks;
     _module->blocks(blocks);
     _module->submodules(blocks);
 
-    unsigned idCounter = 1;
+    unsigned idCounter = _regions.size();
     for(Block* b: blocks) {
         StaticRegion* sr = new StaticRegion(idCounter++, this, b);
         _regions.push_back(sr);

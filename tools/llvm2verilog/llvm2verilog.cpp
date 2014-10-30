@@ -35,6 +35,8 @@ int main(int argc, const char** argv) {
         StdLibStops(sc);
 
         for(auto&& m: modules) {
+            m->validityCheck();
+
             printf("Module inputs %lu, outputs %lu before refinement\n",
                    m->inputs().size(), m->outputs().size());
             // Refine each module until it cannot be further refined

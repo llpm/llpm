@@ -46,10 +46,10 @@ protected:
     friend class InputPort;
     friend class OutputPort;
 
-    void definePort(InputPort* ip) {
+    virtual void definePort(InputPort* ip) {
         _inputs.insert(ip);
     }
-    void definePort(OutputPort* op) {
+    virtual void definePort(OutputPort* op) {
         _outputs.insert(op);
     }
 
@@ -72,10 +72,10 @@ public:
         return _history;
     }
 
-    std::set<InputPort*>&  inputs()  {
+    const std::set<InputPort*>&  inputs()  {
         return _inputs;
     }
-    std::set<OutputPort*>& outputs() {
+    const std::set<OutputPort*>& outputs() {
         return _outputs;
     }
 

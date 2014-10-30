@@ -21,6 +21,7 @@ void Pipeline::buildMinimum() {
     for (const Connection& c: allConns) {
         Block* a = c.source()->owner();
         Block* b = c.sink()->owner();
+        
         StaticRegion* sra = _schedule->findRegion(a);
         StaticRegion* srb = _schedule->findRegion(b);
 

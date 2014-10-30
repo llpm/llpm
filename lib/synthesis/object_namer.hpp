@@ -32,6 +32,8 @@ public:
     virtual std::string getName(InputPort* p, Module* ctxt, bool io=false);
     virtual std::string getName(OutputPort* p, Module* ctxt, bool io=false);
 
+    virtual void assignName(Port* p, Module* ctxt, std::string name);
+
     virtual void reserveName(std::string name, Module* ctxt) {
         _existingNames.insert(make_pair(ctxt, name));
     }

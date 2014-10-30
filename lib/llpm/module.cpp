@@ -17,16 +17,20 @@ ContainerModule::~ContainerModule() {
 
 void ContainerModule::addInputPort(InputPort* ip) {
     auto dummy = new Identity(ip->type());
-    _inputMap.insert(make_pair(ip, dummy));
-    definePort(dummy->din());
+    _inputMap.insert(make_pair(dummy->din(), dummy));
+    _inputs.insert(dummy->din());
     dummy->name(str(boost::format("input%1%_dummy") % inputs().size()));
+    conns()->blacklist(dummy);
+    this->conns()->connect(dummy->dout(), ip);
 }
 
 void ContainerModule::addOutputPort(OutputPort* op) {
     auto dummy = new Identity(op->type());
-    _outputMap.insert(make_pair(op, dummy));
-    definePort(dummy->dout());
+    _outputMap.insert(make_pair(dummy->dout(), dummy));
+    _outputs.insert(dummy->dout());
     dummy->name(str(boost::format("output%1%_dummy") % outputs().size()));
+    conns()->blacklist(dummy);
+    this->conns()->connect(op, dummy->din());
 }
 
 bool ContainerModule::refine(ConnectionDB& conns) const
@@ -66,6 +70,13 @@ unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
 Schedule* ContainerModule::schedule() {
     if (_schedule == NULL) {
         _schedule = new Schedule(this);
+
+        // Add dummy I/O blocks to special IO region
+        for (auto p: _inputMap)
+            _schedule->createModuleIORegion()->add(p.second);
+        for (auto p: _outputMap)
+            _schedule->createModuleIORegion()->add(p.second);
+
         _schedule->buildBaseSchedule();
     }
     return _schedule;
@@ -80,6 +91,14 @@ Pipeline* ContainerModule::pipeline() {
 }
 
 void ContainerModule::validityCheck() const {
+    for (InputPort* ip: _inputs) {
+        assert(_inputMap.count(ip) == 1);
+    }
+
+    for (OutputPort* op: _outputs) {
+        assert(_outputMap.count(op) == 1);
+    }
+
     for (Block* b: _blocks) {
         assert(b->module() == this);
     }

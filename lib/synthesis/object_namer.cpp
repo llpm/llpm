@@ -23,6 +23,11 @@ static std::string addContext(std::string base, Block* b, Module* ctxt) {
     return name;
 }
 
+void ObjectNamer::assignName(Port* p, Module* ctxt, std::string name) {
+    _portNames[p] = name;
+    _existingNames.insert(make_pair(ctxt, name));
+}
+
 std::string ObjectNamer::primBlockName(Block* b) {
     std::string& base = _blockNames[b];
     if (base == "") {

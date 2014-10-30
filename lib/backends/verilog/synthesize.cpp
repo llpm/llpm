@@ -94,6 +94,7 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
                 % typestr(ip->type());
         ctxt << boost::format("    input %1%_valid,\n") % inputName;
         ctxt << boost::format("    output %1%_bp,\n") % inputName;
+
     }
     ctxt << "\n";
     for (auto&& op: mod->outputs()) {
@@ -120,25 +121,60 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
 
     ctxt << "    // Input registers\n";
     for (auto&& ip: mod->inputs()) {
-        if (conns->findSource(ip) == NULL) {
-            // If necessary, create a dummy block for each input
-            Identity* dummy = new Identity(ip->type());
-            conns->connect(dummy->dout(), ip);
-        }
-        OutputPort* dummyOP = conns->findSource(ip);
-        ctxt.updateMapping(dummyOP, ctxt.name(dummyOP) + "_reg");
+        OutputPort* dummyOP = mod->getDriver(ip);
 
         ctxt << boost::format("    `LI_CONTROL(%1%_reg_valid, %1%_valid,\n"
                               "                %1%_reg_bp, %1%_bp,\n"
                               "                %1%_ce);\n")
                     % ctxt.name(ip);
-        ctxt << boost::format("    `DFF(%1%, %2%_reg, %2%, %2%_ce);\n")
+        ctxt << boost::format("    `DFF(%1%, %2%_reg_extern, %2%, %2%_ce);\n")
                     % bitwidth(ip->type())
                     % ctxt.name(ip);
+
+        ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip) + "_reg");
+
+        ctxt << boost::format("    assign %1%_reg_bp = \n")
+                    % ctxt.name(ip);
+
+        bool first = true;
+        vector<InputPort*> sinks;
+        conns->findSinks(dummyOP, sinks);
+        for (auto op: sinks) {
+            auto sinkBlock = op->owner();
+            auto sinkSR = s->findRegion(sinkBlock);
+            if (first)
+                first = false;
+            else
+                ctxt << " |\n";
+            ctxt << boost::format("        sr%1%_bp_out")
+                            % sinkSR->id();
+        }
+        ctxt << ";\n";
     }
     ctxt << "\n";
 
+    for (auto&& op: mod->outputs()) {
+        InputPort* dummyIP = mod->getSink(op);
+        ctxt.namer().assignName(dummyIP, mod, ctxt.name(op));
+        OutputPort* source = conns->findSource(dummyIP);
+        StaticRegion* outputSR = s->findRegion(op->owner());
+        ctxt << boost::format("    assign %1% = %2%_extern;\n")
+                    % ctxt.name(op)
+                    % ctxt.name(source);
+        ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
+                    % ctxt.name(op)
+                    % ctxt.name(source);
+        ctxt << boost::format("    assign sr%2%_bp_out = %1%_bp;\n")
+                    % ctxt.name(op)
+                    % outputSR->id();
+    }
+
+    ctxt << "\n";
+
     for (StaticRegion* region: s->regions()) {
+        if (region->io()) 
+            continue;
+
         ctxt.region = region;
         unsigned regCount = region->id();
         ctxt << "// --- Static region " << regCount << " --- \n\n";
