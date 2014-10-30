@@ -69,12 +69,16 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
         throw InvalidArgument("The input port being connected has been rewritten!");
 
     _connections.insert(Connection(o, i));
+    registerBlock(o->owner());
+    registerBlock(i->owner());
 }
 
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
     auto f = _connections.find(Connection(o, i));
     if (f != _connections.end())
         _connections.erase(f);
+    deregisterBlock(o->owner());
+    deregisterBlock(i->owner());
 }
 
 void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& newPorts) {

@@ -9,6 +9,9 @@
 // fwd def
 namespace llvm {
     class Module;
+    namespace legacy {
+        class FunctionPassManager;
+    }
 }
 
 namespace llpm {
@@ -16,6 +19,7 @@ namespace llpm {
 class LLVMTranslator {
     Design& _design;
     std::auto_ptr < llvm::Module > _llvmModule;
+    llvm::legacy::FunctionPassManager* _pm;
 
 public:
     LLVMTranslator(Design& design);

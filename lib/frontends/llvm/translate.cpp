@@ -1,19 +1,20 @@
 #include "translate.hpp"
 
-#include <llvm/PassManager.h>
 #include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/IR/LegacyPassManager.h>
+
+#include <llvm/Transforms/Scalar.h>
 
 #include <frontends/llvm/library.hpp>
 
 namespace llpm {
 
 LLVMTranslator::LLVMTranslator(Design& design) :
-    _design(design)
-{
+    _design(design) {
     design.refinery().appendLibrary(new LLVMBaseLibrary());
 }
 
@@ -25,6 +26,7 @@ void LLVMTranslator::readBitcode(std::string fileName) {
     initializeCore(*Registry);
     initializeAnalysis(*Registry);
     // initializeBasicCallGraphPass(*Registry);
+    initializeScalarOpts(*Registry);
 
     llvm::SMDiagnostic Err;
     llvm::Module *mod = NULL;
@@ -35,6 +37,9 @@ void LLVMTranslator::readBitcode(std::string fileName) {
             Err.print("LLVMTranslator::readBitcode", llvm::errs());
             throw Exception("Could not parse module\n");
     }
+
+    _pm = new llvm::legacy::FunctionPassManager(mod);
+    _pm->add(llvm::createInstructionNamerPass());
 }
 
 LLVMFunction* LLVMTranslator::translate(llvm::Function* func) {
@@ -47,6 +52,7 @@ LLVMFunction* LLVMTranslator::translate(std::string fnName) {
     if (this->_llvmModule.get() == NULL)
         throw InvalidCall("Must load a module into LLVMTranslator before translating");
     llvm::Function* func = this->_llvmModule->getFunction(fnName);
+    _pm->run(*func);
     if (func == NULL)
         throw InvalidArgument("Could not find function: " + fnName);
     return translate(func);

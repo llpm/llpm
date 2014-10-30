@@ -31,8 +31,18 @@ unsigned Refinery::refine(std::vector<Block*> crude,
             const vector<Refiner*>& possible_refiners = _refiners(c);
 
             for(auto& r: possible_refiners) {
+                conns.clearNewBlocks();
                 if(r->refine(c, conns)) {
                     refinedBlocks.insert(c);
+                    assert(conns.isUsed(c) == false);
+                    std::set<Block*> newBlocks;
+                    conns.readAndClearNewBlocks(newBlocks);
+                    for (Block* nb: newBlocks) {
+                        assert(nb != c);
+                        assert(conns.isUsed(nb));
+                        assert(nb->history().src() == BlockHistory::Unknown);
+                        nb->history().setRefinement(c);
+                    }
                     break;
                 }
             }

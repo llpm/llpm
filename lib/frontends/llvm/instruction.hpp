@@ -19,7 +19,11 @@ protected:
 
     LLVMInstruction(llvm::Instruction* ins) :
         _ins(ins)
-    { }
+    {
+        if (ins->hasName())
+            this->name(ins->getName());
+        printf("Ins: %s\n", ins->getName().str().c_str());
+    }
 
 public:
     DEF_GET_NP(ins);

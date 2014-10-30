@@ -2,6 +2,8 @@
 
 #include <frontends/llvm/instruction.hpp>
 
+#include <boost/format.hpp>
+
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/CFG.h>
@@ -44,6 +46,34 @@ static void checkValue(llvm::Value* operand) {
     throw InvalidArgument("I don't know how to deal with value type!");
 }
 
+
+std::string getBasicBlockName(llvm::BasicBlock* bb) {
+    if (bb->hasName()) {
+        return bb->getName();
+    } else {
+        auto& bbList = bb->getParent()->getBasicBlockList();
+        size_t ctr = 0;
+        for (auto& bi: bbList) {
+            ctr += 1;
+            if (&bi == bb)
+                break;
+        }
+        return str(boost::format("bb%1%") % ctr);
+    }
+}
+
+LLVMEntry::LLVMEntry(llvm::Function* func, const std::vector<llvm::Value*>& map) :
+    StructTwiddler(FunctionType(func), ValueMap(func, map)) {
+    this->name(func->getName().str() + "_entry");
+}
+
+LLVMExit::LLVMExit(llvm::Function* func, unsigned N) :
+    Select(N, llvm::StructType::get(func->getContext(),
+                                    vector<llvm::Type*>(1, func->getReturnType()) )) {
+    this->dout()->type()->dump(); printf("\n");
+    this->name(func->getName().str() + "_exit");
+}
+
 LLVMBasicBlock::LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
     _function(f),
     _basicBlock(bb),
@@ -51,6 +81,8 @@ LLVMBasicBlock::LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
     _numInputs(0),
     _numOutputs(0)
 {
+    this->name(getBasicBlockName(bb));
+
     llvm::TerminatorInst* ti = _basicBlock->getTerminator();
     if (ti == NULL) {
         throw InvalidArgument("A basic block does not appear to have a terminator!");
@@ -224,7 +256,10 @@ LLVMControl::LLVMControl(LLVMFunction* func, LLVMBasicBlock* bb) :
     _basicBlock(bb),
     _bbInput(this, bb->input()->type()),
     _bbOutput(this, bb->output()->type())
-{  }
+{
+    if (bb->name() != "")
+        this->name(bb->name() + "_control");
+}
 
 void LLVMControl::construct() {
     llvm::BasicBlock* bb = _basicBlock->basicBlock();
@@ -428,7 +463,9 @@ void LLVMFunction::build(llvm::Function* func) {
     }
 
     assert(_returnPorts.size() > 0);
-    _exit = new LLVMExit(_returnPorts.size(), _returnPorts[0]->type());
+    func->getReturnType()->dump(); printf("\n");
+    _returnPorts[0]->type()->dump(); printf("\n");
+    _exit = new LLVMExit(func, _returnPorts.size());
     for (size_t i=0; i<_returnPorts.size(); i++) {
         connect(_returnPorts[i], _exit->din(i));
     }

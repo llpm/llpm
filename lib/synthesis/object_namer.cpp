@@ -27,14 +27,20 @@ std::string ObjectNamer::primBlockName(Block* b) {
     std::string& base = _blockNames[b];
     if (base == "") {
         base = b->name();
-        if (base == "")
-            base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
+        if (base == "") {
+            if (b->history().src() == BlockHistory::Refinement) {
+                base = primBlockName(b->history().srcBlock()) + "p";
+            } else {
+                base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
+            }
+        }
 
         size_t ctr = 0;
         string orig_base = base;
         while (_existingNames.count(std::make_pair(b->module(), base))) {
             base = str(boost::format("%1%_%2%") % orig_base % ++ctr);
         }
+        _existingNames.insert(make_pair(b->module(), base));
     }
     return base;
 }

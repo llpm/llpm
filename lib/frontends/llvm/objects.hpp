@@ -16,15 +16,13 @@ class LLVMEntry: public StructTwiddler {
     static llvm::Type* FunctionType(llvm::Function*);
     static std::vector<unsigned> ValueMap(llvm::Function*, const std::vector<llvm::Value*>&);
 public:
-    LLVMEntry(llvm::Function* func, const std::vector<llvm::Value*>& map) :
-        StructTwiddler(FunctionType(func), ValueMap(func, map)) { }
+    LLVMEntry(llvm::Function* func, const std::vector<llvm::Value*>& map);
     virtual ~LLVMEntry() { }
 };
 
 class LLVMExit: public Select {
 public:
-    LLVMExit(unsigned N, llvm::Type* type) :
-        Select(N, type) { }
+    LLVMExit(llvm::Function* func, unsigned N);
     virtual ~LLVMExit() { }
 };
 

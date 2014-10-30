@@ -19,14 +19,14 @@ void ContainerModule::addInputPort(InputPort* ip) {
     auto dummy = new Identity(ip->type());
     _inputMap.insert(make_pair(ip, dummy));
     definePort(dummy->din());
-    dummy->name(str(boost::format("input%1%") % inputs().size()));
+    dummy->name(str(boost::format("input%1%_dummy") % inputs().size()));
 }
 
 void ContainerModule::addOutputPort(OutputPort* op) {
     auto dummy = new Identity(op->type());
     _outputMap.insert(make_pair(op, dummy));
     definePort(dummy->dout());
-    dummy->name(str(boost::format("output%1%") % outputs().size()));
+    dummy->name(str(boost::format("output%1%_dummy") % outputs().size()));
 }
 
 bool ContainerModule::refine(ConnectionDB& conns) const

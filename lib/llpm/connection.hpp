@@ -7,6 +7,7 @@
 
 #include <set>
 #include <map>
+#include <unordered_map>
 
 using namespace std;
 
@@ -55,8 +56,24 @@ class Module;
 class ConnectionDB {
     Module* _module;
     set<Connection> _connections;
+    std::unordered_map<Block*, uint64_t> _blockUseCounts;
+    std::set<Block*> _newBlocks;
     std::map<const InputPort*, vector<InputPort*> > _inputRewrites;
     std::map<const OutputPort*, OutputPort*> _outputRewrites;
+
+    void registerBlock(Block* block) {
+        if (_blockUseCounts.find(block) == _blockUseCounts.end())
+            _newBlocks.insert(block);
+
+        uint64_t& count = _blockUseCounts[block];
+        count += 1;
+    }
+
+    void deregisterBlock(Block* block) {
+        uint64_t& count = _blockUseCounts[block];
+        assert(count >= 1);
+        count -= 1;
+    }
 
 public:
     ConnectionDB(Module* m) :
@@ -69,10 +86,20 @@ public:
         return _connections;
     }
 
+    void readAndClearNewBlocks(std::set<Block*>& nb) {
+        nb.clear();
+        nb.swap(_newBlocks);
+        assert(_newBlocks.size() == 0);
+    }
+
+    void clearNewBlocks() {
+        _newBlocks.clear();
+    }
+
     void findAllBlocks(set<Block*>& blocks) const {
-        for(const Connection& c: _connections) {
-            blocks.insert(c.source()->owner());
-            blocks.insert(c.sink()->owner());
+        for (auto pr: _blockUseCounts) {
+            if (pr.second >= 1)
+                blocks.insert(pr.first);
         }
     }
 
@@ -80,6 +107,13 @@ public:
     void disconnect(OutputPort* o, InputPort* i);
     void disconnect(Connection c) {
         disconnect(c.source(), c.sink());
+    }
+
+    bool isUsed(Block* b) const {
+        auto f = _blockUseCounts.find(b);
+        if (f == _blockUseCounts.end())
+            return false;
+        return f->second >= 1;
     }
 
     bool exists(Connection c) {

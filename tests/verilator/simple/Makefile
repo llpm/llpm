@@ -4,7 +4,7 @@ CXX=../../../bin/llvm/bin/clang++
 
 default: simple_test
 
-obj/simple.hpp: simple.bc
+obj/simple.hpp: simple.bc ../../../bin/llvm2verilog
 	../../../bin/llvm2verilog simple.bc obj simple
 
 simple.hpp: obj/simple.hpp
@@ -23,4 +23,4 @@ simple_test: simple_test.cpp simple.hpp
 	llvm-dis-3.4 $@
 
 clean:
-	rm ${ALL}
+	rm -rf simple_test simple.hpp *.bc obj *.ll

@@ -37,6 +37,8 @@ public:
         // Construct any constants it produces
         for(llvm::Constant* c: lbb->constants()) {
             Constant* block = new Constant(c);
+            if (c->hasName())
+                block->name(c->getName());
             valueMap[c] = block->dout();
         }
 
@@ -47,6 +49,8 @@ public:
             llvm::Value* v = p.first;
             unsigned inputNum = p.second;
             Extract* e = new Extract(lbb->input()->type(), {inputNum});
+            if (v->hasName())
+                e->name(v->getName().str() + "_extractor");
             inputs.push_back(e->din());
             valueMap[v] = e->dout();
         }
@@ -65,6 +69,8 @@ public:
                         inTypes.push_back(ins.getOperand(i)->getType());
                 }
                 Join* inJoin = new Join(inTypes);
+                if (ins.hasName())
+                    inJoin->name(ins.getName().str() + "_input_join");
                 conns.connect(inJoin->dout(), li->input());
                 unsigned hwNum =0;
                 for (unsigned i=0; i<ins.getNumOperands(); i++) {
@@ -92,6 +98,8 @@ public:
                     // If it's not local it better be a
                     // constant!
                     Constant* c = new Constant(operand);
+                    if (operand->hasName())
+                        c->name(operand->getName());
                     conns.connect(c->dout(), inputPorts[hwNum]);
                 }
                 hwNum += 1;
@@ -100,6 +108,8 @@ public:
 
         // Create and connect up a basic block output
         Join* output = new Join(lbb->output()->type());
+        if (bb->hasName())
+            output->name("bb_" + bb->getName().str() + "output_join");
         auto outputMap = lbb->outputMap();
         for(auto p: outputMap) {
             llvm::Value* v = p.first;

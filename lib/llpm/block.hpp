@@ -2,6 +2,7 @@
 #define __LLPM_BLOCK_HPP__
 
 #include <llpm/llpm.hpp>
+#include <llpm/history.hpp>
 #include <vector>
 #include <map>
 #include <set>
@@ -38,6 +39,8 @@ protected:
     std::set<InputPort*>  _inputs;
     std::set<OutputPort*> _outputs;
 
+    BlockHistory _history;
+
     Block(): _module(NULL) { }
 
     friend class InputPort;
@@ -64,6 +67,10 @@ public:
 
     DEF_GET_NP(name);
     DEF_SET(name);
+
+    BlockHistory& history() {
+        return _history;
+    }
 
     std::set<InputPort*>&  inputs()  {
         return _inputs;
