@@ -1,5 +1,5 @@
 CFLAGS=-O1
-CXXFLAGS=-std=c++1y ${CFLAGS}
+CXXFLAGS=${CFLAGS}
 CXX=../../../bin/llvm/bin/clang++
 
 default: simple_test

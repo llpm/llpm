@@ -223,11 +223,12 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     os << "#ifndef __MOD_" << mod->name() << "_LLPM_WEDGE__\n";
     os << "#define __MOD_" << mod->name() << "_LLPM_WEDGE__\n\n";
 
-    os << "#include <stdint.h>\n\n";
+    os << "#include <string>\n"
+       << "#include <stdint.h>\n\n";
 
-    os << "// Forward declaration for ugly verilator class\n";
+    os << "// Forward declaration for ugly verilator classes\n";
     os << "class V" << mod->name() << ";\n";
-    os << "\n";
+    os << "class VerilatedVcdC;\n\n";
 
     os << "/*\n"
        << " * This class is the wrapper for the " + mod->name() + " module.\n"
@@ -238,6 +239,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     os << "public:\n";
 
     os << "    " << mod->name() << "();\n"
+       << "    ~" << mod->name() << "();\n"
        << "\n";
 
     for (InputPort* ip: mod->inputs()) {
@@ -267,12 +269,14 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
 
     os << "    // Simulation run control\n"
        << "    void reset();\n"
-       << "    void run(unsigned cycles = 1);\n";
+       << "    void run(unsigned cycles = 1);\n"
+       << "    void trace(std::string fn);\n";
 
 
     os << "\nprivate:\n";
     os << "    V" << mod->name() << "* simulator;\n";
     os << "    uint64_t cycleCount;\n";
+    os << "    VerilatedVcdC* tfp;\n";
     os << "};\n";
 
     os << "\n"
@@ -287,21 +291,38 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
     os << "#include \"" << mod->name() << ".hpp\"\n"
        << "#include \"V" << mod->name() << ".h\"\n"
+       << "#include \"verilated_vcd_c.h\"\n"
        << "\n";
 
     os << mod->name() << "::" << mod->name() << "() {\n"
        << "    simulator = new V" << mod->name() << "();\n"
+       << "    cycleCount = 0;\n"
+       << "    tfp = NULL;\n"
+       << "};\n";
+
+    os << mod->name() << "::~" << mod->name() << "() {\n"
+       << "    if (tfp) {\n"
+       << "        tfp->close();\n"
+       << "        delete tfp;\n"
+       << "    }\n"
+       << "    delete simulator;\n"
        << "};\n";
 
     os << "void " << mod->name() << "::run(unsigned cycles) {"
        << R"STRING(
     for (unsigned i=0; i<cycles; i++) {
-        simulator->clk = 0;
-        simulator->eval();
         simulator->clk = 1;
         simulator->eval();
+        if (this->tfp)
+            tfp->dump(this->cycleCount * 2);
+        simulator->clk = 0;
+        simulator->eval();
+        if (this->tfp)
+            tfp->dump((this->cycleCount * 2) + 1);
         this->cycleCount += 1;
     }
+    if (this->tfp && (this->cycleCount % 10) == 0)
+        this->tfp->flush();
 }
 )STRING";
 
@@ -320,6 +341,14 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 }
 )STRING";
 
+    os << "void " << mod->name() << "::trace(std::string fn) {"
+       << R"STRING(
+   Verilated::traceEverOn(true);
+   this->tfp = new VerilatedVcdC;
+   this->simulator->trace(this->tfp, 99);
+   this->tfp->open(fn.c_str());
+}
+)STRING";
 
     // Code for packing inputs
     for (InputPort* ip: mod->inputs()) {
@@ -369,9 +398,13 @@ R"STRING(
                         % numwords;
         }
 
-        os << "    this->run(1);\n"
-           << "    return true;\n";
-        os << "}\n";
+        os << boost::format(
+R"STRING(
+    this->run(1);
+    simulator->%1%_valid = 0;
+    return true;
+};
+)STRING") % ip->name();
 
         os << boost::format("void %3%::%1%(%2%    ) {\n")
                     % ip->name()

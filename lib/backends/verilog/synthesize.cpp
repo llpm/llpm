@@ -38,7 +38,7 @@ static const std::string header = R"STRING(
         reg [W-1:0] N;\
         always@(posedge clk, negedge resetn)\
         begin\
-            if (resetn)\
+            if (~resetn)\
                 N <= {W{1'b0}};\
             else if (CE)\
                 N <= D;\
@@ -50,7 +50,7 @@ static const std::string header = R"STRING(
         wire CE = V_IN && ~BP_OUT;\
         always@(posedge clk, negedge resetn)\
         begin\
-            if (resetn)\
+            if (~resetn)\
                 V_OUT``_reg <= 1'b0;\
             else begin\
                 if (!BP_IN)\
@@ -164,7 +164,7 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
         ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
                     % ctxt.name(op)
                     % ctxt.name(source);
-        ctxt << boost::format("    assign sr%2%_bp_out = %1%_bp;\n")
+        ctxt << boost::format("    wire sr%2%_bp_out = %1%_bp;\n")
                     % ctxt.name(op)
                     % outputSR->id();
     }
