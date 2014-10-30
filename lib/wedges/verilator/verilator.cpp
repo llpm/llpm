@@ -39,7 +39,11 @@ static void run(std::string command) {
     printf("Running: %s\n", command.c_str());
     int rc = system(command.c_str());
     if (rc == -1)
-        throw SysError("running verilator");
+        throw SysError("running external command");
+    if (rc != 0)
+        throw ExternalError(str(boost::format("Got code %1% while running command: %2%")
+                                % rc
+                                % command));
 }
 
 void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {

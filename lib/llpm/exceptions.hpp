@@ -58,6 +58,14 @@ public:
         Exception("Error while " + action + ": " + std::string(strerror(errno))) { } 
 };
 
+class ExternalError: public Exception {
+public:
+    ExternalError(std::string msg = "") :
+        Exception("External error: " + msg) { }
+};
+
+
+
 } // namespace llpm
 
 #endif // __LLPM_EXCEPTIONS_HPP__
