@@ -40,10 +40,12 @@ static void run(std::string command) {
     int rc = system(command.c_str());
     if (rc == -1)
         throw SysError("running external command");
+#if 0
     if (rc != 0)
         throw ExternalError(str(boost::format("Got code %1% while running command: %2%")
                                 % rc
                                 % command));
+#endif
 }
 
 void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
