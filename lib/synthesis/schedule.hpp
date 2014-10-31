@@ -24,15 +24,17 @@ class Schedule;
 class StaticRegion {
 public:
     class Layer {
-        friend class StaticRegion;
-
         unordered_set<Block*> _blocks;
 
+    public:
         void addBlock(Block* b) {
             _blocks.insert(b);
         }
 
-    public:
+        template<typename T>
+        void addBlocks(T cntr) {
+            _blocks.insert(cntr.begin(), cntr.end());
+        }
         DEF_GET_NP(blocks);
 
         bool contains(Block* b) const {
