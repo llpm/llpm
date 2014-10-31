@@ -38,4 +38,14 @@ for d in Glob("./tools/*"):
     driver = env.Program("bin/" + d, Glob("./tools/%s/*.cpp" % d))
     Default(driver)
 
+supportFiles = Glob("./support/*") + \
+               Glob("./support/*/*") + \
+               Glob("./support/*/*/*")
+
+for f in supportFiles:
+    if f.isfile():
+        i = env.Install("bin/" + str(f.get_dir()), f)
+        Default(i)
+
+
 

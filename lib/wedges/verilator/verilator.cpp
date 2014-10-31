@@ -18,6 +18,23 @@ static const char* verilatorGlobalOpts =
 static const char* verilatedCppOpts = 
     "-DVL_PRINTF=printf -DVM_TRACE=1 -DVM_COVERAGE=0 -fbracket-depth=4096";
 
+static const std::vector<std::string> externalFiles = {
+    // Verilator crap
+    "/verilator/share/verilator/include/verilated.h",
+    "/verilator/share/verilator/include/verilatedos.h",
+    "/verilator/share/verilator/include/verilated_config.h",
+    "/verilator/share/verilator/include/verilated_vcd_c.h",
+    "/verilator/share/verilator/include/verilated_imp.h",
+    "/verilator/share/verilator/include/verilated_heavy.h",
+    "/verilator/share/verilator/include/verilated_syms.h",
+    "/verilator/share/verilator/include/verilated.cpp",
+    "/verilator/share/verilator/include/verilated_vcd_c.cpp",
+
+    // Verilog libraries
+    "/support/backends/verilog/select.v",
+};
+
+
 // Helper function to get directory entries
 static int getdir (std::string dir, std::vector<std::string> &files)
 {
@@ -86,25 +103,15 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         }
     }
 
-    // Copy in some of the verilator globals
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated.h"));
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilatedos.h"));
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_config.h"));
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_vcd_c.h"));
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_imp.h"));
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_heavy.h"));
-    verilatedHppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_syms.h"));
-    cppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated.cpp"));
-    cppFiles.push_back(
-        fileset.copy(Directories::executablePath() + "/verilator/share/verilator/include/verilated_vcd_c.cpp"));
+    // Copy in the necessary globals
+    for (auto f: externalFiles) {
+        auto ext = f.substr(f.find_last_of("."));
+        auto cpy = fileset.copy(Directories::executablePath() + f);
+        if (ext == ".cpp")
+            cppFiles.push_back(cpy);
+        if (ext == ".h")
+            verilatedHppFiles.push_back(cpy);
+    }
 
     FileSet::File* hpp = fileset.create(mod->name() + ".hpp");
     writeHeader(hpp, mod);

@@ -65,7 +65,7 @@ int main(int argc, const char** argv) {
         VerilogSynthesizer vs(d);
         VerilatorWedge vw(&vs);
 
-        FileSet fs(true, dirName, true);
+        FileSet fs(false, dirName, true);
         for (Module* mod: d.modules()) {
             vw.writeModule(fs, mod);
         }

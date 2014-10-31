@@ -20,9 +20,19 @@ Schedule::~Schedule() {
 }
 
 StaticRegion* Schedule::createModuleIORegion() {
-    auto sr = new StaticRegion(_regions.size(), this, true);
+    auto sr = new StaticRegion(_regions.size(), this, StaticRegion::IO);
     _regions.push_back(sr);
     return sr;
+}
+
+StaticRegion* Schedule::createSpecialRegion() {
+    auto sr = new StaticRegion(_regions.size(), this, StaticRegion::Special);
+    _regions.push_back(sr);
+    return sr;
+}
+
+void Schedule::buildSchedule() {
+    buildBaseSchedule();
 }
 
 void Schedule::buildBaseSchedule() {
@@ -30,10 +40,14 @@ void Schedule::buildBaseSchedule() {
     _module->blocks(blocks);
     _module->submodules(blocks);
 
+    buildBlockMap();
+
     unsigned idCounter = _regions.size();
     for(Block* b: blocks) {
-        StaticRegion* sr = new StaticRegion(idCounter++, this, b);
-        _regions.push_back(sr);
+        if (_blockMap.find(b) == _blockMap.end()) {
+            StaticRegion* sr = new StaticRegion(idCounter++, this, b);
+            _regions.push_back(sr);
+        }
     }
 
     buildBlockMap();

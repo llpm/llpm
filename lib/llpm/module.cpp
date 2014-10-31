@@ -76,8 +76,6 @@ Schedule* ContainerModule::schedule() {
             _schedule->createModuleIORegion()->add(p.second);
         for (auto p: _outputMap)
             _schedule->createModuleIORegion()->add(p.second);
-
-        _schedule->buildBaseSchedule();
     }
     return _schedule;
 }

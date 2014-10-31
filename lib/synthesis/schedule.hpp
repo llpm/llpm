@@ -46,27 +46,33 @@ public:
         Output
     };
 
+    enum Type {
+        Normal,
+        Special,
+        IO
+    };
+
 private:
     unsigned _id;
-    bool _io;
+    Type _type;
     Schedule*   _schedule;
     set<Block*> _blocks;
 
 public:
-    StaticRegion(unsigned id, Schedule* s, Block* b, bool io=false):
+    StaticRegion(unsigned id, Schedule* s, Block* b, Type type = Normal):
         _id(id),
-        _io(io),
+        _type(type),
         _schedule(s) {
         _blocks.insert(b);
     }
 
-    StaticRegion(unsigned id, Schedule* s, bool io=false):
+    StaticRegion(unsigned id, Schedule* s, Type type = Normal):
         _id(id),
-        _io(io),
+        _type(type),
         _schedule(s) { }
 
     DEF_GET_NP(id);
-    DEF_GET_NP(io);
+    DEF_GET_NP(type);
 
     void add(StaticRegion& a) {
         _blocks.insert(a._blocks.begin(), a._blocks.end());
@@ -102,6 +108,7 @@ public:
 
     DEF_GET_NP(module);
 
+    void buildSchedule();
     void buildBaseSchedule();
 
     const list<StaticRegion*>& regions() {
@@ -109,6 +116,7 @@ public:
     }
 
     StaticRegion* createModuleIORegion();
+    StaticRegion* createSpecialRegion();
 
     StaticRegion* findRegion(Block* b) const {
         auto f = _blockMap.find(b);
