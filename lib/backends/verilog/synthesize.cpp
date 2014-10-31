@@ -90,6 +90,7 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
 
     printf("Pipelining...\n");
     Pipeline* p = mod->pipeline();
+    p->build();
 
     // Write out header
     ctxt << header;
@@ -101,6 +102,19 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
 
     ctxt.namer().reserveName("clk", mod);
     ctxt.namer().reserveName("resetn", mod);
+
+    writeIO(ctxt);
+
+    for (StaticRegion* region: s->regions()) {
+        writeStaticRegion(region, ctxt);
+    }
+
+    ctxt << "endmodule\n";
+}
+
+void VerilogSynthesizer::writeIO(Context& ctxt) {
+    Module* mod = ctxt.module();
+    Schedule* s = mod->schedule();
 
     for (auto&& ip: mod->inputs()) {
         auto inputName = ctxt.name(ip, true);
@@ -187,168 +201,177 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     }
 
     ctxt << "\n";
+}
 
-    for (StaticRegion* region: s->regions()) {
-        if (region->type() == StaticRegion::IO) 
-            continue;
+void VerilogSynthesizer::writeSpecialStaticRegion(StaticRegion* region, Context& ctxt) {
+}
 
-        ctxt.region = region;
-        unsigned regCount = region->id();
-        ctxt << "// --- Static region " << regCount << " --- \n\n";
+void VerilogSynthesizer::writeStaticRegion(StaticRegion* region, Context& ctxt) {
+    if (region->type() == StaticRegion::IO) 
+        return;
 
-        vector< StaticRegion::Layer > stages;
-        region->schedule(p, stages);
+    if (region->type() == StaticRegion::Special)
+        return writeSpecialStaticRegion(region, ctxt);
 
-        // Examine all connections concerned with this region
-        map<Block*, set<OutputPort*>> users;
-        map<OutputPort*, unsigned> numUsers;
-        set<OutputPort*> outputs;
-        set<OutputPort*> inputs;
-        for (auto&& block: region->blocks()) {
-            vector<Connection> blockConns;
-            conns->find(block, blockConns);
+    Pipeline* p = ctxt.module()->pipeline();
+    Schedule* s = ctxt.module()->schedule();
+    ConnectionDB* conns = ctxt.module()->conns();
 
-            for (auto c: blockConns) {
-                numUsers[c.source()] += 1;
-                switch (region->classifyConnection(c)) {
-                case StaticRegion::Input:
-                    inputs.insert(c.source());
-                    users[block].insert(c.source());
-                    break;
-                case StaticRegion::Internal:
-                    users[block].insert(c.source());
-                    break;
-                case StaticRegion::Output:
-                    outputs.insert(c.source());
-                    break;
-                }
+    ctxt.region = region;
+    unsigned regCount = region->id();
+    ctxt << "// --- Static region " << regCount << " --- \n\n";
+
+    vector< StaticRegion::Layer > stages;
+    region->schedule(p, stages);
+
+
+    // Examine all connections concerned with this region
+    map<Block*, set<OutputPort*>> users;
+    map<OutputPort*, unsigned> numUsers;
+    set<OutputPort*> outputs;
+    set<OutputPort*> inputs;
+    for (auto&& block: region->blocks()) {
+        vector<Connection> blockConns;
+        conns->find(block, blockConns);
+
+        for (auto c: blockConns) {
+            numUsers[c.source()] += 1;
+            switch (region->classifyConnection(c)) {
+            case StaticRegion::Input:
+                inputs.insert(c.source());
+                users[block].insert(c.source());
+                break;
+            case StaticRegion::Internal:
+                users[block].insert(c.source());
+                break;
+            case StaticRegion::Output:
+                outputs.insert(c.source());
+                break;
             }
         }
-
-        ctxt << "    // Input LI control\n";
-        ctxt << "    wire sr" << regCount << "_input_valid = \n";
-        bool first = true;
-        for (auto&& ip: inputs) {
-            if (first)
-                first = false;
-            else 
-                ctxt << " &\n";
-            ctxt << "        " << ctxt.name(ip) << "_valid";
-        }
-        if (first)
-            ctxt << "        1'b1;\n";
-        else
-            ctxt << ";\n";
-
-        ctxt << boost::format("    `LI_CONTROL(sr%1%_l0_valid, sr%1%_input_valid,\n"
-                              "                sr%1%_bp_out, sr%1%_bp_l0, sr%1%_l0_ce);\n") % regCount;
-
-        ctxt << "    // Input registers\n";
-        for (auto&& op: inputs) {
-            std::string name = str(boost::format("%1%_sr%2%_l0")
-                                        % ctxt.name(op)
-                                        % regCount);
-
-            ctxt << "    wire " << ctxt.name(op) << "_sr" << regCount << "bp = sr" << regCount << "_bp_out;\n";
-            if (!op->type()->isVoidTy())
-                ctxt << boost::format("    `DFF(%1%, %2%, %3%_extern, sr%4%_l0_ce);\n")
-                            % bitwidth(op->type())
-                            % name
-                            % ctxt.name(op)
-                            % regCount;
-            ctxt.updateMapping(op, name);
-        }
-        ctxt << "\n";
-
-        for (unsigned i=0; i<stages.size(); i++) {
-            ctxt.layerNum = i;
-            ctxt << "    // --- Pipeline stage " << i << " ---\n\n";
-
-            ctxt.layer = &stages[i];
-            auto blocks = ctxt.layer->blocks();
-            for (Block* b: blocks) {
-                print(ctxt, b);
-            }
-
-            for (Block* b: blocks) {
-                auto uses = users[b];
-                for (auto u: uses) {
-                    auto f = numUsers.find(u);
-                    assert(f->second > 0);
-                    assert(f->first != NULL);
-                    f->second -= 1;
-                    if (f->second == 0) {
-                        ctxt.removeMapping(f->first);
-                        numUsers.erase(f);
-                    }
-                }
-            }
-
-            ctxt << boost::format("    `LI_CONTROL(sr%1%_l%2%_valid, sr%1%_l%3%_valid,\n"
-                                  "                sr%1%_bp_l%3%, sr%1%_bp_l%2%, sr%1%_l%2%_ce);\n")
-                            % regCount
-                            % (i+1)
-                            % i;
-            for (auto p: numUsers) {
-                // Iterate through all of the values still in use
-                // and register them for the next layer
-                OutputPort* op = p.first;
-                if (!op->type()->isVoidTy())
-                    ctxt << boost::format("    `DFF(%1%, %2%_sr%3%_l%4%, %2%, sr%3%_l%4%_ce);\n")
-                                % bitwidth(op->type())
-                                % ctxt.name(op)
-                                % regCount
-                                % (i+1);
-                ctxt.updateMapping(op, str(boost::format("%1%_sr%2%_l%3%")
-                                                    % ctxt.name(op)
-                                                    % regCount
-                                                    % (i+1)));
-            }
-            ctxt << "\n";
-        }
-
-        ctxt << "    // Output assignments\n";
-        for (auto op: outputs) {
-            if (!op->type()->isVoidTy())
-                ctxt << boost::format("    wire [%3%:0] %1%_extern = %2%;\n")
-                                % ctxt.name(op)
-                                % ctxt.findMapping(op)
-                                % (bitwidth(op->type()) - 1);
-            ctxt << boost::format("    wire %1%_valid = sr%2%_l%3%_valid;\n")
-                            % ctxt.name(op)
-                            % regCount
-                            % stages.size();
-        }
-
-        ctxt << "    // Incoming backpressure\n";
-        ctxt << boost::format("    wire sr%1%_bp_l%2% = \n")
-                    % regCount
-                    % stages.size();
-
-        first = true;
-        for (auto op: outputs) {
-            vector<InputPort*> sinks;
-            conns->findSinks(op, sinks);
-            for (auto op: sinks) {
-                auto sinkBlock = op->owner();
-                auto sinkSR = s->findRegion(sinkBlock);
-                if (first)
-                    first = false;
-                else
-                    ctxt << " |\n";
-                ctxt << boost::format("        sr%1%_bp_out")
-                                % sinkSR->id();
-            }
-        }
-        if (first)
-            ctxt << "        1'b0;\n";
-        else
-            ctxt << ";\n";
-
-        ctxt << "\n\n";
     }
 
-    ctxt << "endmodule\n";
+    ctxt << "    // Input LI control\n";
+    ctxt << "    wire sr" << regCount << "_input_valid = \n";
+    bool first = true;
+    for (auto&& ip: inputs) {
+        if (first)
+            first = false;
+        else 
+            ctxt << " &\n";
+        ctxt << "        " << ctxt.name(ip) << "_valid";
+    }
+    if (first)
+        ctxt << "        1'b1;\n";
+    else
+        ctxt << ";\n";
+
+    ctxt << boost::format("    `LI_CONTROL(sr%1%_l0_valid, sr%1%_input_valid,\n"
+                          "                sr%1%_bp_out, sr%1%_bp_l0, sr%1%_l0_ce);\n") % regCount;
+
+    ctxt << "    // Input registers\n";
+    for (auto&& op: inputs) {
+        std::string name = str(boost::format("%1%_sr%2%_l0")
+                                    % ctxt.name(op)
+                                    % regCount);
+
+        ctxt << "    wire " << ctxt.name(op) << "_sr" << regCount << "bp = sr" << regCount << "_bp_out;\n";
+        if (!op->type()->isVoidTy())
+            ctxt << boost::format("    `DFF(%1%, %2%, %3%_extern, sr%4%_l0_ce);\n")
+                        % bitwidth(op->type())
+                        % name
+                        % ctxt.name(op)
+                        % regCount;
+        ctxt.updateMapping(op, name);
+    }
+    ctxt << "\n";
+
+    for (unsigned i=0; i<stages.size(); i++) {
+        ctxt.layerNum = i;
+        ctxt << "    // --- Pipeline stage " << i << " ---\n\n";
+
+        ctxt.layer = &stages[i];
+        auto blocks = ctxt.layer->blocks();
+        for (Block* b: blocks) {
+            print(ctxt, b);
+        }
+
+        for (Block* b: blocks) {
+            auto uses = users[b];
+            for (auto u: uses) {
+                auto f = numUsers.find(u);
+                assert(f->second > 0);
+                assert(f->first != NULL);
+                f->second -= 1;
+                if (f->second == 0) {
+                    ctxt.removeMapping(f->first);
+                    numUsers.erase(f);
+                }
+            }
+        }
+
+        ctxt << boost::format("    `LI_CONTROL(sr%1%_l%2%_valid, sr%1%_l%3%_valid,\n"
+                              "                sr%1%_bp_l%3%, sr%1%_bp_l%2%, sr%1%_l%2%_ce);\n")
+                        % regCount
+                        % (i+1)
+                        % i;
+        for (auto p: numUsers) {
+            // Iterate through all of the values still in use
+            // and register them for the next layer
+            OutputPort* op = p.first;
+            if (!op->type()->isVoidTy())
+                ctxt << boost::format("    `DFF(%1%, %2%_sr%3%_l%4%, %2%, sr%3%_l%4%_ce);\n")
+                            % bitwidth(op->type())
+                            % ctxt.name(op)
+                            % regCount
+                            % (i+1);
+            ctxt.updateMapping(op, str(boost::format("%1%_sr%2%_l%3%")
+                                                % ctxt.name(op)
+                                                % regCount
+                                                % (i+1)));
+        }
+        ctxt << "\n";
+    }
+
+    ctxt << "    // Output assignments\n";
+    for (auto op: outputs) {
+        if (!op->type()->isVoidTy())
+            ctxt << boost::format("    wire [%3%:0] %1%_extern = %2%;\n")
+                            % ctxt.name(op)
+                            % ctxt.findMapping(op)
+                            % (bitwidth(op->type()) - 1);
+        ctxt << boost::format("    wire %1%_valid = sr%2%_l%3%_valid;\n")
+                        % ctxt.name(op)
+                        % regCount
+                        % stages.size();
+    }
+
+    ctxt << "    // Incoming backpressure\n";
+    ctxt << boost::format("    wire sr%1%_bp_l%2% = \n")
+                % regCount
+                % stages.size();
+
+    first = true;
+    for (auto op: outputs) {
+        vector<InputPort*> sinks;
+        conns->findSinks(op, sinks);
+        for (auto op: sinks) {
+            auto sinkBlock = op->owner();
+            auto sinkSR = s->findRegion(sinkBlock);
+            if (first)
+                first = false;
+            else
+                ctxt << " |\n";
+            ctxt << boost::format("        sr%1%_bp_out")
+                            % sinkSR->id();
+        }
+    }
+    if (first)
+        ctxt << "        1'b0;\n";
+    else
+        ctxt << ";\n";
+
+    ctxt << "\n\n";
 }
 
 void VerilogSynthesizer::print(Context& ctxt, Block* b)

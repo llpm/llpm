@@ -83,7 +83,6 @@ Schedule* ContainerModule::schedule() {
 Pipeline* ContainerModule::pipeline() {
     if (_pipeline == NULL) {
         _pipeline = new Pipeline(this);
-        _pipeline->buildMinimum();
     }
     return _pipeline;
 }

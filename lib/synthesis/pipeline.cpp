@@ -13,6 +13,10 @@ Pipeline::Pipeline(MutableModule* mod) :
 Pipeline::~Pipeline() {
 }
 
+void Pipeline::build() {
+    buildMinimum();
+}
+
 void Pipeline::buildMinimum() {
     _stages.clear();
     _schedule = _module->schedule();

@@ -97,6 +97,10 @@ public:
         virtual void print(Context& ctxt, Block* c) const = 0;
     };
 
+    void writeIO(Context&);
+    void writeStaticRegion(StaticRegion*, Context&);
+    void writeSpecialStaticRegion(StaticRegion*, Context& ctxt);
+
 private:
     Design& _design;
     PCollection _printers;

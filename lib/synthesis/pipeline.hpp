@@ -35,6 +35,8 @@ public:
 
     // Builds pipeline stages only where absolutely necessary
     void buildMinimum();
+
+    void build();
 };
 
 } // namespace llpm
