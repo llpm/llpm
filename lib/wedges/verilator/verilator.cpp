@@ -70,27 +70,46 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     FileSet::File* vModFile = fileset.create(mod->name() + ".v");
     _verilog->writeModule(vModFile, mod);
 
+    std::list<FileSet::File*> cppFiles;
+    std::list<FileSet::File*> verilatedHppFiles;
+    std::list<FileSet::File*> vFiles;
+    vFiles.push_back(vModFile);
+
+    // Copy in the necessary globals
+    for (auto f: externalFiles) {
+        auto ext = f.substr(f.find_last_of("."));
+        auto cpy = fileset.copy(Directories::executablePath() + f);
+        if (ext == ".cpp")
+            cppFiles.push_back(cpy);
+        if (ext == ".h")
+            verilatedHppFiles.push_back(cpy);
+        if (ext == ".v")
+            vFiles.push_back(cpy);
+    }
+
+    std::string verilogFiles = "";
+    for(auto f: vFiles) {
+        verilogFiles = verilogFiles + f->name() + " ";
+    }
+
     // Run Verilator, creating several files
     std::string tmpdir = fileset.tmpdir();
     run(str(
-        boost::format("%1%/verilator/bin/verilator_bin %2% --Mdir %3% %4%")
+        boost::format("%1%/verilator/bin/verilator_bin %2% --Mdir %3% --top-module %4% %5%")
             % Directories::executablePath()
             % verilatorGlobalOpts
             % tmpdir
-            % vModFile->name()
+            % mod->name()
+            % verilogFiles
             ));
 
     // Don't need the verilog output anymore
     vModFile->erase();
 
-    std::list<FileSet::File*> cppFiles;
-
-
     // Copy in some of the verilator outputs
     std::vector<std::string> verilatorOutputs;
     int rc = getdir(tmpdir, verilatorOutputs);
     assert(rc == 0);
-    std::list<FileSet::File*> verilatedHppFiles;
     for (auto f: verilatorOutputs) {
         auto ext = f.substr(f.find_last_of("."));
         if (ext == ".cpp") {
@@ -101,16 +120,6 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
             auto verilatedHpp = fileset.copy(tmpdir + "/" + f);
             verilatedHppFiles.push_back(verilatedHpp);
         }
-    }
-
-    // Copy in the necessary globals
-    for (auto f: externalFiles) {
-        auto ext = f.substr(f.find_last_of("."));
-        auto cpy = fileset.copy(Directories::executablePath() + f);
-        if (ext == ".cpp")
-            cppFiles.push_back(cpy);
-        if (ext == ".h")
-            verilatedHppFiles.push_back(cpy);
     }
 
     FileSet::File* hpp = fileset.create(mod->name() + ".hpp");

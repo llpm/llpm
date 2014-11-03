@@ -695,7 +695,7 @@ public:
         ctxt << boost::format("    %1% # (\n") % style
              << boost::format("        .Width(%1%),\n") % bitwidth(s->dout()->type())
              << boost::format("        .NumInputs(%1%), \n") % s->din_size()
-             << boost::format("        .CLog2NumInputs(%1%),\n") 
+             << boost::format("        .CLog2NumInputs(%1%)\n") 
                         % std::max((unsigned)1, (unsigned)ceil(log2(s->din_size())))
              << boost::format("    ) %1% (\n") % ctxt.name(c)
              <<               "        .clk(clk),\n"
@@ -707,7 +707,7 @@ public:
 
              << boost::format("        .a(%1%), \n") % ctxt.name(s->dout())
              << boost::format("        .a_valid(%1%_valid), \n") % ctxt.name(s->dout())
-             << boost::format("        .a_bp(%1%_bp), \n") % ctxt.name(s->dout())
+             << boost::format("        .a_bp(%1%_bp) \n") % ctxt.name(s->dout())
              <<               "    );\n"
              ;
 
