@@ -154,24 +154,12 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
         throw InvalidArgument("Verilog synthesizer cannot operate on opaque modules!");
     }
 
-    ctxt << "    // Input registers\n";
+    ctxt << "    // Input back pressure connection\n";
     for (auto&& ip: mod->inputs()) {
         OutputPort* dummyOP = mod->getDriver(ip);
 
-        ctxt << boost::format("    reg %1%_reg_valid;\n"
-                              "    reg %1%_reg_bp;\n"
-                              "    `LI_CONTROL(%1%_reg_valid, %1%_valid,\n"
-                              "                %1%_reg_bp, %1%_bp,\n"
-                              "                %1%_ce);\n")
-                    % ctxt.name(ip);
-        ctxt << boost::format("    reg [%1%-1:0] %2%_reg;\n"
-                              "    `DFF(%1%, %2%_reg, %2%, %2%_ce);\n")
-                    % bitwidth(ip->type())
-                    % ctxt.name(ip);
-
-        ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip) + "_reg");
-
-        ctxt << boost::format("    assign %1%_reg_bp = \n")
+        ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip));
+        ctxt << boost::format("    assign %1%_bp = \n")
                     % ctxt.name(ip);
 
         vector<InputPort*> sinks;
