@@ -5,6 +5,7 @@
 #include <llpm/module.hpp>
 
 #include <boost/format.hpp>
+#include <cctype>
 
 namespace llpm {
 
@@ -28,6 +29,15 @@ void ObjectNamer::assignName(Port* p, Module* ctxt, std::string name) {
     _existingNames.insert(make_pair(ctxt, name));
 }
 
+static std::string sanitize(std::string s) {
+    for (unsigned i = 0; i < s.size(); i++) {
+        if (!isalnum(s[i])) {
+            s[i] = '_';
+        }
+    }
+    return s;
+}
+
 std::string ObjectNamer::primBlockName(Block* b) {
     std::string& base = _blockNames[b];
     if (base == "") {
@@ -40,6 +50,8 @@ std::string ObjectNamer::primBlockName(Block* b) {
             } else {
                 base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
             }
+        } else {
+            base = sanitize(base);
         }
 
         size_t ctr = 0;
