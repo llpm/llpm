@@ -1,7 +1,7 @@
 #include "library.hpp"
 
 
-#include <llpm/logic_intr.hpp>
+#include <libraries/core/logic_intr.hpp>
 #include <frontends/llvm/instruction.hpp>
 #include <libraries/util/types.hpp>
 

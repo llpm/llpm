@@ -4,7 +4,7 @@
 
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
-#include <llpm/std_library.hpp>
+#include <libraries/core/std_library.hpp>
 #include <frontends/llvm/translate.hpp>
 #include <refinery/refinery.hpp>
 #include <backends/verilog/synthesize.hpp>

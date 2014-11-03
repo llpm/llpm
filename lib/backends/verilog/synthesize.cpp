@@ -6,8 +6,8 @@
 #include <synthesis/pipeline.hpp>
 #include <util/llvm_type.hpp>
 
-#include <llpm/comm_intr.hpp>
-#include <llpm/std_library.hpp>
+#include <libraries/core/comm_intr.hpp>
+#include <libraries/core/std_library.hpp>
 
 #include <llvm/IR/Constants.h>
 

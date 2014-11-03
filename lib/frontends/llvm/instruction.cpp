@@ -6,7 +6,7 @@
 #include <boost/function.hpp>
 #include <llvm/IR/Instructions.h>
 
-#include <llpm/std_library.hpp>
+#include <libraries/core/std_library.hpp>
 
 namespace llpm {
 

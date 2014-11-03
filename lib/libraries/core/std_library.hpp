@@ -1,5 +1,5 @@
-#ifndef __LLPM_STD_LIBRARY_HPP__
-#define __LLPM_STD_LIBRARY_HPP__
+#ifndef __LLPM_LIBRARIES_CORE_STD_LIBRARY_HPP__
+#define __LLPM_LIBRARIES_CORE_STD_LIBRARY_HPP__
 
 /***************
  * This file contains all of the standard functions (and #includes
@@ -10,9 +10,9 @@
  */
 
 #include <llpm/block.hpp>
-#include <llpm/comm_intr.hpp>
-#include <llpm/mem_intr.hpp>
-#include <llpm/logic_intr.hpp>
+#include <libraries/core/comm_intr.hpp>
+#include <libraries/core/mem_intr.hpp>
+#include <libraries/core/logic_intr.hpp>
 #include <refinery/refinery.hpp>
 
 namespace llpm {
@@ -200,4 +200,4 @@ namespace llpm {
 
 } // namespace llpm
 
-#endif // __LLPM_STD_LIBRARY_HPP__
+#endif // __LLPM_LIBRARIES_CORE_STD_LIBRARY_HPP__

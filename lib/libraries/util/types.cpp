@@ -1,6 +1,6 @@
 #include "types.hpp"
 
-#include <llpm/comm_intr.hpp>
+#include <libraries/core/comm_intr.hpp>
 
 #include <llvm/IR/DerivedTypes.h>
 

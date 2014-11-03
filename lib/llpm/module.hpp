@@ -5,7 +5,7 @@
 #include <llpm/ports.hpp>
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
-#include <llpm/comm_intr.hpp>
+#include <libraries/core/comm_intr.hpp>
 
 #include <boost/foreach.hpp>
 

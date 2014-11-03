@@ -1,5 +1,5 @@
-#ifndef __LLPM_LOGIC_INTR_HPP__
-#define __LLPM_LOGIC_INTR_HPP__
+#ifndef __LLPM_LIBRARIES_CORE_LOGIC_INTR_HPP__
+#define __LLPM_LIBRARIES_CORE_LOGIC_INTR_HPP__
 
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
@@ -47,4 +47,4 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_MEM_INTR_HPP__
+#endif // __LLPM_LIBRARIES_CORE_MEM_INTR_HPP__
