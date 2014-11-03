@@ -41,15 +41,14 @@ public:
     DEF_GET_NP(modIO); 
 
     bool operator==(const Connection& c) const {
-        return c._sink == this->_sink && c._source == this->_source;
-    }
-
-    uint64_t hash() const {
-        return ((uint64_t)_source) ^ ((uint64_t)_sink);
+        return (c._sink == this->_sink) 
+            && (c._source == this->_source);
     }
 
     int operator<(const Connection& c) const {
-        return this->hash() < c.hash();
+        if (this->_source != c._source)
+            return this->_source < c._source;
+        return this->_sink < c._sink;
     }
 };
 
