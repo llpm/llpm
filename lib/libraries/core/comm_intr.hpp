@@ -68,6 +68,10 @@ public:
 
     DEF_ARRAY_GET(din);
     DEF_GET(dout);
+
+    virtual FiringRule firing() const {
+        return OR;
+    }
 };
 
 // Takes N inputs of different types and outputs them
@@ -82,6 +86,10 @@ public:
 
     DEF_ARRAY_GET(din);
     DEF_GET(dout);
+
+    virtual FiringRule firing() const {
+        return OR;
+    }
 };
 
 // Splits a single input into N constituent parts

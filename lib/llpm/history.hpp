@@ -16,7 +16,8 @@ public:
     enum Source {
         Unknown,
         Frontend,
-        Refinement
+        Refinement,
+        Optimization
     };
 
 private:
@@ -51,6 +52,11 @@ public:
 
     void setRefinement(Block* src) {
         _src = Refinement;
+        _srcBlocks = {src};
+    }
+
+    void setOptimization(Block* src) {
+        _src = Optimization;
         _srcBlocks = {src};
     }
 

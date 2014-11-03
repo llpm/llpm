@@ -11,6 +11,8 @@
 #include <llpm/connection.hpp>
 #include <llpm/module.hpp>
 
+#include <libraries/synthesis/pipeline.hpp>
+
 namespace llpm {
 
 // fwd defs. C++ is dumb ++
@@ -19,13 +21,20 @@ class Schedule;
 
 /* A StaticRegion represents a region of blocks which can be
  * statically scheduled. In other words, it is a feed-forward region
- * of blocks.
+ * of blocks, though it may not be implemented that way.
  */
 class StaticRegion {
 public:
+#if 0
     class Layer {
-        unordered_set<Block*> _blocks;
+        friend class StaticRegion;
 
+        set<Block*> _blocks;
+
+        Layer() {
+            _controller = new PipelineStageController();
+        }
+        
     public:
         void addBlock(Block* b) {
             _blocks.insert(b);
@@ -33,14 +42,19 @@ public:
 
         template<typename T>
         void addBlocks(T cntr) {
-            _blocks.insert(cntr.begin(), cntr.end());
+            for (auto b: cntr)
+                addBlock(b);
         }
         DEF_GET_NP(blocks);
+        DEF_GET_NP(controller);
 
         bool contains(Block* b) const {
             return _blocks.find(b) != _blocks.end();
         }
+
+        void buildRegisters();
     };
+#endif
 
     enum ConnType {
         Input,
@@ -59,12 +73,14 @@ private:
     Type _type;
     Schedule*   _schedule;
     set<Block*> _blocks;
+    bool _scheduled;
 
 public:
     StaticRegion(unsigned id, Schedule* s, Block* b, Type type = Normal):
         _id(id),
         _type(type),
-        _schedule(s) {
+        _schedule(s), 
+        _scheduled(false) {
         _blocks.insert(b);
     }
 
@@ -88,7 +104,10 @@ public:
         return _blocks;
     }
 
-    void schedule(Pipeline*, vector<Layer>&);
+    void findIO(set<InputPort*>& inputs,
+                set<OutputPort*>& outputs);
+
+    void schedule(Pipeline*);
     ConnType classifyConnection(Connection conn);
 };
 
@@ -98,11 +117,14 @@ public:
  * and back pressure).
  */
 class Schedule {
+    friend class StaticRegion;
+
     MutableModule* _module;
     list<StaticRegion*> _regions;
     unordered_map<Block*, StaticRegion*> _blockMap;
 
     void buildBlockMap();
+    void buildBlockMap(StaticRegion* r);
 
 public:
     Schedule(Module* module);

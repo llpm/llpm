@@ -35,6 +35,8 @@ std::string ObjectNamer::primBlockName(Block* b) {
         if (base == "") {
             if (b->history().src() == BlockHistory::Refinement) {
                 base = primBlockName(b->history().srcBlock()) + "p";
+            } else if (b->history().src() == BlockHistory::Optimization) {
+                base = primBlockName(b->history().srcBlock()) + "o";
             } else {
                 base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
             }

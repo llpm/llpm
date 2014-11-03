@@ -82,9 +82,20 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     bool blacklisted = 
         _blacklist.count(o->owner()) > 0 || 
         _blacklist.count(i->owner()) > 0;
-    _connections.insert(Connection(o, i, blacklisted));
+    Connection c(o, i, blacklisted);
+    _connections.insert(c);
     registerBlock(o->owner());
     registerBlock(i->owner());
+
+#ifndef LLPM_NO_DEBUG
+    {
+        Connection cf;
+        auto found = this->find(i, cf);
+        assert(found);
+        assert(cf.sink() == i);
+        assert(cf.source() == o);
+    }
+#endif
 }
 
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
@@ -93,6 +104,14 @@ void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
         _connections.erase(f);
     deregisterBlock(o->owner());
     deregisterBlock(i->owner());
+
+#ifndef LLPM_NO_DEBUG
+    {
+        Connection c;
+        auto found = this->find(i, c);
+        assert(!found);
+    }
+#endif
 }
 
 void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& newPorts) {

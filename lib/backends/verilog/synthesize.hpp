@@ -31,12 +31,9 @@ public:
         Context(std::ostream& os, Module* ctxt) :
             _os(os),
             _namer(ctxt->design().namer()),
-            _ctxt(ctxt),
-            layer(NULL)
+            _ctxt(ctxt)
         { }
 
-        StaticRegion::Layer* layer;
-        unsigned layerNum;
         StaticRegion* region;
 
         void updateMapping(OutputPort* op, std::string name) {

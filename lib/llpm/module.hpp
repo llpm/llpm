@@ -54,6 +54,22 @@ public:
 
     virtual OutputPort* getDriver(InputPort* ip)  = 0;
     virtual InputPort* getSink(OutputPort* op) = 0;
+
+    // Modules are assumed to have independent inputs
+    virtual FiringRule firing() const {
+        return OR;
+    }
+
+    // Modules are assume to have independent outputs
+    virtual bool outputsIndependent() const {
+        return true;
+    }
+};
+
+class DummyBlock: public Identity {
+public:
+    DummyBlock(llvm::Type* t) :
+        Identity(t) { }
 };
 
 // A module which a third party can edit
@@ -85,8 +101,8 @@ class ContainerModule : public MutableModule {
     // Each container module input and output port have a pass
     // through block and a mapping to the internal output and input
     // port on the corresponding pass through block.
-    map<InputPort*, Identity*> _inputMap;
-    map<OutputPort*, Identity*> _outputMap;
+    map<InputPort*, DummyBlock*> _inputMap;
+    map<OutputPort*, DummyBlock*> _outputMap;
 
     // Schedule
     Schedule* _schedule;

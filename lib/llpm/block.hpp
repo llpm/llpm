@@ -32,6 +32,11 @@ class Module;
  * via "refine" method.
  */
 class Block : public gc_cleanup {
+public:
+    enum FiringRule {
+        AND, // All inputs must be available before this block is executed
+        OR   // Block fires when any input is available
+    };
 
 protected:
     Module* _module;
@@ -67,6 +72,19 @@ public:
 
     DEF_GET_NP(name);
     DEF_SET(name);
+
+    virtual FiringRule firing() const {
+        return AND;
+    }
+
+    /*
+     * If 'false' (the default), when this block produces an output an output
+     * appears on all output ports. If an output can appear on one output but
+     * not another then this method must return 'true'.
+     */
+    virtual bool outputsIndependent() const {
+        return false;
+    }
 
     BlockHistory& history() {
         return _history;
