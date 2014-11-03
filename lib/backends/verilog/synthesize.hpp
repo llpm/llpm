@@ -92,6 +92,9 @@ public:
 
         virtual bool handles(Block*) const = 0;
         virtual void print(Context& ctxt, Block* c) const = 0;
+        virtual bool customLID() const {
+            return false;
+        }
     };
 
     void writeIO(Context&);
