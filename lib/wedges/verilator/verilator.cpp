@@ -411,7 +411,7 @@ R"STRING(
 
             os << boost::format("    memcpy(simulator->%1%, arg.arr, %2%);\n")
                         % ip->name()
-                        % numwords;
+                        % (4 * numwords);
         }
 
         os << boost::format(
