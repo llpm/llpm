@@ -2,7 +2,10 @@ CFLAGS=-O1
 CXXFLAGS=${CFLAGS}
 CXX=../../../bin/llvm/bin/clang++
 
-default: simple_test
+default: simple_test simple.pdf
+
+simple.pdf: obj/simple.gv
+	dot -Tpdf -o simple.pdf obj/simple.gv
 
 obj/simple.hpp: simple.bc ../../../bin/llvm2verilog
 	../../../bin/llvm2verilog simple.bc obj simple

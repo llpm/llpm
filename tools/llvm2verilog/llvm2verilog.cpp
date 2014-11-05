@@ -8,7 +8,7 @@
 #include <frontends/llvm/translate.hpp>
 #include <refinery/refinery.hpp>
 #include <backends/verilog/synthesize.hpp>
-
+#include <backends/graphviz/graphviz.hpp>
 #include <wedges/verilator/verilator.hpp>
 
 using namespace llpm;
@@ -62,11 +62,14 @@ int main(int argc, const char** argv) {
             m->validityCheck();
         }
 
+        GraphvizOutput gv(d);
         VerilogSynthesizer vs(d);
         VerilatorWedge vw(&vs);
 
+
         FileSet fs(true, dirName, true);
         for (Module* mod: d.modules()) {
+            gv.writeModule(fs.create(mod->name() + ".gv"), mod);
             vw.writeModule(fs, mod);
         }
 
