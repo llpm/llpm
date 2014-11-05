@@ -1,6 +1,7 @@
 #include "graphviz.hpp"
 
 #include <libraries/synthesis/pipeline.hpp>
+#include <util/misc.hpp>
 
 namespace llpm {
 
@@ -15,7 +16,8 @@ static std::string attrs(ObjectNamer& namer, Block* b) {
         a["label"] = "reg";
     } else {
         a["shape"] = "component";
-        a["label"]="\"" + namer.getName(b, b->module()) + "\\n" + typeid(*b).name() + "\"";
+        a["label"]="\"" + namer.getName(b, b->module()) + "\\n" 
+            + cpp_demangle(typeid(*b).name()) + "\"";
     }
 
     std::string rc = "";
