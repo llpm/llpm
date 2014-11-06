@@ -54,16 +54,10 @@ bool ContainerModule::refine(ConnectionDB& conns) const
 }
 
 unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
-    vector<Block*> blocksTmp(_blocks.begin(), _blocks.end());
+    vector<Block*> blocksTmp;
+    blocks(blocksTmp);
 
     auto passes = design().refinery().refine(blocksTmp, _conns, sc);
-
-    set<Block*> blocks;
-    _conns.findAllBlocks(blocks);
-    _blocks.clear();
-    for (Block* b: blocks) {
-        addBlock(b);
-    }
     return passes;
 }
 
@@ -96,31 +90,11 @@ void ContainerModule::validityCheck() const {
         assert(_outputMap.count(op) == 1);
     }
 
-    for (Block* b: _blocks) {
-        assert(b->module() == this);
-    }
-
-    for (Module* b: _modules) {
-        assert(b->module() == this);
-    }
-
     set<Block*> blocks;
     _conns.findAllBlocks(blocks);
     for (Block* b: blocks) {
-        auto c1 = _blocks.count(b);
-
-        Module* m = dynamic_cast<Module*>(b);
-        if (m) {
-            auto c2 = _modules.count(m);
-            assert( c1 == 0 );
-            assert( c2 > 0 );
-        } else {
-            assert( c1 > 0 );
-        }
+        assert(b->module() == this);
     }
-    // printf("Blocks: %lu, _blocks: %lu, _modules: %lu\n",
-           // blocks.size(), _blocks.size(), _modules.size());
-    assert(blocks.size() == (_blocks.size() + _modules.size()) );
 }
 
 } // namespace llpm

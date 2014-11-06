@@ -79,8 +79,6 @@ public:
         Module(design, name) { }
 
     virtual ConnectionDB* conns() = 0;
-    virtual void addBlock(Block* b) = 0;
-    virtual void addSubmodule(Module* m) = 0;
 };
 
 /**********
@@ -90,10 +88,10 @@ public:
  */
 class ContainerModule : public MutableModule {
     // The blocks which I directly contain
-    set<Block*> _blocks;
+    // set<Block*> _blocks;
 
     // My submodules
-    set<Module*> _modules;
+    // set<Module*> _modules;
 
     // The connections between blocks in this module
     ConnectionDB _conns;
@@ -150,6 +148,7 @@ public:
         return internalOPSink;
     }
 
+#if 0
     void addBlock(Block* b) {
         assert(b != NULL);
 
@@ -164,12 +163,15 @@ public:
             b->module(this);
         }
     }
+#endif
 
+#if 0
     void addSubmodule(Module* m) {
         assert(m != NULL);
         this->_modules.insert(m);
         m->module(this);
     }
+#endif
 
     void connect(InputPort* sink, OutputPort* source) {
         connect(source, sink);
@@ -189,25 +191,14 @@ public:
             throw InvalidArgument("Sink block is not contained by this module!");
         }
 
-        if (sourceB->module() == NULL) {
-            this->addBlock(sourceB);
-        }
-
-        if (sinkB->module() == NULL) {
-            this->addBlock(sinkB);
-        }
-
         _conns.connect(source, sink);
     }
 
     virtual bool hasState() const {
-        for(Block* b: _blocks) {
+        std::set<Block*> blocks;
+        _conns.findAllBlocks(blocks);
+        for(Block* b: blocks) {
             if (b->hasState())
-                return true;
-        }
-
-        for(Module* m: _modules) {
-            if (m->hasState())
                 return true;
         }
 
@@ -215,15 +206,29 @@ public:
     }
 
     virtual void blocks(vector<Block*>& vec) const {
-        vec.insert(vec.end(), _blocks.begin(), _blocks.end());
+        std::set<Block*> blocks;
+        _conns.findAllBlocks(blocks);
+        vec.insert(vec.end(), blocks.begin(), blocks.end());
     }
 
     virtual void submodules(vector<Block*>& vec) const {
-        vec.insert(vec.end(), _modules.begin(), _modules.end());
+        std::set<Block*> blocks;
+        _conns.findAllBlocks(blocks);
+        for (Block* b: blocks) {
+            Module* m = dynamic_cast<Module*>(b);
+            if (m != NULL)
+                vec.push_back(m);
+        }
     }
 
     virtual void submodules(vector<Module*>& vec) const {
-        vec.insert(vec.end(), _modules.begin(), _modules.end());
+        std::set<Block*> blocks;
+        _conns.findAllBlocks(blocks);
+        for (Block* b: blocks) {
+            Module* m = dynamic_cast<Module*>(b);
+            if (m != NULL)
+                vec.push_back(m);
+        }
     }
     
     virtual bool refinable() const {
