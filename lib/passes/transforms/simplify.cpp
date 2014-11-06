@@ -12,9 +12,11 @@ void SimplifyPass::run(Module* m) {
     ConnectionDB* conns = m->conns();
     assert(conns != NULL);
 
-    set<Block*> blocks;
-    conns->findAllBlocks(blocks);
-    printf("Simplifying %s with %lu blocks\n", m->name().c_str(), blocks.size());
+    set<Block*> origBlocks;
+    conns->findAllBlocks(origBlocks);
+    printf("Simplifying %s with %lu blocks\n", m->name().c_str(), origBlocks.size());
+
+    set<Block*> blocks = origBlocks;
 
     // Eliminate identities and other no-ops
     for (Block* b: blocks) {
@@ -125,8 +127,18 @@ void SimplifyPass::run(Module* m) {
                     match = false;
             }
 
-            // TODO: if a re-order occurs, does it matter? Check consumers
-            // to determine if operands are commutative
+            if (!match) {
+                // Split-join pair re-orders fields. Does it matter? Check
+                // consumers to determine if operands are commutative
+                vector<InputPort*> sinks;
+                conns->findSinks(jb->dout(), sinks);
+                match = true;
+                for (InputPort* ip: sinks) {
+                    if (!ip->owner()->inputCommutative(ip)) {
+                        match = false;
+                    }
+                }
+            }
 
             if (match) {
                 // Samely-ordered match? Total no-op, so remove the pair
@@ -142,13 +154,21 @@ void SimplifyPass::run(Module* m) {
 
                 conns->removeBlock(jb);
                 conns->removeBlock(split);
-            } 
+            }
         }
     }
+
+    // TODO: Find and eliminate redundant (duplicate) blocks
 
     blocks.clear();
     conns->findAllBlocks(blocks);
     printf("    Simplified %s to %lu blocks\n", m->name().c_str(), blocks.size());
+    
+    // Apply this pass iteratively until convergence
+    if (origBlocks != blocks) {
+        // Did this pass do something?
+        this->run(m);
+    }
 }
 
 };

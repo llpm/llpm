@@ -30,6 +30,11 @@ namespace llpm {
         static llvm::Type* OutType(std::vector<llvm::Type*>);
 
         IntAddition(std::vector<llvm::Type*>);
+
+        virtual bool inputCommutative(InputPort* op) const {
+            assert(op == din());
+            return true;
+        }
     };
 
     // a - b. Integers only
@@ -125,6 +130,11 @@ namespace llpm {
         static llvm::Type* InType(std::vector<llvm::Type*>);
         static llvm::Type* OutType(std::vector<llvm::Type*>);
         IntMultiply(std::vector<llvm::Type*>);
+
+        virtual bool inputCommutative(InputPort* op) const {
+            assert(op == din());
+            return true;
+        }
     };
 
     // Divide integer a by integer b
@@ -170,6 +180,11 @@ namespace llpm {
     public:
         Bitwise(unsigned N, llvm::Type* t, Op op);
         DEF_GET_NP(op);
+
+        virtual bool inputCommutative(InputPort* op) const {
+            assert(op == din());
+            return true;
+        }
     };
 
     class IntCompare : public Function {

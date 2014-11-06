@@ -28,6 +28,8 @@ void Transformer::remove(Block* b) {
         _conns->disconnect(op, sink);
         _conns->connect(driver, sink);
     }
+
+    _conns->removeBlock(b);
 }
 
 };

@@ -97,6 +97,12 @@ public:
         return _outputs;
     }
 
+    // Can previous blocks re-order the fields of this input and obtain the
+    // same result from this block?
+    virtual bool inputCommutative(InputPort* op) const {
+        return false;
+    }
+
     int inputNum(InputPort* ip) const {
         auto f = _inputs.find(ip);
         if (f == _inputs.end())
