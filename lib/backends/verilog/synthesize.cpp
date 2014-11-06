@@ -21,7 +21,7 @@ VerilogSynthesizer::VerilogSynthesizer(Design& d) :
     addDefaultPrinters();
 }
 
-void VerilogSynthesizer::write(std::ostream& os) {
+    void VerilogSynthesizer::write(std::ostream& os) {
     auto& modules = _design.modules();
     for (auto& m: modules) {
         writeModule(os, m);
@@ -651,8 +651,11 @@ public:
         return dynamic_cast<Router*>(b) != NULL;
     }
 
+    virtual bool customLID() const {
+        return true;
+    }
+
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
-        assert(false && "I'm quite sure router is broken");
         Router* r = dynamic_cast<Router*>(c);
         auto dinName = ctxt.name(r->din());
         auto dinType = r->din()->type()->getContainedType(1);
@@ -665,16 +668,24 @@ public:
 
         for (unsigned i=0; i<r->dout_size(); i++) {
             auto op = r->dout(i);
-            ctxt << "    assign " << ctxt.name(op) << " = "
-                 << boost::format("%1%[%2%:%3%] == %4% ? %1%[%5%:%6%] : {%7%{1'bx}};\n")
+            ctxt << boost::format("    assign %8% = (%1%[%2%:%3%] == %4%) ? %1%[%5%:%6%] : {%7%{1'bx}};\n"
+                                  "    assign %8%_valid = (%1%[%2%:%3%] == %4%) ? 1'b1 : 1'b0;\n")
                     % dinName
                     % (selWidth + selOffset - 1)
                     % selOffset
                     % i
                     % (dinWidth + dinOffset - 1)
                     % dinOffset
-                    % dinWidth;
+                    % dinWidth
+                    % ctxt.name(op);
         }
+        ctxt << "    assign " << dinName << "_bp = \n";
+        for (unsigned i=0; i<r->dout_size(); i++) {
+            auto op = r->dout(i);
+            ctxt << boost::format("        (%1%_bp & %1%_valid) |\n")
+                        % ctxt.name(op);
+        }
+        ctxt << "        1'b0;\n";
     }
 };
 

@@ -1,6 +1,7 @@
-CFLAGS=-O1
+CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
 CXX=../../../bin/llvm/bin/clang++
+OPTS=-mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
 
 default: simple_test simple.pdf
 
@@ -18,7 +19,8 @@ simple_test: simple_test.cpp simple.hpp
 	${CXX} -o simple_test simple_test.cpp.bc obj/simple_verilator.bc
 
 %.bc: %.c
-	clang -c -emit-llvm ${CFLAGS} $< -o $@
+	clang -c -emit-llvm ${CFLAGS} $< -o $@.tmp
+	opt ${OPTS} $@.tmp -o $@
 	llvm-dis-3.4 $@
 
 %.bc: %.cpp

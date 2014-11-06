@@ -44,8 +44,9 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
            << "[" << attrs(namer, b) << "];\n";
         for (auto ip: b->inputs()) {
             OutputPort* op = conns->findSource(ip);
-            os << "    " << namer.getName(op->owner(), mod) << " -> "
-               << namer.getName(b, mod) << ";\n";
+            if (op != NULL)
+                os << "    " << namer.getName(op->owner(), mod) << " -> "
+                   << namer.getName(b, mod) << ";\n";
         }
     }
 

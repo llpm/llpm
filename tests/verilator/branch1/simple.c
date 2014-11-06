@@ -1,6 +1,7 @@
 long simple(long a, long b) {
-    if (a > b)
-        return a;
-    return b;
+    long i;
+    for (i=0; i<b; i++)
+        a += 1;
+    return a;
 }
 
