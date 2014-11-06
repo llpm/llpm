@@ -2,6 +2,8 @@
 
 #include <util/transform.hpp>
 
+#include <deque>
+
 namespace llpm {
 
 void SimplifyPass::run(Module* m) {
@@ -27,7 +29,64 @@ void SimplifyPass::run(Module* m) {
         Router* rb = dynamic_cast<Router*>(b);
         if (rb && rb->dout_size() == 1)
             t.remove(rb);
+
+        Extract* eb = dynamic_cast<Extract*>(b);
+        if (eb && eb->path().size() == 0) {
+            t.remove(eb);
+        }
     }
+
+    blocks.clear();
+    conns->findAllBlocks(blocks);
+    // Find all field extracts
+    map<OutputPort*, set<unsigned>> fieldsUsed;
+    for (Block* b: blocks) {
+        Extract* eb = dynamic_cast<Extract*>(b);
+        if (eb) {
+            assert(eb->path().size() > 0);
+            OutputPort* op = conns->findSource(eb->din());
+            fieldsUsed[op].insert(eb->path()[0]);
+        }
+    }
+
+    // Replace some extracts with splits
+    for (auto pr: fieldsUsed) {
+        // Rule: convert to split if 2 or more fields are used
+        if (pr.second.size() >= 2) {
+            OutputPort* op = pr.first;
+            Split* s = new Split(op->type());
+            conns->connect(op, s->din());
+
+            vector<InputPort*> opSinks;
+            conns->findSinks(op, opSinks);
+            for (auto sink: opSinks) {
+                Extract* eb = dynamic_cast<Extract*>(sink->owner());
+                if (eb) {
+                    auto path = eb->path();
+                    assert(path.size() > 0);
+                    unsigned fieldNum = path.front();
+                    path.erase(path.begin());
+                    assert(fieldNum < s->dout_size());
+                    conns->disconnect(op, sink);
+
+                    OutputPort* newOp = s->dout(fieldNum);
+                    if (path.size() > 0) {
+                        Extract* newEB = new Extract(newOp->type(), path);
+                        conns->connect(newOp, newEB->din());
+                        newOp = newEB->dout();
+                    }
+
+                    vector<InputPort*> users;
+                    conns->findSinks(eb->dout(), users);
+                    for (auto user: users) {
+                        conns->disconnect(eb->dout(), user);
+                        conns->connect(newOp, user);
+                    }
+                }
+            }
+        }
+    }
+
 
     blocks.clear();
     conns->findAllBlocks(blocks);

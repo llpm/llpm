@@ -17,6 +17,7 @@ public:
     { }
 
     void remove(Block* b);
+    void replace(Block* b, Block* with);
 };
 
 };
