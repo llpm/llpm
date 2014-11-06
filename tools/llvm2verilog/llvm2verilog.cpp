@@ -11,6 +11,9 @@
 #include <backends/graphviz/graphviz.hpp>
 #include <wedges/verilator/verilator.hpp>
 
+#include <passes/manager.hpp>
+#include <passes/transforms/simplify.hpp>
+
 using namespace llpm;
 
 int main(int argc, const char** argv) {
@@ -33,6 +36,9 @@ int main(int argc, const char** argv) {
 
         BaseLibraryStopCondition sc;
         StdLibStops(sc);
+
+        PassManager pm(d);
+        pm.append(new SimplifyPass(d));
 
         for(auto&& m: modules) {
             m->validityCheck();
@@ -61,6 +67,8 @@ int main(int argc, const char** argv) {
 
             m->validityCheck();
         }
+
+        pm.run();
 
         GraphvizOutput gv(d);
         VerilogSynthesizer vs(d);

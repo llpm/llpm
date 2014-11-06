@@ -137,5 +137,13 @@ void ConnectionDB::remap(const OutputPort* origPort, OutputPort* newPort) {
     }
 }
 
+void ConnectionDB::removeBlock(Block* b) {
+    std::vector<Connection> conns;
+    this->find(b, conns);
+    for (auto&& c: conns) {
+        this->disconnect(c);
+    }
+}
+
 } // namespace llpm
 

@@ -120,6 +120,14 @@ public:
         return _connections.count(c) > 0;
     }
 
+    bool connected(OutputPort* op, InputPort* ip) {
+        return exists(Connection(op, ip, false));
+    }
+
+    bool connected(InputPort* ip, OutputPort* op) {
+        return exists(Connection(op, ip, false));
+    }
+
     size_t numConnections() {
         return _connections.size();
     }
@@ -129,6 +137,8 @@ public:
     void find(Block* b, vector<Connection>&) const;
     bool find(const InputPort* ip, Connection& c) const;
     void find(const OutputPort* op, std::vector<Connection>& out)const ;
+
+    void removeBlock(Block* b);
 
     void update(const ConnectionDB& newdb);
     
