@@ -99,6 +99,8 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
 }
 
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
+    assert(o != NULL);
+    assert(i != NULL);
     auto f = _connections.find(Connection(o, i, false));
     if (f != _connections.end())
         _connections.erase(f);

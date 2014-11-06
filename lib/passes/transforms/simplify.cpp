@@ -105,7 +105,7 @@ void SimplifyPass::run(Module* m) {
                 auto input = jb->din(i);
                 auto driver = conns->findSource(input);
                 drivers.push_back(driver); 
-                Split* s = dynamic_cast<Split*>(driver->owner());
+                Split* s = (driver == NULL) ? NULL : dynamic_cast<Split*>(driver->owner());
                 
                 // Populate driver split if not already
                 if (split == NULL)

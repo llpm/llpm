@@ -19,14 +19,16 @@ void Transformer::remove(Block* b) {
 
     InputPort* ip = *inputs.begin();
     OutputPort* driver = _conns->findSource(ip);
-    _conns->disconnect(driver, ip);
+    if (driver)
+        _conns->disconnect(driver, ip);
 
     OutputPort* op = *outputs.begin();
     vector<InputPort*> sinks;
     _conns->findSinks(op, sinks);
     for (InputPort* sink: sinks) {
         _conns->disconnect(op, sink);
-        _conns->connect(driver, sink);
+        if (driver)
+            _conns->connect(driver, sink);
     }
 
     _conns->removeBlock(b);
