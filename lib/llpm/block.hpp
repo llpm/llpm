@@ -97,6 +97,22 @@ public:
         return _outputs;
     }
 
+    int inputNum(InputPort* ip) const {
+        auto f = _inputs.find(ip);
+        if (f == _inputs.end())
+            return -1;
+        else
+            return std::distance(_inputs.begin(), f);
+    }
+
+    int outputNum(OutputPort* op) const {
+        auto f = _outputs.find(op);
+        if (f == _outputs.end())
+            return -1;
+        else
+            return std::distance(_outputs.begin(), f);
+    }
+
     virtual bool hasState() const = 0;
     bool isPure() const {
         return !hasState();
