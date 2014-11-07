@@ -2,6 +2,7 @@
 
 #include <libraries/synthesis/pipeline.hpp>
 #include <util/misc.hpp>
+#include <util/llvm_type.hpp>
 
 #include <boost/format.hpp>
 
@@ -45,7 +46,9 @@ static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip) {
     auto ipName = ip->name();
     if (ipName == "")
         ipName = str(boost::format("%1%") % ip->owner()->inputNum(ip));
-    a["label"] = "\"" + opName + "\\n" + ipName + "\"";
+    a["label"] = "\"" + opName + "\\n" 
+        + ipName + "\\n"
+        + typestr(op->type()) + "\"";
     a["fontsize"] = "8.0";
 
     return attrs(a);
