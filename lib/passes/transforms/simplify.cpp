@@ -50,6 +50,21 @@ void SimplifyPass::run(Module* m) {
         }
     }
 
+    // Eliminate blocks which drive nothing
+    for (Block* b: blocks) {
+        auto outputs = b->outputs();
+        bool noSinks = true;
+        for (auto op: outputs) {
+            vector<InputPort*> sinks;
+            conns->findSinks(op, sinks);
+            if (sinks.size() > 0)
+                noSinks = false;
+        }
+
+        if (noSinks)
+            t.remove(b);
+    }
+
 
     blocks.clear();
     conns->findAllBlocks(blocks);
