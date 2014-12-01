@@ -61,18 +61,31 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     assert(conns != NULL);
 
     os << "digraph " << mod->name() << " {\n";
+    os << R"STRING(
+    subgraph inputs {
+        input1_dummy[label="Module Input 1"]
+        graph[rank="min"]
+    }
+    subgraph outputs {
+        output1_dummy[label="Module Output 1"]
+        graph[rank = "max"]
+    }
+)STRING";
     set<Block*> blocks;
     conns->findAllBlocks(blocks);
     for (Block* b: blocks) {
         os << "    " << namer.getName(b, mod)
            << "[" << attrs(namer, b) << "];\n";
-        for (auto ip: b->inputs()) {
-            OutputPort* op = conns->findSource(ip);
-            if (op != NULL)
-                os << "    " << namer.getName(op->owner(), mod) << " -> "
-                   << namer.getName(b, mod) 
-                   << "[" << attrs(namer, op, ip) << "];\n";
-        }
+
+    }
+
+    const set<Connection>& rawConns = conns->raw();
+    for (auto conn: rawConns) {
+        auto op = conn.source();
+        auto ip = conn.sink();
+        os << "    " << namer.getName(op->owner(), mod) << " -> "
+           << namer.getName(ip->owner(), mod) 
+           << "[" << attrs(namer, op, ip) << "];\n";
     }
 
     os << "}\n";
