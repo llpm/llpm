@@ -47,17 +47,17 @@ static const std::string header = R"STRING(
         end
 `define LI_CONTROL(V_OUT, V_IN, BP_OUT, BP_IN, CE)\
         reg V_OUT``_internal;\
-        assign V_OUT = V_OUT``_internal && ~BP_IN;\
-        assign BP_OUT = V_OUT;\
+        assign V_OUT = V_OUT``_internal;\
+        assign BP_OUT = V_OUT``_internal;\
         wire CE = V_IN && ~BP_OUT;\
         always@(posedge clk)\
         begin\
             if (~resetn)\
                 V_OUT``_internal <= 1'b0;\
             else begin\
-                if (!BP_IN)\
+                if (V_OUT && ~BP_IN)\
                     V_OUT``_internal <= 1'b0;\
-                if (V_IN)\
+                if (CE)\
                     V_OUT``_internal <= 1'b1;\
             end\
         end
@@ -102,7 +102,8 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     ctxt << header;
 
     ctxt << "\n\n";
-    ctxt << "// The \"" << mod->name() << "\" module of type " << typeid(*mod).name() << "\n";
+    ctxt << "// The \"" << mod->name() << "\" module of type "
+         << cpp_demangle(typeid(*mod).name()) << "\n";
     ctxt << "module " << mod->name() << " (\n";
 
 
@@ -236,7 +237,8 @@ void VerilogSynthesizer::writeStaticRegion(StaticRegion* region, Context& ctxt) 
         if (dynamic_cast<DummyBlock*>(b) != NULL)
             continue;
 
-        ctxt << "    // Block \"" << ctxt.primBlockName(b) << "\" type " << typeid(*b).name() << "\n";
+        ctxt << "    // Block \"" << ctxt.primBlockName(b) << "\" type "
+             << cpp_demangle(typeid(*b).name()) << "\n";
         for (InputPort* ip: b->inputs()) {
             Connection c;
             auto inpFound = conns->find(ip, c);
@@ -293,6 +295,7 @@ void VerilogSynthesizer::writeStaticRegion(StaticRegion* region, Context& ctxt) 
         ctxt << "\n";
     }
 
+
 }
 
 void VerilogSynthesizer::print(Context& ctxt, Block* b)
@@ -303,7 +306,7 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
         throw ImplementationError(
             str(boost::format(" Cannot translate block %1% of type %2% into verilog.") 
                             % blockName
-                            % typeid(*b).name()));
+                            % cpp_demangle(typeid(*b).name())));
     } else {
         assert(!b->outputsIndependent());
         auto printer = possible_printers.front();
@@ -331,6 +334,18 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
 
             for (auto op: b->outputs()) {
                 ctxt << "    assign " << ctxt.name(op) << "_valid = " << ctxt.name(b) << "_valid;\n";
+            }
+
+
+            ctxt << "    wire " << ctxt.name(b) << "_bp = \n";
+            ctxt << "        ~" << ctxt.name(b) << "_valid | \n";
+            for (auto op: b->outputs()) {
+                ctxt << "        " << ctxt.name(op) << "_bp | " << "\n";
+            }
+            ctxt << "        1'b0;\n";
+
+            for (auto ip: b->inputs()) {
+                ctxt << "    assign " << ctxt.name(ip) << "_bp = " << ctxt.name(b) << "_bp;\n";
             }
         }
     }
@@ -675,7 +690,7 @@ public:
         for (unsigned i=0; i<r->dout_size(); i++) {
             auto op = r->dout(i);
             ctxt << boost::format("    assign %8% = (%1%[%2%:%3%] == %4%) ? %1%[%5%:%6%] : {%7%{1'bx}};\n"
-                                  "    assign %8%_valid = (%1%[%2%:%3%] == %4%) ? 1'b1 : 1'b0;\n")
+                                  "    assign %8%_valid = (%1%[%2%:%3%] == %4%) ? %1%_valid : 1'b0;\n")
                     % dinName
                     % (selWidth + selOffset - 1)
                     % selOffset
@@ -709,14 +724,14 @@ public:
         Select* s = dynamic_cast<Select*>(c);
         std::string style = "LLPM_Select_Priority";
     
-         ctxt << boost::format("    wire [%1%:0] %2%_input_combined [%3%:0];\n") 
+        ctxt << boost::format("    wire [%1%:0] %2%_input_combined [%3%:0];\n") 
                             % (bitwidth(s->dout()->type()) - 1)
                             % ctxt.name(s)
                             % (s->din_size() - 1)
-              << boost::format("    wire %1%_valids[%2%:0];\n") 
+             << boost::format("    wire %1%_valids[%2%:0];\n") 
                             % ctxt.name(s)
                             % (s->din_size() - 1)
-              << boost::format("    wire %1%_bp[%2%:0];\n") 
+             << boost::format("    wire %1%_bp[%2%:0];\n") 
                             % ctxt.name(s)
                             % (s->din_size() - 1)
             ;
@@ -729,6 +744,12 @@ public:
                             % ctxt.name(s)
                             % i
                             % ctxt.name(s->din(i))
+#if 0
+                 << boost::format("    assign %3%_bp = %1%_bp[%2%];\n")
+                            % ctxt.name(s)
+                            % i
+                            % ctxt.name(s->din(i))
+#endif
                 ;
         }
 
@@ -751,6 +772,14 @@ public:
              <<               "    );\n"
              ;
 
+        for (unsigned i=0; i<s->din_size(); i++) {
+
+                 ctxt << boost::format("    assign %3%_bp = %1%_bp[%2%];\n")
+                            % ctxt.name(s)
+                            % i
+                            % ctxt.name(s->din(i))
+                ;
+        }
     }
 };
 

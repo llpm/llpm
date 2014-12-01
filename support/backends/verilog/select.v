@@ -8,7 +8,7 @@
 
 
 // This select implementation uses an arbiter which always favors the highest
-// number input. Can cause starvation on other inputs. Cheap, but if
+// number input. Can cause starvation on other inputs. Cheap and if
 // necessary, flow control must be implemented elsewhere
 module LLPM_Select_Priority(clk, resetn, x, x_valid, x_bp, a, a_valid, a_bp);
 
