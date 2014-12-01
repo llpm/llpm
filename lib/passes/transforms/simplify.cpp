@@ -59,7 +59,8 @@ void SimplifyPass::run(Module* m) {
         Extract* eb = dynamic_cast<Extract*>(b);
         if (eb) {
             assert(eb->path().size() > 0);
-            OutputPort* op = conns->findSource(eb->din());        Multiplexer* mb = dynamic_cast<Multiplexer*>(b);
+            OutputPort* op = conns->findSource(eb->din()); 
+            Multiplexer* mb = dynamic_cast<Multiplexer*>(b);
         if (mb)
             t.remove(mb);
             fieldsUsed[op].insert(eb->path()[0]);
