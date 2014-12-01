@@ -55,7 +55,7 @@ static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip) {
 }
 
 void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
-    ObjectNamer namer;
+    ObjectNamer& namer = mod->design().namer();
 
     ConnectionDB* conns = mod->conns();
     assert(conns != NULL);

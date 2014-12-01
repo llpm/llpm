@@ -38,6 +38,11 @@ public:
         _dout(this, value->getType())
     { }
 
+    Constant(llvm::Type* t) :
+        _value(NULL),
+        _dout(this, t)
+    { }
+
     virtual bool hasState() const { return false; }
 
     DEF_GET(dout);

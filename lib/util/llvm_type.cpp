@@ -2,6 +2,7 @@
 #include <llpm/exceptions.hpp>
 
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Value.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace llpm {
@@ -34,6 +35,13 @@ unsigned bitoffset(llvm::Type* ct, unsigned n) {
 }
 
 std::string typestr(llvm::Type* t) {
+    std::string s;
+    llvm::raw_string_ostream os(s);
+    t->print(os);
+    return s;
+}
+
+std::string valuestr(llvm::Value* t) {
     std::string s;
     llvm::raw_string_ostream os(s);
     t->print(os);

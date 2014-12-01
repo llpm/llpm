@@ -5,6 +5,7 @@
 #include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
 #include <util/llvm_type.hpp>
+#include <util/misc.hpp>
 
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/std_library.hpp>
@@ -242,6 +243,9 @@ void VerilogSynthesizer::writeStaticRegion(StaticRegion* region, Context& ctxt) 
             std::string opName;
             if (!inpFound) {
                 fprintf(stderr, "Warning: no driver found for input %s!\n", ctxt.name(ip).c_str());
+                fprintf(stderr, "         input %u of %lu of block %s type %s\n",
+                                b->inputNum(ip)+1, b->inputs().size(),
+                                ctxt.name(b).c_str(), cpp_demangle(typeid(*b).name()).c_str());
                 opName = "UNKNOWN";
             } else {
                 opName = ctxt.name(c.source());
@@ -534,8 +538,9 @@ public:
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Constant* f = dynamic_cast<Constant*>(c);
-        ctxt << "    assign " << ctxt.name(f->dout()) << " = "
-             << toString(f->value()) << ";";
+        if (!f->dout()->type()->isVoidTy())
+            ctxt << "    assign " << ctxt.name(f->dout()) << " = "
+                 << toString(f->value()) << ";";
     }
 };
 

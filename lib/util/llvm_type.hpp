@@ -6,6 +6,7 @@
 // If I never see another fwd declaration...
 namespace llvm {
     class Type;
+    class Value;
 };
 
 namespace llpm {
@@ -18,6 +19,7 @@ namespace llpm {
     unsigned bitoffset(llvm::Type* t, unsigned n);
 
     std::string typestr(llvm::Type* t);
+    std::string valuestr(llvm::Value* t);
 }
 
 #endif // __LLPM_UTIL_LLVM_TYPE_HPP__

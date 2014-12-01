@@ -4,11 +4,32 @@
 #include <typeinfo>
 #include <typeindex>
 #include <boost/function.hpp>
+#include <boost/format.hpp>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/BasicBlock.h>
 
 #include <libraries/core/std_library.hpp>
+#include <util/llvm_type.hpp>
 
 namespace llpm {
+
+void LLVMInstruction::createName() {
+    if (_ins->hasName()) {
+        this->name(_ins->getName());
+        return;
+    }
+
+    unsigned idx = 0;
+    auto bb = _ins->getParent();
+    for (auto iter = bb->begin();
+         iter != bb->end() && (llvm::Instruction*)iter != _ins;
+         iter++) {
+        idx ++;
+    }
+    this->name(str(boost::format("%1%i%2%")
+                        % bb->getName().str()
+                        % idx));
+}
 
 unsigned LLVMInstruction::GetNumHWOperands(llvm::Instruction* ins) {
     switch (ins->getOpcode()) {
@@ -91,12 +112,12 @@ llvm::Type* LLVMInstruction::GetOutput(llvm::Instruction* ins) {
 template<typename Inner>
 class WrapperInstruction: public LLVMPureInstruction {
 public:
-    WrapperInstruction(llvm::Instruction* ins) :
-        LLVMPureInstruction(ins, GetInput(ins), GetOutput(ins))
+    WrapperInstruction(const LLVMBasicBlock* bb, llvm::Instruction* ins) :
+        LLVMPureInstruction(bb, ins, GetInput(ins), GetOutput(ins))
     { }
 
-    static WrapperInstruction* Create(llvm::Instruction* ins) {
-        return new WrapperInstruction(ins);
+    static WrapperInstruction* Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+        return new WrapperInstruction(bb, ins);
     }
 
     virtual bool refinable() const {
@@ -155,12 +176,12 @@ class TruncatingIntWrapperInstruction: public LLVMPureInstruction {
     Inner* New() const;
 
 public:
-    TruncatingIntWrapperInstruction(llvm::Instruction* ins) :
-        LLVMPureInstruction(ins)
+    TruncatingIntWrapperInstruction(const LLVMBasicBlock* bb, llvm::Instruction* ins) :
+        LLVMPureInstruction(bb, ins)
     { }
 
-    static TruncatingIntWrapperInstruction* Create(llvm::Instruction* ins) {
-        return new TruncatingIntWrapperInstruction(ins);
+    static TruncatingIntWrapperInstruction* Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+        return new TruncatingIntWrapperInstruction(bb, ins);
     }
 
     virtual bool refinable() const {
@@ -233,12 +254,12 @@ class IntWrapperInstruction: public LLVMPureInstruction {
     Inner* New() const;
 
 public:
-    IntWrapperInstruction(llvm::Instruction* ins) :
-        LLVMPureInstruction(ins)
+    IntWrapperInstruction(const LLVMBasicBlock* bb, llvm::Instruction* ins) :
+        LLVMPureInstruction(bb, ins)
     { }
 
-    static IntWrapperInstruction* Create(llvm::Instruction* ins) {
-        return new IntWrapperInstruction(ins);
+    static IntWrapperInstruction* Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+        return new IntWrapperInstruction(bb, ins);
     }
 
     virtual bool refinable() const {
@@ -359,14 +380,15 @@ IntCompare* IntWrapperInstruction<IntCompare>::New() const {
 
 class FlowInstruction: public LLVMPureInstruction {
 public:
-    FlowInstruction(llvm::Instruction* ins) :
-        LLVMPureInstruction(ins, GetInput(ins), GetOutput(ins))
+    FlowInstruction(const LLVMBasicBlock* bb, llvm::Instruction* ins) :
+        LLVMPureInstruction(bb, ins, GetInput(ins), GetOutput(ins))
     { }
 
-    static FlowInstruction* Create(llvm::Instruction* ins) {
-        return new FlowInstruction(ins);
+    static LLVMInstruction* Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+        if (ins->getNumOperands() == 1)
+            return new LLVMConstant(bb, ins);
+        return new FlowInstruction(bb, ins);
     }
-
 
     virtual bool refinable() const {
         return true;
@@ -374,15 +396,29 @@ public:
 
     virtual bool refine(ConnectionDB& conns) const
     {
-        auto b = new Identity(GetOutput(_ins));
-        conns.remap(input(), b->din());
-        conns.remap(output(), b->dout());
+        assert(_ins->getNumOperands() > 1);
+        auto m = new Multiplexer(_ins->getNumOperands() - 1, GetOutput(_ins));
+        auto mj = new Join(m->din()->type());
+        conns.connect(mj->dout(), m->din());
+        conns.remap(input(), mj->din(0));
+        conns.remap(output(), m->dout());
+
+        for (unsigned i=1; i<_ins->getNumOperands(); i++) {
+            auto op = _ins->getOperand(i);
+            llvm::BasicBlock* succ = llvm::dyn_cast<llvm::BasicBlock>(op);
+            assert(succ != NULL);
+            unsigned succNum = this->_bb->mapSuccessor(succ);
+            unsigned bw = bitwidth(m->dout()->type());
+            auto c = new Constant(llvm::Constant::getIntegerValue(m->dout()->type(),
+                                                                  llvm::APInt(bw, succNum)));
+            conns.connect(c->dout(), mj->din(i));
+        }
         return true;
     }
 };
 
 
-typedef boost::function<LLVMInstruction* (llvm::Instruction*)> InsConstructor;
+typedef boost::function<LLVMInstruction* (const LLVMBasicBlock* bb, llvm::Instruction*)> InsConstructor;
 std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::PHI, WrapperInstruction<Identity>::Create},
     {llvm::Instruction::Select, WrapperInstruction<Multiplexer>::Create},
@@ -414,12 +450,12 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::Switch, FlowInstruction::Create},
 };
 
-LLVMInstruction* LLVMInstruction::Create(llvm::Instruction* ins) {
+LLVMInstruction* LLVMInstruction::Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {
     assert(ins != NULL);
     auto f = Constructors.find(ins->getOpcode());
     if (f == Constructors.end())
         throw InvalidArgument(string("Instruction type unsupported: ") + ins->getOpcodeName());
-    return f->second(ins);
+    return f->second(bb, ins);
 }
 
 } // namespace llpm

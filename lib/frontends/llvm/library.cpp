@@ -8,6 +8,7 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/BasicBlock.h>
 
+#include <util/llvm_type.hpp>
 
 namespace llpm {
 
@@ -27,9 +28,12 @@ public:
         map<llvm::Instruction*, LLVMInstruction*> blockMap;
         map<llvm::Value*, OutputPort*> valueMap;
 
+        cout << "Refining BB " << bb->getName().str() << endl;
+        cout << valuestr(bb) << endl;
+
         // Construct each block
         for(llvm::Instruction& ins: bb->getInstList()) {
-            auto block = LLVMInstruction::Create(&ins);
+            auto block = LLVMInstruction::Create(lbb, &ins);
             blockMap[&ins] = block;
             valueMap[&ins] = block->output();
         }
@@ -166,7 +170,7 @@ public:
             Router* rtr = new Router(c->successors_size(), c->bbOutput()->type());
             Join*   rtrJ = new Join(rtr->din()->type());
             conns.connect(rtrJ->dout(), rtr->din());
-            conns.remap(c->bbOutput(), rtrJ->din(1));
+            conns.remap(c->bbOutput(), {successorSel->din(), rtrJ->din(1)});
             conns.connect(successorSel->dout(), rtrJ->din(0));
 
 
