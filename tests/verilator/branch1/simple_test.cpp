@@ -18,6 +18,7 @@ int main(void) {
     s->a(&l);
     printf("Result: %lu\n", l);
     printf("S/W Result: %lu\n", simple_sw(4, 10));
+    printf("Cycle count: %lu\n", s->cycles());
     s->run(5);
     // s->run(200);
     delete s;

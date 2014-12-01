@@ -286,8 +286,8 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     os << "    // Simulation run control\n"
        << "    void reset();\n"
        << "    void run(unsigned cycles = 1);\n"
-       << "    void trace(std::string fn);\n";
-
+       << "    void trace(std::string fn);\n"
+       << "    uint64_t cycles() const { return cycleCount; }\n";
 
     os << "\nprivate:\n";
     os << "    V" << mod->name() << "* simulator;\n";
