@@ -376,11 +376,12 @@ public:
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         PipelineRegister* reg = dynamic_cast<PipelineRegister*>(c);
         if (reg->controller() == NULL) {
-            ctxt << boost::format("    `DFF(%1%, %2%, %3%, %4%_ce);\n")
-                        % bitwidth(reg->din()->type())
-                        % ctxt.name(reg->dout())
-                        % ctxt.name(reg->din())
-                        % ctxt.name(reg);
+            if (!reg->din()->type()->isVoidTy())
+                ctxt << boost::format("    `DFF(%1%, %2%, %3%, %4%_ce);\n")
+                            % bitwidth(reg->din()->type())
+                            % ctxt.name(reg->dout())
+                            % ctxt.name(reg->din())
+                            % ctxt.name(reg);
             ctxt << boost::format("    `LI_CONTROL(%1%_valid, %2%_valid, %2%_bp, %1%_bp, %3%_ce);\n")
                         % ctxt.name(reg->dout())
                         % ctxt.name(reg->din())
