@@ -36,7 +36,20 @@ void SimplifyPass::run(Module* m) {
         if (eb && eb->path().size() == 0) {
             t.remove(eb);
         }
+
+        // Find & replace single-input multiplexes
+        Multiplexer* mb = dynamic_cast<Multiplexer*>(b);
+        if (mb) {
+            auto dinT = mb->din()->type();
+            assert(dinT->isStructTy());
+            if (dinT->getStructNumElements() == 2) {
+                // Just a selector and data field
+                Extract* e = new Extract(dinT, {1});
+                t.replace(mb, e);
+            }
+        }
     }
+
 
     blocks.clear();
     conns->findAllBlocks(blocks);
@@ -46,7 +59,9 @@ void SimplifyPass::run(Module* m) {
         Extract* eb = dynamic_cast<Extract*>(b);
         if (eb) {
             assert(eb->path().size() > 0);
-            OutputPort* op = conns->findSource(eb->din());
+            OutputPort* op = conns->findSource(eb->din());        Multiplexer* mb = dynamic_cast<Multiplexer*>(b);
+        if (mb)
+            t.remove(mb);
             fieldsUsed[op].insert(eb->path()[0]);
         }
     }
