@@ -60,6 +60,8 @@ public:
         return OR;
     }
 
+    virtual bool hasCycles() const = 0;
+
     // Modules are assume to have independent outputs
     virtual bool outputsIndependent() const {
         return true;
@@ -234,6 +236,8 @@ public:
     virtual bool refinable() const {
         return true;
     }
+
+    virtual bool hasCycles() const;
 
     virtual bool refine(ConnectionDB& conns) const;
     

@@ -77,6 +77,13 @@ public:
         return AND;
     }
 
+    // Does the logic in this block contain any cycles? Cycles mean that
+    // logic cannot be completely combinatorial and prevents static
+    // region formation
+    virtual bool hasCycles() const {
+        return false;
+    }
+
     /*
      * If 'false' (the default), when this block produces an output an output
      * appears on all output ports. If an output can appear on one output but

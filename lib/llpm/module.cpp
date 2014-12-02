@@ -2,8 +2,11 @@
 
 #include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
+#include <util/graph.hpp>
 
 #include <boost/format.hpp>
+
+#include <deque>
 
 namespace llpm {
 
@@ -95,6 +98,16 @@ void ContainerModule::validityCheck() const {
     for (Block* b: blocks) {
         assert(b->module() == this);
     }
+}
+
+bool ContainerModule::hasCycles() const {
+    for (auto p: _inputMap) {
+        auto dummy = p.second;
+        set<Block*> path;
+        if (dfs_cycle(dummy, path, &_conns))
+            return true;
+    }
+    return false;
 }
 
 } // namespace llpm
