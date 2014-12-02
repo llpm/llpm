@@ -341,12 +341,12 @@ IntCompare* IntWrapperInstruction<IntCompare>::New() const {
         break;
     case llvm::CmpInst::ICMP_ULT:
         icmp->swapOperands();
-        cmp = IntCompare::GT;
+        cmp = IntCompare::GTE;
         isSigned = false;
         break;
     case llvm::CmpInst::ICMP_ULE:
         icmp->swapOperands();
-        cmp = IntCompare::GTE;
+        cmp = IntCompare::GT;
         isSigned = false;
         break;
     case llvm::CmpInst::ICMP_SGT:
@@ -359,12 +359,12 @@ IntCompare* IntWrapperInstruction<IntCompare>::New() const {
         break;
     case llvm::CmpInst::ICMP_SLT:
         icmp->swapOperands();
-        cmp = IntCompare::GT;
+        cmp = IntCompare::GTE;
         isSigned = true;
         break;
     case llvm::CmpInst::ICMP_SLE:
         icmp->swapOperands();
-        cmp = IntCompare::GTE;
+        cmp = IntCompare::GT;
         isSigned = true;
         break;
     default:
@@ -396,23 +396,11 @@ public:
 
     virtual bool refine(ConnectionDB& conns) const
     {
-        assert(_ins->getNumOperands() > 1);
-        auto m = new Multiplexer(_ins->getNumOperands() - 1, GetOutput(_ins));
-        auto mj = new Join(m->din()->type());
-        conns.connect(mj->dout(), m->din());
-        conns.remap(input(), mj->din(0));
-        conns.remap(output(), m->dout());
+        auto i = new Identity(this->din()->type());
 
-        for (unsigned i=1; i<_ins->getNumOperands(); i++) {
-            auto op = _ins->getOperand(i);
-            llvm::BasicBlock* succ = llvm::dyn_cast<llvm::BasicBlock>(op);
-            assert(succ != NULL);
-            unsigned succNum = this->_bb->mapSuccessor(succ);
-            unsigned bw = bitwidth(m->dout()->type());
-            auto c = new Constant(llvm::Constant::getIntegerValue(m->dout()->type(),
-                                                                  llvm::APInt(bw, succNum)));
-            conns.connect(c->dout(), mj->din(i));
-        }
+        conns.remap(input(), i->din());
+        conns.remap(output(), i->dout());
+
         return true;
     }
 };
