@@ -46,10 +46,95 @@ void Schedule::buildSchedule() {
             auto sr = createSpecialRegion();
             sr->add(sel);
         }
+
+        Router* rtr = dynamic_cast<Router*>(b);
+        if (rtr != NULL) {
+            auto sr = createSpecialRegion();
+            sr->add(rtr);
+        }
     }
 
     buildBlockMap();
+    buildGreedySchedule();
     buildBaseSchedule();
+}
+
+void Schedule::dfsGreedyBuild(Block* b, set<Block*> path,
+                              StaticRegion* sr, set<Block*>& discard) {
+    path.insert(b);
+    for (OutputPort* source: b->outputs()) {
+        vector<InputPort*> sinks;
+        _module->conns()->findSinks(source, sinks);
+        for (InputPort* sink: sinks) {
+            Block* owner = sink->owner();
+            if (findRegion(owner) == NULL) {
+                if (path.count(owner) == 0 &&
+                    !owner->hasCycles()) {
+                    sr->add(owner);
+                    dfsGreedyBuild(owner, path, sr, discard);
+                } else {
+#if 0
+                    cout << "discard insert "
+                        <<_module->design().namer().primBlockName(owner)
+                        << endl;
+#endif
+                    discard.insert(owner);
+                }
+            } else {
+#if 0
+                cout << "Already grouped "
+                        <<_module->design().namer().primBlockName(owner)
+                        << endl;
+#endif
+            }
+        }
+    }
+}
+
+void Schedule::buildGreedySchedule() {
+    set<Block*> discard;
+    ConnectionDB* conns = _module->conns();
+#if 0
+    for (InputPort* modInput: _module->inputs()) {
+        auto driver = _module->getDriver(modInput);
+        vector<InputPort*> sinks;
+        conns->findSinks(driver, sinks);
+        for (auto sink: sinks) {
+            discard.insert(sink->owner());
+        }
+    }
+#endif
+
+    for (auto sr: _regions) {
+        for (auto b: sr->blocks()) {
+            for (auto op: b->outputs()) {
+                vector<InputPort*> sinks;
+                conns->findSinks(op, sinks);
+                for (auto sink: sinks) {
+                    discard.insert(sink->owner());
+                }
+            }
+        }
+    }
+
+    while (!discard.empty()) {
+        Block* b = *discard.begin();
+        discard.erase(b);
+        if (findRegion(b))
+            continue;
+
+        StaticRegion* sr = new StaticRegion(_regions.size(), this, b);
+        _regions.push_back(sr);
+#if 0
+        cout << "Greedy build "
+                <<_module->design().namer().primBlockName(b)
+                << endl;
+#endif
+        dfsGreedyBuild(b, {}, sr, discard);
+        for (auto&& srBlock: sr->blocks()) {
+            _blockMap[srBlock] = sr;
+        }
+    }
 }
 
 void Schedule::buildBaseSchedule() {

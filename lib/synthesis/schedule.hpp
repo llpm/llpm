@@ -126,6 +126,9 @@ class Schedule {
     void buildBlockMap();
     void buildBlockMap(StaticRegion* r);
 
+    void dfsGreedyBuild(Block* b, set<Block*> path,
+                        StaticRegion* sr, set<Block*>& discard);
+
 public:
     Schedule(Module* module);
     virtual ~Schedule();
@@ -133,6 +136,7 @@ public:
     DEF_GET_NP(module);
 
     void buildSchedule();
+    void buildGreedySchedule();
     void buildBaseSchedule();
 
     const list<StaticRegion*>& regions() {
