@@ -73,21 +73,6 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
 
     printf("Scheduling...\n");
     Schedule* s = mod->schedule();
-    {
-        // Find specially treat nodes
-        //
-        vector<Block*> blocks;
-        mod->blocks(blocks);
-        mod->submodules(blocks);
-
-        for(Block* b: blocks) {
-            Select* sel = dynamic_cast<Select*>(b);
-            if (sel != NULL) {
-                auto sr = s->createSpecialRegion();
-                sr->add(sel);
-            }
-        }
-    }
     s->buildSchedule();
 
     printf("Pipelining...\n");

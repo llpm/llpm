@@ -148,7 +148,7 @@ public:
             return f->second;
         if (b->module() != _module)
             throw InvalidArgument("Block does not belong to the same module as this schedule!");
-        throw ImplementationError("Could not find region for block. Does schedule have to be re-built?");
+        return NULL;
     }
 };
 

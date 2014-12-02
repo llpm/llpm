@@ -3,6 +3,8 @@
 #include <libraries/synthesis/pipeline.hpp>
 #include <util/misc.hpp>
 #include <util/llvm_type.hpp>
+#include <synthesis/schedule.hpp>
+#include <synthesis/pipeline.hpp>
 
 #include <boost/format.hpp>
 
@@ -62,22 +64,18 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     assert(conns != NULL);
 
     os << "digraph " << mod->name() << " {\n";
-    os << R"STRING(
-    subgraph inputs {
-        input1_dummy[label="Module Input 1"]
-        graph[rank="min"]
-    }
-    subgraph outputs {
-        output1_dummy[label="Module Output 1"]
-        graph[rank = "max"]
-    }
-)STRING";
-    set<Block*> blocks;
-    conns->findAllBlocks(blocks);
-    for (Block* b: blocks) {
-        os << "    " << namer.getName(b, mod)
-           << "[" << attrs(namer, b) << "];\n";
+    Schedule* sched = mod->schedule();
+    sched->buildSchedule();
 
+    for (auto sr: sched->regions()) {
+        os << boost::format("    subgraph cluster_sr%1% {\n"
+                            "        color=black;\n")
+                                % sr->id();
+        for (Block* b: sr->blocks()) {
+            os << "        " << namer.getName(b, mod)
+               << "[" << attrs(namer, b) << "];\n";
+        }
+        os << "    }\n";
     }
 
     const set<Connection>& rawConns = conns->raw();

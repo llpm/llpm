@@ -32,6 +32,23 @@ StaticRegion* Schedule::createSpecialRegion() {
 }
 
 void Schedule::buildSchedule() {
+    // Find specially treat nodes
+    vector<Block*> blocks;
+    this->module()->blocks(blocks);
+    this->module()->submodules(blocks);
+
+    for(Block* b: blocks) {
+        if (findRegion(b) != NULL)
+            continue;
+
+        Select* sel = dynamic_cast<Select*>(b);
+        if (sel != NULL) {
+            auto sr = createSpecialRegion();
+            sr->add(sel);
+        }
+    }
+
+    buildBlockMap();
     buildBaseSchedule();
 }
 
@@ -44,7 +61,7 @@ void Schedule::buildBaseSchedule() {
 
     unsigned idCounter = _regions.size();
     for(Block* b: blocks) {
-        if (_blockMap.find(b) == _blockMap.end()) {
+        if (findRegion(b) == NULL) {
             StaticRegion* sr = new StaticRegion(idCounter++, this, b);
             _regions.push_back(sr);
         }
@@ -68,7 +85,8 @@ void Schedule::buildBlockMap(StaticRegion* sr) {
 }
 
 void StaticRegion::schedule(Pipeline* pipeline) {
-    assert(this->_scheduled == false);
+    if (this->_scheduled)
+        return;
     ConnectionDB* conns = _schedule->module()->conns();
     deque<Block*> toAdd;
     for (Block* b: _blocks) {
