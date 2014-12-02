@@ -145,6 +145,10 @@ public:
             throw ImplementationError("Block needs to implement refine method!");
         return false;
     }
+
+    virtual std::string print() const {
+        return "";
+    }
 };
 
 /*****

@@ -211,6 +211,25 @@ namespace llpm {
 
         DEF_GET_NP(op);
         DEF_GET(isSigned);
+
+        virtual std::string print() const {
+            string ret = _isSigned ? "s " : "u ";
+            switch (_op) {
+            case EQ:
+                ret += "==";
+                break;
+            case NEQ:
+                ret += "!=";
+                break;
+            case GT:
+                ret += ">";
+                break;
+            case GTE:
+                ret += ">=";
+                break;
+            }
+            return ret;
+        }
     };
 
 } // namespace llpm

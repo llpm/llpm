@@ -31,6 +31,7 @@ static std::string attrs(ObjectNamer& namer, Block* b) {
     } else {
         a["shape"] = "component";
         a["label"]="\"" + namer.getName(b, b->module()) + "\\n" 
+            + b->print() + "\\n"
             + cpp_demangle(typeid(*b).name()) + "\"";
     }
 

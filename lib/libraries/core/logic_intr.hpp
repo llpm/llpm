@@ -44,6 +44,7 @@ public:
     { }
 
     virtual bool hasState() const { return false; }
+    virtual std::string print() const;
 
     DEF_GET(dout);
     DEF_GET_NP(value);
