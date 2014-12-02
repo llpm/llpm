@@ -6,6 +6,7 @@
 #include <synthesis/pipeline.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
+#include <refinery/refinery.hpp>
 
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/std_library.hpp>
@@ -19,10 +20,11 @@ namespace llpm {
 VerilogSynthesizer::VerilogSynthesizer(Design& d) :
     _design(d)
 {
+    StdLibStops(_stops);
     addDefaultPrinters();
 }
 
-    void VerilogSynthesizer::write(std::ostream& os) {
+void VerilogSynthesizer::write(std::ostream& os) {
     auto& modules = _design.modules();
     for (auto& m: modules) {
         writeModule(os, m);
@@ -795,6 +797,10 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(new MultiplexerPrinter());
     _printers.appendEntry(new RouterPrinter());
+}
+
+bool VerilogSynthesizer::blockIsPrimitive(Block* b) {
+    return primitiveStops()->stopRefine(b);
 }
 
 } // namespace llpm

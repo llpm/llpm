@@ -19,6 +19,9 @@ using namespace llpm;
 int main(int argc, const char** argv) {
     try {
         Design d;
+        VerilogSynthesizer vs(d);
+        d.backend(&vs);
+
         if (argc < 3) {
             fprintf(stderr, "Usage: %s <llvm_bitcode> <output directory> [<function_name>*]\n", argv[0]);
             return 1;
@@ -71,7 +74,6 @@ int main(int argc, const char** argv) {
         pm.run();
 
         GraphvizOutput gv(d);
-        VerilogSynthesizer vs(d);
         VerilatorWedge vw(&vs);
 
 

@@ -5,6 +5,8 @@
 #include <llvm/IR/LLVMContext.h>
 #include <refinery/refinery.hpp>
 #include <synthesis/object_namer.hpp>
+#include <backends/backend.hpp>
+#include <util/macros.hpp>
 
 #include <vector>
 
@@ -18,6 +20,7 @@ class Design {
     Refinery* _refinery;
     std::vector<Module*> _modules;
     ObjectNamer* _namer;
+    Backend* _backend;
 
 public:
     static llvm::LLVMContext& Default_LLVMContext;
@@ -33,6 +36,9 @@ public:
     Refinery& refinery() {
         return *_refinery;
     }
+
+    DEF_GET_NP(backend);
+    DEF_SET_NONULL(backend);
 
     void refine(Module* m);
 

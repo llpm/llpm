@@ -10,6 +10,7 @@
 #include <synthesis/object_namer.hpp>
 #include <refinery/priority_collection.hpp>
 #include <synthesis/schedule.hpp>
+#include <backends/backend.hpp>
 
 // fwd def
 namespace llvm {
@@ -18,7 +19,7 @@ namespace llvm {
 
 namespace llpm {
 
-class VerilogSynthesizer {
+class VerilogSynthesizer : public Backend {
 public:
     class Context {
         std::ostream& _os;
@@ -104,6 +105,7 @@ public:
 private:
     Design& _design;
     PCollection _printers;
+    BaseLibraryStopCondition _stops;
 
     void addDefaultPrinters();
 
@@ -118,6 +120,11 @@ public:
     void write(std::ostream& os);
 
     void print(Context& ctxt, Block* b);
+
+    virtual bool blockIsPrimitive(Block* b);
+    virtual Refinery::StopCondition* primitiveStops() {
+        return &_stops;
+    }
 };
 
 } // namespace llpm
