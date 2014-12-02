@@ -130,7 +130,7 @@ void Schedule::buildGreedySchedule() {
                 <<_module->design().namer().primBlockName(b)
                 << endl;
 #endif
-        dfsGreedyBuild(b, {}, sr, discard);
+        dfsGreedyBuild(b, set<Block*>(), sr, discard);
         for (auto&& srBlock: sr->blocks()) {
             _blockMap[srBlock] = sr;
         }
