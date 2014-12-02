@@ -570,7 +570,7 @@ public:
         Join* j = dynamic_cast<Join*>(c);
         ctxt << "    assign " << ctxt.name(j->dout()) << " = { ";
         bool first = true;
-        for (size_t i=0; i < j->din_size(); i++) {
+        for (signed i = j->din_size() - 1; i >= 0; i--) {
             if (j->din(i)->type()->isVoidTy())
                 continue;
             if (first)

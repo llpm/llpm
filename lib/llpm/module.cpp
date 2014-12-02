@@ -18,7 +18,7 @@ ContainerModule::~ContainerModule() {
 void ContainerModule::addInputPort(InputPort* ip) {
     auto dummy = new DummyBlock(ip->type());
     _inputMap.insert(make_pair(dummy->din(), dummy));
-    _inputs.insert(dummy->din());
+    _inputs.push_back(dummy->din());
     dummy->name(str(boost::format("input%1%_dummy") % inputs().size()));
     conns()->blacklist(dummy);
     this->conns()->connect(dummy->dout(), ip);
@@ -27,7 +27,7 @@ void ContainerModule::addInputPort(InputPort* ip) {
 void ContainerModule::addOutputPort(OutputPort* op) {
     auto dummy = new DummyBlock(op->type());
     _outputMap.insert(make_pair(dummy->dout(), dummy));
-    _outputs.insert(dummy->dout());
+    _outputs.push_back(dummy->dout());
     dummy->name(str(boost::format("output%1%_dummy") % outputs().size()));
     conns()->blacklist(dummy);
     this->conns()->connect(op, dummy->din());

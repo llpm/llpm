@@ -41,8 +41,8 @@ public:
 protected:
     Module* _module;
     std::string _name;
-    std::set<InputPort*>  _inputs;
-    std::set<OutputPort*> _outputs;
+    std::vector<InputPort*>  _inputs;
+    std::vector<OutputPort*> _outputs;
 
     BlockHistory _history;
 
@@ -52,10 +52,10 @@ protected:
     friend class OutputPort;
 
     virtual void definePort(InputPort* ip) {
-        _inputs.insert(ip);
+        _inputs.push_back(ip);
     }
     virtual void definePort(OutputPort* op) {
-        _outputs.insert(op);
+        _outputs.push_back(op);
     }
 
 public:
@@ -90,10 +90,10 @@ public:
         return _history;
     }
 
-    const std::set<InputPort*>&  inputs()  {
+    const std::vector<InputPort*>&  inputs()  {
         return _inputs;
     }
-    const std::set<OutputPort*>& outputs() {
+    const std::vector<OutputPort*>& outputs() {
         return _outputs;
     }
 
@@ -104,7 +104,7 @@ public:
     }
 
     int inputNum(InputPort* ip) const {
-        auto f = _inputs.find(ip);
+        auto f = find(_inputs.begin(), _inputs.end(), ip);
         if (f == _inputs.end())
             return -1;
         else
@@ -112,7 +112,7 @@ public:
     }
 
     int outputNum(OutputPort* op) const {
-        auto f = _outputs.find(op);
+        auto f = find(_outputs.begin(), _outputs.end(), op);
         if (f == _outputs.end())
             return -1;
         else
