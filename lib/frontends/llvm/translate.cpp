@@ -52,9 +52,9 @@ LLVMFunction* LLVMTranslator::translate(std::string fnName) {
     if (this->_llvmModule.get() == NULL)
         throw InvalidCall("Must load a module into LLVMTranslator before translating");
     llvm::Function* func = this->_llvmModule->getFunction(fnName);
-    _pm->run(*func);
     if (func == NULL)
         throw InvalidArgument("Could not find function: " + fnName);
+    _pm->run(*func);
     return translate(func);
 }
 
