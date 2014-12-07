@@ -16,7 +16,7 @@ ${NAME}.pdf: obj/${NAME}.gv
 	dot -Tpdf -o ${NAME}.pdf obj/${NAME}.gv
 
 obj/${NAME}.hpp: ${NAME}.bc ../../../bin/llvm2verilog
-	../../../bin/llvm2verilog ${NAME}.bc obj ${NAME}
+	../../../bin/cpphdl ${NAME}.bc obj ${NAME}
 
 ${NAME}.hpp: obj/${NAME}.hpp
 	cp obj/${NAME}.hpp .

@@ -30,6 +30,9 @@ public:
         assert(module != NULL);
         this->_llvmModule.reset(module);
     }
+    llvm::Module* getModule() {
+        return _llvmModule.get();
+    }
 
     LLVMFunction* translate(llvm::Function*);
     LLVMFunction* translate(std::string fnName);
