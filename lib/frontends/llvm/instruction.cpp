@@ -14,21 +14,27 @@
 namespace llpm {
 
 void LLVMInstruction::createName() {
-    if (_ins->hasName()) {
-        this->name(_ins->getName());
-        return;
+    this->name(NameInstruction(_ins));
+}
+
+std::string LLVMInstruction::NameInstruction(llvm::Value* val) {
+    if (val->hasName()) {
+        return val->getName();
     }
 
+    llvm::Instruction* ins = llvm::dyn_cast_or_null<llvm::Instruction>(val);
+    if (ins == NULL)
+        return "";
     unsigned idx = 0;
-    auto bb = _ins->getParent();
+    auto bb = ins->getParent();
     for (auto iter = bb->begin();
-         iter != bb->end() && (llvm::Instruction*)iter != _ins;
+         iter != bb->end() && (llvm::Instruction*)iter != ins;
          iter++) {
         idx ++;
     }
-    this->name(str(boost::format("%1%i%2%")
-                        % bb->getName().str()
-                        % idx));
+    return str(boost::format("%1%i%2%")
+                    % bb->getName().str()
+                    % idx);
 }
 
 unsigned LLVMInstruction::GetNumHWOperands(llvm::Instruction* ins) {
@@ -405,6 +411,42 @@ public:
     }
 };
 
+LLVMLoadInstruction::LLVMLoadInstruction(const LLVMBasicBlock* bb,
+                                         llvm::Instruction* ins) :
+        LLVMInstruction(bb, ins),
+        _din(this, GetInput(ins), "x"),
+        _dout(this, GetOutput(ins), "a"),
+        _readReq(this, GetInput(ins), "readReq"),
+        _readResp(this, GetOutput(ins), "readResp") { }
+
+bool LLVMLoadInstruction::refine(ConnectionDB& conns) const {
+    auto inputID = new Identity(input()->type());
+    conns.remap(input(), inputID->din());
+    conns.remap(readReq(), inputID->dout());
+    auto outputID = new Identity(output()->type());
+    conns.remap(output(), outputID->dout());
+    conns.remap(readResp(), outputID->din());
+    return true;
+}
+
+LLVMStoreInstruction::LLVMStoreInstruction(const LLVMBasicBlock* bb,
+                                           llvm::Instruction* ins) :
+    LLVMInstruction(bb, ins),
+    _din(this, GetInput(ins), "x"),
+    _dout(this, GetOutput(ins), "a"),
+    _writeReq(this, GetInput(ins), "writeReq"),
+    _writeResp(this, GetOutput(ins), "writeResp") { }
+
+
+bool LLVMStoreInstruction::refine(ConnectionDB& conns) const {
+    auto inputID = new Identity(input()->type());
+    conns.remap(input(), inputID->din());
+    conns.remap(writeReq(), inputID->dout());
+    auto outputID = new Identity(output()->type());
+    conns.remap(output(), outputID->dout());
+    conns.remap(writeResp(), outputID->din());
+    return true;
+}
 
 typedef boost::function<LLVMInstruction* (const LLVMBasicBlock* bb, llvm::Instruction*)> InsConstructor;
 std::unordered_map<unsigned, InsConstructor > Constructors = {
@@ -436,6 +478,10 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::Ret, WrapperInstruction<Identity>::Create},
     {llvm::Instruction::Br, FlowInstruction::Create},
     {llvm::Instruction::Switch, FlowInstruction::Create},
+
+    // Memory ops
+    {llvm::Instruction::Load, LLVMLoadInstruction::Create},
+    {llvm::Instruction::Store, LLVMStoreInstruction::Create},
 };
 
 LLVMInstruction* LLVMInstruction::Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {

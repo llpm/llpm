@@ -38,7 +38,13 @@ public:
     virtual const InputPort* input() const = 0;
     virtual const OutputPort* output() const = 0;
 
-    static LLVMInstruction* Create(const LLVMBasicBlock* bb, llvm::Instruction*);
+    virtual OutputPort* memReqPort() {
+        return NULL;
+    }
+
+    virtual InputPort* memRespPort() {
+        return NULL;
+    }
 
     virtual unsigned getNumHWOperands() const {
         return GetNumHWOperands(_ins);
@@ -47,6 +53,9 @@ public:
     virtual bool hwIgnoresOperand(unsigned i) const {
         return HWIgnoresOperand(_ins, i);
     }
+
+    static LLVMInstruction* Create(const LLVMBasicBlock* bb, llvm::Instruction*);
+    static std::string NameInstruction(llvm::Value*);
 };
 
 class LLVMPureInstruction: public LLVMInstruction, public Function {
@@ -140,6 +149,106 @@ public:
     }
     virtual const OutputPort* output() const {
         return &_dout;
+    }
+};
+
+class LLVMLoadInstruction : public LLVMInstruction {
+    InputPort _din;
+    OutputPort _dout;
+    OutputPort _readReq;
+    InputPort  _readResp;
+
+public:
+    LLVMLoadInstruction(const LLVMBasicBlock* bb,
+                         llvm::Instruction* ins);
+
+    DEF_GET(readReq);
+    DEF_GET(readResp);
+
+    virtual OutputPort* memReqPort() {
+        return &_readReq;
+    }
+
+    virtual InputPort* memRespPort() {
+        return &_readResp;
+    }
+
+    virtual bool refinable() const {
+        return true;
+    }
+    virtual bool refine(ConnectionDB& conns) const;
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    virtual InputPort* input() {
+        return &_din;
+    }
+    virtual OutputPort* output(){
+        return &_dout;
+    }
+
+    virtual const InputPort* input() const {
+        return &_din;
+    }
+    virtual const OutputPort* output() const {
+        return &_dout;
+    }
+
+    static LLVMLoadInstruction* Create(
+        const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+        return new LLVMLoadInstruction(bb, ins);
+    }
+};
+
+class LLVMStoreInstruction : public LLVMInstruction {
+    InputPort _din;
+    OutputPort _dout;
+    OutputPort _writeReq;
+    InputPort  _writeResp;
+
+public:
+    LLVMStoreInstruction(const LLVMBasicBlock* bb,
+                         llvm::Instruction* ins);
+
+    DEF_GET(writeReq);
+    DEF_GET(writeResp);
+
+    virtual OutputPort* memReqPort() {
+        return &_writeReq;
+    }
+
+    virtual InputPort* memRespPort() {
+        return &_writeResp;
+    }
+
+    virtual bool refinable() const {
+        return true;
+    }
+    virtual bool refine(ConnectionDB& conns) const;
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    virtual InputPort* input() {
+        return &_din;
+    }
+    virtual OutputPort* output(){
+        return &_dout;
+    }
+
+    virtual const InputPort* input() const {
+        return &_din;
+    }
+    virtual const OutputPort* output() const {
+        return &_dout;
+    }
+
+    static LLVMStoreInstruction* Create(
+        const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+        return new LLVMStoreInstruction(bb, ins);
     }
 };
 

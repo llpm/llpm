@@ -36,6 +36,14 @@ public:
             auto block = LLVMInstruction::Create(lbb, &ins);
             blockMap[&ins] = block;
             valueMap[&ins] = block->output();
+
+            // Connect up memory ports, if any
+            auto req = block->memReqPort();
+            if (req)
+                conns.remap(lbb->reqPort(&ins), req);
+            auto resp = block->memRespPort();
+            if (resp)
+                conns.remap(lbb->respPort(&ins), resp);
         }
 
         // Construct any constants it produces

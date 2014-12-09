@@ -44,7 +44,7 @@ int main(int argc, const char** argv) {
         StdLibStops(sc);
 
         PassManager pm(d);
-        pm.append(new SimplifyPass(d));
+        // pm.append(new SimplifyPass(d));
 
         for(auto&& m: modules) {
             m->validityCheck();

@@ -263,6 +263,23 @@ void LLVMBasicBlock::buildIO() {
     this->resetTypes(input, output);
 }
 
+void LLVMImpureBasicBlock::buildIO() {
+    LLVMBasicBlock::buildIO();
+
+    llvm::BasicBlock* bb = basicBlock();
+    for(llvm::Instruction& ins: bb->getInstList()) {
+        if (ins.mayReadOrWriteMemory()) {
+            auto req = 
+                new OutputPort(this, LLVMInstruction::GetInput(&ins));
+            _memReqs[&ins] = req;
+            auto resp = 
+                new InputPort(this, LLVMInstruction::GetOutput(&ins));
+            _memResps[&ins] = resp;
+            _function->regBBMemPort(&ins, req, resp);
+        }
+    }
+}
+
 
 LLVMControl::LLVMControl(LLVMFunction* func, LLVMBasicBlock* bb) :
     _function(func),
@@ -443,6 +460,14 @@ LLVMFunction::LLVMFunction(llpm::Design& design, llvm::Function* func) :
 LLVMFunction::~LLVMFunction() {
 }
 
+void LLVMFunction::regBBMemPort(llvm::Value* val,
+                                OutputPort* req,
+                                InputPort* resp) {
+    _memReqs[val] =
+        addOutputPort(req, LLVMInstruction::NameInstruction(val) + "_mreq");
+    _memResps[val] =
+        addInputPort(resp, LLVMInstruction::NameInstruction(val) + "_mresp");
+}
 
 void LLVMFunction::build(llvm::Function* func) {
     // First, we gotta build the blockMap

@@ -41,6 +41,11 @@ class LLVMFunction: public ContainerModule {
     InputPort* _call;
     OutputPort* _ret;
 
+    // Memory load request ports
+    std::map<llvm::Value*, OutputPort*> _memReqs;
+    // Memory load response ports
+    std::map<llvm::Value*, InputPort*> _memResps;
+
     LLVMFunction(Design&, llvm::Function*);
     void build(llvm::Function* func);
 
@@ -65,6 +70,8 @@ public:
             return NULL;
         return f->second;
     }
+
+    void regBBMemPort(llvm::Value*, OutputPort*, InputPort*);
 };
 
 
@@ -104,8 +111,8 @@ public:
     virtual ~LLVMBasicBlock() { }
 
     static llvm::Type* GetHWType(llvm::Value*);
-    void buildRequests();
-    void buildIO();
+    virtual void buildRequests();
+    virtual void buildIO();
 
     DEF_GET_NP(function);
     DEF_GET_NP(basicBlock);
@@ -160,6 +167,13 @@ public:
         assert(f != _successorMap.end());
         return f->second;
     }
+
+    virtual OutputPort* reqPort(llvm::Value*) const {
+        throw InvalidCall("This LLVMBasicBlock does not have memory ports!");
+    }
+    virtual InputPort*  respPort(llvm::Value*) const {
+        throw InvalidCall("This LLVMBasicBlock does not have memory ports!");
+    }
 };
 
 // Pure LLVM Basic Blocks (those without loads/stores) are treated
@@ -200,18 +214,17 @@ class LLVMImpureBasicBlock: public LLVMBasicBlock {
     OutputPort _dout;
 
     // Memory load request ports
-    std::map<llvm::Value*, OutputPort*> _readReqs;
+    std::map<llvm::Value*, OutputPort*> _memReqs;
 
     // Memory load response ports
-    std::map<llvm::Value*, InputPort*> _readResp;
+    std::map<llvm::Value*, InputPort*> _memResps;
     
-    // Memory store request ports
-    std::map<llvm::Value*, OutputPort*> _writeReqs;
-
     LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb);
 
 public:
     virtual ~LLVMImpureBasicBlock() { }
+
+    virtual void buildIO();
 
     virtual InputPort* input() {
         return &_din;
@@ -233,6 +246,19 @@ public:
     void resetTypes(llvm::Type* input, llvm::Type* output) {
         _din = InputPort(this, input);
         _dout = OutputPort(this, output);
+    }
+
+    virtual OutputPort* reqPort(llvm::Value* v) const {
+        auto f = _memReqs.find(v);
+        if (f == _memReqs.end())
+            throw InvalidArgument("Could not find memory port allocated for value!");
+        return f->second;
+    }
+    virtual InputPort*  respPort(llvm::Value* v) const {
+        auto f = _memResps.find(v);
+        if (f == _memResps.end())
+            throw InvalidArgument("Could not find memory port allocated for value!");
+        return f->second;
     }
 };
 
