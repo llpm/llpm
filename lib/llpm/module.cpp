@@ -19,26 +19,24 @@ ContainerModule::~ContainerModule() {
 }
 
 InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
-    auto dummy = new DummyBlock(ip->type());
-    InputPort* extIp = new InputPort(this, ip->type(), ip->name());
-    _inputMap.insert(make_pair(extIp, dummy));
     if (name == "")
-        dummy->name(str(boost::format("input%1%_dummy") % inputs().size()));
-    else
-        dummy->name(name);
+        name = str(boost::format("input%1%") % inputs().size());
+    auto dummy = new DummyBlock(ip->type());
+    InputPort* extIp = new InputPort(this, ip->type(), name);
+    _inputMap.insert(make_pair(extIp, dummy));
+    dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
     this->conns()->connect(dummy->dout(), ip);
     return extIp;
 }
 
 OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
-    auto dummy = new DummyBlock(op->type());
-    OutputPort* extOp = new OutputPort(this, op->type(), op->name());
-    _outputMap.insert(make_pair(extOp, dummy));
     if (name == "")
-        dummy->name(str(boost::format("output%1%_dummy") % outputs().size()));
-    else
-        dummy->name(name);
+        name = str(boost::format("output%1%") % outputs().size());
+    auto dummy = new DummyBlock(op->type());
+    OutputPort* extOp = new OutputPort(this, op->type(), name);
+    _outputMap.insert(make_pair(extOp, dummy));
+    dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
     this->conns()->connect(op, dummy->din());
     return extOp;

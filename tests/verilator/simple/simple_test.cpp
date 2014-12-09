@@ -7,9 +7,9 @@ int main(void) {
     s->trace("debug.vcd");
     s->reset();
     uint64_t start = s->cycles();
-    s->x(4, 10);
+    s->call(4, 10);
     uint64_t l;
-    s->a(&l);
+    s->ret(&l);
     printf("Result: %lu\n", l);
     printf("Cycles: %lu\n", s->cycles() - start);
     s->run(5);
