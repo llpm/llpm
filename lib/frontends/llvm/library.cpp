@@ -76,7 +76,7 @@ public:
                 if (ins.hasName())
                     inJoin->name(ins.getName().str() + "_input_join");
                 conns.connect(inJoin->dout(), li->input());
-                unsigned hwNum =0;
+                unsigned hwNum = 0;
                 for (unsigned i=0; i<ins.getNumOperands(); i++) {
                     if (!li->hwIgnoresOperand(i)) {
                         inputPorts.push_back(inJoin->din(hwNum));

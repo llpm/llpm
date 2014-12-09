@@ -9,14 +9,15 @@ DIS=../../../bin/llvm/bin/llvm-dis
 OPT=../../../bin/llvm/bin/opt
 
 NAME=reg_counter
+ROOT=RegCounter
 
 default: ${NAME}_test ${NAME}.pdf
 
-${NAME}.pdf: obj/${NAME}.gv
-	dot -Tpdf -o ${NAME}.pdf obj/${NAME}.gv
+${ROOT}.pdf: obj/${ROOT}.gv
+	dot -Tpdf -o ${ROOT}.pdf obj/${ROOT}.gv
 
 obj/${NAME}.hpp: ${NAME}.bc ../../../bin/llvm2verilog
-	../../../bin/cpphdl ${NAME}.bc obj ${NAME}
+	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
 
 ${NAME}.hpp: obj/${NAME}.hpp
 	cp obj/${NAME}.hpp .

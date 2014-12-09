@@ -18,26 +18,36 @@ ContainerModule::~ContainerModule() {
         delete _pipeline;
 }
 
-void ContainerModule::addInputPort(InputPort* ip) {
+InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
     auto dummy = new DummyBlock(ip->type());
-    _inputMap.insert(make_pair(dummy->din(), dummy));
-    _inputs.push_back(dummy->din());
-    dummy->name(str(boost::format("input%1%_dummy") % inputs().size()));
+    InputPort* extIp = new InputPort(this, ip->type(), ip->name());
+    _inputMap.insert(make_pair(extIp, dummy));
+    if (name == "")
+        dummy->name(str(boost::format("input%1%_dummy") % inputs().size()));
+    else
+        dummy->name(name);
     conns()->blacklist(dummy);
     this->conns()->connect(dummy->dout(), ip);
+    return extIp;
 }
 
-void ContainerModule::addOutputPort(OutputPort* op) {
+OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
     auto dummy = new DummyBlock(op->type());
-    _outputMap.insert(make_pair(dummy->dout(), dummy));
-    _outputs.push_back(dummy->dout());
-    dummy->name(str(boost::format("output%1%_dummy") % outputs().size()));
+    OutputPort* extOp = new OutputPort(this, op->type(), op->name());
+    _outputMap.insert(make_pair(extOp, dummy));
+    if (name == "")
+        dummy->name(str(boost::format("output%1%_dummy") % outputs().size()));
+    else
+        dummy->name(name);
     conns()->blacklist(dummy);
     this->conns()->connect(op, dummy->din());
+    return extOp;
 }
 
+#if 0
 bool ContainerModule::refine(ConnectionDB& conns) const
 {
+    return false;
     assert(false && "Not implemented");
 
 #if 0
@@ -55,6 +65,7 @@ bool ContainerModule::refine(ConnectionDB& conns) const
 #endif
     return true;
 }
+#endif
 
 unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
     vector<Block*> blocksTmp;

@@ -38,11 +38,17 @@ class LLVMFunction: public ContainerModule {
     LLVMEntry* _entry;
     LLVMExit* _exit;
 
+    InputPort* _call;
+    OutputPort* _ret;
+
     LLVMFunction(Design&, llvm::Function*);
     void build(llvm::Function* func);
 
 public:
     virtual ~LLVMFunction();
+
+    DEF_GET_NP(call);
+    DEF_GET_NP(ret);
 
     LLVMControl* getControl(llvm::BasicBlock* bb) const {
         auto f = _controlMap.find(bb);
@@ -182,6 +188,51 @@ public:
 
     virtual void resetTypes(llvm::Type* input, llvm::Type* output) {
         Function::resetTypes(input, output);
+    }
+};
+
+// LLVM Basic Blocks with loads/stores
+class LLVMImpureBasicBlock: public LLVMBasicBlock {
+    friend class LLVMFunction;
+
+    // SSA inputs and outputs
+    InputPort _din;
+    OutputPort _dout;
+
+    // Memory load request ports
+    std::map<llvm::Value*, OutputPort*> _readReqs;
+
+    // Memory load response ports
+    std::map<llvm::Value*, InputPort*> _readResp;
+    
+    // Memory store request ports
+    std::map<llvm::Value*, OutputPort*> _writeReqs;
+
+    LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb);
+
+public:
+    virtual ~LLVMImpureBasicBlock() { }
+
+    virtual InputPort* input() {
+        return &_din;
+    }
+    virtual const InputPort* input() const {
+        return &_din;
+    }
+    virtual OutputPort* output() {
+        return &_dout;
+    }
+    virtual const OutputPort* output() const {
+        return &_dout;
+    }
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    void resetTypes(llvm::Type* input, llvm::Type* output) {
+        _din = InputPort(this, input);
+        _dout = OutputPort(this, output);
     }
 };
 

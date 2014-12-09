@@ -70,7 +70,7 @@ LLVMEntry::LLVMEntry(llvm::Function* func, const std::vector<llvm::Value*>& map)
 LLVMExit::LLVMExit(llvm::Function* func, unsigned N) :
     Select(N, llvm::StructType::get(func->getContext(),
                                     vector<llvm::Type*>(1, func->getReturnType()) )) {
-    this->dout()->type()->dump(); printf("\n");
+    // this->dout()->type()->dump(); printf("\n");
     this->name(func->getName().str() + "_exit");
 }
 
@@ -103,6 +103,12 @@ LLVMBasicBlock::LLVMBasicBlock(LLVMFunction* f, llvm::BasicBlock* bb):
 LLVMPureBasicBlock::LLVMPureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb) :
         Function(NULL, NULL),
         LLVMBasicBlock(func, bb)
+{ }
+
+LLVMImpureBasicBlock::LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb) :
+    LLVMBasicBlock(func, bb),
+    _din(this, NULL, "din"),
+    _dout(this, NULL, "dout")
 { }
 
 void LLVMBasicBlock::addInput(llvm::Value* v) {
@@ -429,11 +435,11 @@ void LLVMFunction::build(llvm::Function* func) {
                 touchesMemory = true;
         }
 
-        LLVMPureBasicBlock* bbBlock;
         if (touchesMemory) {
-            throw InvalidArgument("loads/stores not yet supported!");
+            auto bbBlock = new LLVMImpureBasicBlock(this, &bb);
+            _blockMap[&bb] = bbBlock;
         } else {
-            bbBlock = new LLVMPureBasicBlock(this, &bb);
+            auto bbBlock = new LLVMPureBasicBlock(this, &bb);
             _blockMap[&bb] = bbBlock;
         }
     }
@@ -463,8 +469,10 @@ void LLVMFunction::build(llvm::Function* func) {
     }
 
     assert(_returnPorts.size() > 0);
+#if 0
     func->getReturnType()->dump(); printf("\n");
     _returnPorts[0]->type()->dump(); printf("\n");
+#endif
     _exit = new LLVMExit(func, _returnPorts.size());
     for (size_t i=0; i<_returnPorts.size(); i++) {
         connect(_returnPorts[i], _exit->din(i));
@@ -479,8 +487,8 @@ void LLVMFunction::build(llvm::Function* func) {
     connect(_entry->dout(), entryPort);
 
     // Connect input/output
-    addInputPort(_entry->din());
-    addOutputPort(_exit->dout());
+    _call = addInputPort(_entry->din(), "call");
+    _ret = addOutputPort(_exit->dout(), "ret");
 }
 
 void LLVMFunction::connectReturn(OutputPort* retPort) {

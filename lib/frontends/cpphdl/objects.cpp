@@ -17,6 +17,8 @@ CPPHDLClass::CPPHDLClass(Design& design,
 }
 
 void CPPHDLClass::addMember(std::string name, LLVMFunction* func) {
+    addInputPort(func->call(), name + "_call");
+    addOutputPort(func->ret(), name + "_ret");
 }
 
 } // namespace cpphdl

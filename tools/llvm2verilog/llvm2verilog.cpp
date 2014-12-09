@@ -34,7 +34,9 @@ int main(int argc, const char** argv) {
 
         vector<Module*> modules;
         for (int i=3; i<argc; i++) {
-            modules.push_back(trans.translate(argv[i]));
+            auto m = trans.translate(argv[i]);
+            modules.push_back(m);
+            d.addModule(m);
         }
 
         BaseLibraryStopCondition sc;

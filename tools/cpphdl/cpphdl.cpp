@@ -37,6 +37,7 @@ int main(int argc, const char** argv) {
         for (int i=3; i<argc; i++) {
             auto m = trans.translate(argv[i]);
             modules.insert(m);
+            d.addModule(m);
         }
 
         BaseLibraryStopCondition sc;
@@ -83,7 +84,9 @@ int main(int argc, const char** argv) {
 
         FileSet fs(true, dirName, true);
         for (Module* mod: d.modules()) {
+            printf("Writing graphviz output...\n");
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
+            printf("Writing Verilog output...\n");
             vw.writeModule(fs, mod);
         }
 

@@ -18,16 +18,15 @@ class Pipeline;
 class Module : public Block {
 protected:
     Design& _design;
-    std::string _name;
 
 public:
     Module(Design& design, std::string name) :
-        _design(design),
-        _name(name)
-    { }
+        _design(design)
+    {
+        this->name(name);
+    }
     virtual ~Module() { }
 
-    DEF_GET_NP(name);
     DEF_GET_NP(design);
 
     virtual bool hasState() const = 0;
@@ -109,24 +108,15 @@ class ContainerModule : public MutableModule {
     Pipeline* _pipeline;
 
 protected:
-    void addInputPort(InputPort* ip);
-    void addOutputPort(OutputPort* op);
-
-    virtual void definePort(InputPort* ip) {
-        assert(false);
-    }
-    virtual void definePort(OutputPort* op) {
-        assert(false);
-    }
+    InputPort* addInputPort(InputPort* ip, std::string name = "");
+    OutputPort* addOutputPort(OutputPort* op, std::string name = "");
 
 public:
     ContainerModule(Design& design, std::string name) :
         MutableModule(design, name),
         _conns(this),
         _schedule(NULL)
-    {
-        design.addModule(this);
-    }
+    { }
 
     virtual ~ContainerModule();
 
@@ -234,12 +224,12 @@ public:
     }
     
     virtual bool refinable() const {
-        return true;
+        return false;
     }
 
     virtual bool hasCycles() const;
 
-    virtual bool refine(ConnectionDB& conns) const;
+    // virtual bool refine(ConnectionDB& conns) const;
     
     virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);
 
