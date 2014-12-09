@@ -223,13 +223,13 @@ public:
         }
     }
     
+    virtual bool refine(ConnectionDB& conns) const;
     virtual bool refinable() const {
-        return false;
+        return true;
     }
 
     virtual bool hasCycles() const;
 
-    // virtual bool refine(ConnectionDB& conns) const;
     
     virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);
 

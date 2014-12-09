@@ -107,6 +107,42 @@ public:
     }
 };
 
+// To represent an instruction with which the base library cannot deal
+class LLVMMiscInstruction : public LLVMInstruction {
+    InputPort _din;
+    OutputPort _dout;
+
+public:
+    LLVMMiscInstruction(const LLVMBasicBlock* bb,
+                        llvm::Instruction* ins) :
+        LLVMInstruction(bb, ins),
+        _din(this, GetInput(ins), "x"),
+        _dout(this, GetOutput(ins), "a")
+    { }
+
+    virtual bool refinable() const {
+        return false;
+    }
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    virtual InputPort* input() {
+        return &_din;
+    }
+    virtual OutputPort* output(){
+        return &_dout;
+    }
+
+    virtual const InputPort* input() const {
+        return &_din;
+    }
+    virtual const OutputPort* output() const {
+        return &_dout;
+    }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_LLVM_INSTRUCTION_HPP__

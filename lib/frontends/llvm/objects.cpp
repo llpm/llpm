@@ -172,6 +172,13 @@ void LLVMBasicBlock::buildRequests() {
                     addInput(operand);
                 }
             }
+
+            if (ins.getNumUses() == 0 &&
+                ins.getType()->isVoidTy()) {
+                // If ins has no uses because it's a void, have it output the
+                // void to make sure it influences control.
+                requestOutput(&ins);
+            }
         }
     }
 }
@@ -291,15 +298,26 @@ void LLVMControl::construct() {
             outputMap.push_back(_basicBlock->mapOutput(v));
         }
 
-        llvm::Type* outType = llvm::StructType::get(bb->getContext(), outputTypes);
+        llvm::Type* outType =
+            llvm::StructType::get(bb->getContext(), outputTypes);
         _successorMaps.push_back(outputMap);
         _successors.push_back(new OutputPort(this, outType));
         _function->connect(_successors.back(), successorPort);
     }
 
     if (_basicBlock->returns()) {
-        _successorMaps.push_back({0});
-        _successors.push_back(new OutputPort(this, _basicBlock->output()->type()));
+        llvm::Value* retValue = _basicBlock->basicBlock()->getTerminator();
+
+        vector<unsigned>    outputMap =
+            {_basicBlock->mapOutput(retValue)};
+        vector<llvm::Type*> outputTypes = 
+            {LLVMBasicBlock::GetHWType(retValue)};
+
+        _successorMaps.push_back(outputMap);
+
+        llvm::Type* outType =
+            llvm::StructType::get(bb->getContext(), outputTypes);
+        _successors.push_back(new OutputPort(this, outType));
         _function->connectReturn(_successors.back());
     }
 }
@@ -469,7 +487,7 @@ void LLVMFunction::build(llvm::Function* func) {
     }
 
     assert(_returnPorts.size() > 0);
-#if 0
+#if 1
     func->getReturnType()->dump(); printf("\n");
     _returnPorts[0]->type()->dump(); printf("\n");
 #endif

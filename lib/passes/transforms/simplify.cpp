@@ -62,7 +62,7 @@ void SimplifyPass::run(Module* m) {
         }
 
         if (noSinks)
-            t.remove(b);
+            t.trash(b);
     }
 
 

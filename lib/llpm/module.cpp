@@ -42,28 +42,24 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
     return extOp;
 }
 
-#if 0
 bool ContainerModule::refine(ConnectionDB& conns) const
 {
-    return false;
-    assert(false && "Not implemented");
+    conns.update(_conns);
 
-#if 0
     for(InputPort* ip: _inputs) {
-        auto driver = getDriver(ip);
-        _conns.
-        _conns.findSinks(driver, ipMap[ip]);
+        auto f = _inputMap.find(ip);
+        assert(f != _inputMap.end());
+        conns.remap(ip, f->second->din());
     }
 
     for(OutputPort* op: _outputs) {
-        auto sink = getSink(op);
-        opMap[op] = _conns.findSource(sink);
+        auto f = _outputMap.find(op);
+        assert(f != _outputMap.end());
+        conns.remap(op, f->second->dout());
     }
 
-#endif
     return true;
 }
-#endif
 
 unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
     vector<Block*> blocksTmp;

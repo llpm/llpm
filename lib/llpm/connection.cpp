@@ -79,10 +79,7 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     if (_inputRewrites.find(i) != _inputRewrites.end())
         throw InvalidArgument("The input port being connected has been rewritten!");
 
-    bool blacklisted = 
-        _blacklist.count(o->owner()) > 0 || 
-        _blacklist.count(i->owner()) > 0;
-    Connection c(o, i, blacklisted);
+    Connection c(o, i);
     _connections.insert(c);
     registerBlock(o->owner());
     registerBlock(i->owner());
@@ -101,7 +98,7 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
     assert(o != NULL);
     assert(i != NULL);
-    auto f = _connections.find(Connection(o, i, false));
+    auto f = _connections.find(Connection(o, i));
     if (f != _connections.end())
         _connections.erase(f);
     deregisterBlock(o->owner());
@@ -145,6 +142,14 @@ void ConnectionDB::removeBlock(Block* b) {
     for (auto&& c: conns) {
         this->disconnect(c);
     }
+}
+
+void ConnectionDB::update(const ConnectionDB& newdb) {
+    for (const Connection& c: newdb._connections) {
+        connect(c.source(), c.sink());
+    }
+    _blacklist.insert(newdb._blacklist.begin(),
+                      newdb._blacklist.end());
 }
 
 } // namespace llpm

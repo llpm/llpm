@@ -16,13 +16,11 @@ namespace llpm {
 class Connection {
     OutputPort* _source;
     InputPort* _sink;
-    bool _modIO;
 
 public:
-    Connection(OutputPort* source, InputPort* sink, bool moduleIO) :
+    Connection(OutputPort* source, InputPort* sink) :
         _source(source),
-        _sink(sink),
-        _modIO(moduleIO)
+        _sink(sink)
     { }
 
     Connection() :
@@ -38,7 +36,6 @@ public:
     // DEF_SET_NONULL(source);
     DEF_GET_NP(sink);
     // DEF_SET_NONULL(sink);
-    DEF_GET_NP(modIO); 
 
     bool operator==(const Connection& c) const {
         return (c._sink == this->_sink) 
@@ -121,11 +118,11 @@ public:
     }
 
     bool connected(OutputPort* op, InputPort* ip) {
-        return exists(Connection(op, ip, false));
+        return exists(Connection(op, ip));
     }
 
     bool connected(InputPort* ip, OutputPort* op) {
-        return exists(Connection(op, ip, false));
+        return exists(Connection(op, ip));
     }
 
     size_t numConnections() {

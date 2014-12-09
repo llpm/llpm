@@ -442,7 +442,7 @@ LLVMInstruction* LLVMInstruction::Create(const LLVMBasicBlock* bb, llvm::Instruc
     assert(ins != NULL);
     auto f = Constructors.find(ins->getOpcode());
     if (f == Constructors.end())
-        throw InvalidArgument(string("Instruction type unsupported: ") + ins->getOpcodeName());
+        return new LLVMMiscInstruction(bb, ins);
     return f->second(bb, ins);
 }
 

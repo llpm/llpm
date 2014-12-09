@@ -34,6 +34,30 @@ void Transformer::remove(Block* b) {
     _conns->removeBlock(b);
 }
 
+void Transformer::trash (Block* b) {
+    if (b->module() != _mod) {
+        throw InvalidArgument("This transformer can only operation on blocks in its module");
+    }
+
+    auto inputs = b->inputs();
+    for (auto ip: inputs) {
+        OutputPort* driver = _conns->findSource(ip);
+        if (driver)
+            _conns->disconnect(driver, ip);
+    }
+
+    auto outputs = b->outputs();
+    for (auto op: outputs) {
+        vector<InputPort*> sinks;
+        _conns->findSinks(op, sinks);
+        for (InputPort* sink: sinks) {
+            _conns->disconnect(op, sink);
+        }
+    }
+
+    _conns->removeBlock(b);
+}
+
 void Transformer::replace(Block* b, Block* with) {
     if (b->module() != _mod) {
         throw InvalidArgument("This transformer can only operation on blocks in its module");
