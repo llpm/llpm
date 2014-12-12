@@ -69,7 +69,7 @@ void Schedule::dfsGreedyBuild(Block* b, set<Block*> path,
             Block* owner = sink->owner();
             if (findRegion(owner) == NULL) {
                 if (path.count(owner) == 0 &&
-                    !owner->hasCycles()) {
+                    !owner->hasCycle()) {
                     sr->add(owner);
                     dfsGreedyBuild(owner, path, sr, discard);
                 } else {

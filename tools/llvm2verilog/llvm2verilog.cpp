@@ -45,6 +45,11 @@ int main(int argc, const char** argv) {
         PassManager pm(d);
         pm.append(new SimplifyPass(d));
 
+        GraphvizOutput gv(d);
+        VerilatorWedge vw(&vs);
+
+        FileSet fs(true, dirName, true);
+
         for(auto&& m: modules) {
             m->validityCheck();
 
@@ -52,7 +57,8 @@ int main(int argc, const char** argv) {
                    m->inputs().size(), m->outputs().size());
             // Refine each module until it cannot be further refined
             unsigned passes = m->internalRefine(&sc);
-            printf("%u refinement passes on '%s'\n", passes, m->name().c_str());
+            printf("%u refinement passes on '%s'\n",
+                   passes, m->name().c_str());
             printf("Module inputs %lu, outputs %lu after refinement\n",
                    m->inputs().size(), m->outputs().size());
 
@@ -71,16 +77,18 @@ int main(int argc, const char** argv) {
             }
 
             m->validityCheck();
+
+            if (m->hasCycle()) {
+                printf("Module has cycle!\n");
+            }
         }
 
         pm.run();
 
-        GraphvizOutput gv(d);
-        VerilatorWedge vw(&vs);
-
-
-        FileSet fs(true, dirName, true);
         for (Module* mod: d.modules()) {
+            if (mod->hasCycle()) {
+                printf("Module still has cycle!\n");
+            }
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
             vw.writeModule(fs, mod);
         }

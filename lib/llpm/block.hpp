@@ -73,15 +73,18 @@ public:
     DEF_GET_NP(name);
     DEF_SET(name);
 
-    virtual FiringRule firing() const {
-        return AND;
-    }
-
     // Does the logic in this block contain any cycles? Cycles mean that
     // logic cannot be completely combinatorial and prevents static
     // region formation
-    virtual bool hasCycles() const {
+    virtual bool hasCycle() const {
         return false;
+    }
+
+    // Does upon what conditions does a block accept inputs and execute?
+    //   AND: All inputs must be available before block execute
+    //   OR:  Any block input causes the block to execute
+    virtual FiringRule firing() const {
+        return AND;
     }
 
     /*
@@ -97,11 +100,18 @@ public:
         return _history;
     }
 
-    const std::vector<InputPort*>&  inputs()  {
+    const std::vector<InputPort*>&  inputs() const {
         return _inputs;
     }
-    const std::vector<OutputPort*>& outputs() {
+    const std::vector<OutputPort*>& outputs() const {
         return _outputs;
+    }
+
+    void ports(std::vector<InputPort*>& iports) const {
+        iports.insert(iports.end(), _inputs.begin(), _inputs.end());
+    }
+    void ports(std::vector<OutputPort*>& oports) const {
+        oports.insert(oports.end(), _outputs.begin(), _outputs.end());
     }
 
     // Can previous blocks re-order the fields of this input and obtain the

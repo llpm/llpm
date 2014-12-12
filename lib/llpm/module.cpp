@@ -2,7 +2,7 @@
 
 #include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
-#include <util/graph.hpp>
+#include <analysis/graph_queries.hpp>
 
 #include <boost/format.hpp>
 
@@ -105,14 +105,12 @@ void ContainerModule::validityCheck() const {
     }
 }
 
-bool ContainerModule::hasCycles() const {
+bool ContainerModule::hasCycle() const {
+    vector<OutputPort*> init;
     for (auto p: _inputMap) {
-        auto dummy = p.second;
-        set<Block*> path;
-        if (dfs_cycle(dummy, path, &_conns))
-            return true;
+        init.push_back(p.second->dout());
     }
-    return false;
+    return queries::BlockCycleExists(&_conns, init);
 }
 
 } // namespace llpm

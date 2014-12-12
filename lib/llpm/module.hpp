@@ -59,7 +59,7 @@ public:
         return OR;
     }
 
-    virtual bool hasCycles() const = 0;
+    virtual bool hasCycle() const = 0;
 
     // Modules are assume to have independent outputs
     virtual bool outputsIndependent() const {
@@ -228,7 +228,7 @@ public:
         return true;
     }
 
-    virtual bool hasCycles() const;
+    virtual bool hasCycle() const;
 
     
     virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);

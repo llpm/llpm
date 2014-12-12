@@ -129,11 +129,26 @@ public:
         return _connections.size();
     }
 
-    void findSinks(const OutputPort* op, std::vector<InputPort*>& out) const;
+    void findSinks(const OutputPort* op,
+                   std::vector<InputPort*>& out) const;
+
     OutputPort* findSource(const InputPort* ip) const;
     void find(Block* b, vector<Connection>&) const;
     bool find(const InputPort* ip, Connection& c) const;
-    void find(const OutputPort* op, std::vector<Connection>& out)const ;
+    void find(const OutputPort* op, std::vector<Connection>& out) const;
+
+    void find(const InputPort* ip, std::vector<OutputPort*>& out) const {
+        Connection c;
+        if (find(ip, c))
+            out.push_back(c.source());
+    }
+    void find(const OutputPort* ip, std::vector<InputPort*>& out) const {
+        std::vector<Connection> ret;
+        find(ip, ret);
+        for (auto&& c: ret) {
+            out.push_back(c.sink());
+        }
+    }
 
     void removeBlock(Block* b);
 
