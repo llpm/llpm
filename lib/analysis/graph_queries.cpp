@@ -25,9 +25,7 @@ struct CycleDetectionVisitor : public Visitor<CyclePath> {
             return TerminateSearch;
         }
 
-        CyclePath p2 = path;
-        p2.popEnd();
-        if (p2.contains(block)) {
+        if (path.hasCycle()) {
             // printf("Block %p %s\n", block, block->name().c_str());
             // p2.print();
             foundCycle = true;

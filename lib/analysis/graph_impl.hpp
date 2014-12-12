@@ -30,11 +30,25 @@ bool Path<SrcPort, DstPort>::contains(Block* b) const {
 
 template<typename SrcPort,
          typename DstPort>
+bool Path<SrcPort, DstPort>::hasCycle() const {
+    std::set< std::pair<SrcPort*, DstPort*> > seen;
+    for (const auto& pp: _path) {
+        if (seen.count(pp) != 0)
+            return true;
+        seen.insert(pp);
+    }
+    return false;
+}
+
+template<typename SrcPort,
+         typename DstPort>
 void Path<SrcPort, DstPort>::print() const {
     for (const auto& pp: _path) {
         printf("%p owner: %p %s -- %p owner %p %s\n",
-               pp.first, pp.first->owner(), pp.first->owner()->name().c_str(),
-               pp.second, pp.second->owner(), pp.second->owner()->name().c_str());
+               pp.first, pp.first->owner(),
+               pp.first->owner()->name().c_str(),
+               pp.second, pp.second->owner(),
+               pp.second->owner()->name().c_str());
     }
 }
 
