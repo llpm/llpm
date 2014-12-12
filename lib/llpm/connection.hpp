@@ -101,7 +101,13 @@ public:
     }
 
     void connect(OutputPort* o, InputPort* i);
+    void connect(InputPort* i, OutputPort* o) {
+        connect(o, i);
+    }
     void disconnect(OutputPort* o, InputPort* i);
+    void disconnect(InputPort* i, OutputPort* o) {
+        disconnect(o, i);
+    }
     void disconnect(Connection c) {
         disconnect(c.source(), c.sink());
     }

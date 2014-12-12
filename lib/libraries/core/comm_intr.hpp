@@ -151,6 +151,10 @@ public:
 
     DEF_GET(din);
     DEF_ARRAY_GET(dout);
+
+    virtual bool outputsIndependent() const {
+        return true;
+    }
 };
 
 } // namespace llpm

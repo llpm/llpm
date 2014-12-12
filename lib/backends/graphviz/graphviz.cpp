@@ -5,6 +5,7 @@
 #include <util/llvm_type.hpp>
 #include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
+#include <llpm/control_region.hpp>
 
 #include <boost/format.hpp>
 
@@ -57,6 +58,60 @@ static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip) {
     return attrs(a);
 }
 
+bool is_hidden(Block* b, Module* topMod) {
+    return dynamic_cast<DummyBlock*>(b) != NULL &&
+           b->module() != topMod;
+}
+
+void printConns(std::ostream& os,
+                ObjectNamer& namer,
+                Module* mod,
+                const set<Connection>& rawConns) {
+    for (auto conn: rawConns) {
+        auto op = conn.source();
+        auto ip = conn.sink();
+
+        vector<InputPort*> sinks;
+
+        auto opContainer = dynamic_cast<ContainerModule*>(op->owner());
+        if (opContainer != NULL) {
+            auto cdb = opContainer->conns();
+            auto internalSink = opContainer->getSink(op);
+            op = cdb->findSource(internalSink);
+        }
+
+        auto ipContainer = dynamic_cast<ContainerModule*>(ip->owner());
+        if (ipContainer != NULL) {
+            auto cdb = ipContainer->conns();
+            auto internalSource = ipContainer->getDriver(ip);
+            cdb->findSinks(internalSource, sinks);
+        } else {
+            sinks = {ip};
+        }
+
+        for (auto ip: sinks) {
+            if (is_hidden(op->owner(), mod) ||
+                is_hidden(ip->owner(), mod))
+                    continue;
+
+            os << "    " << namer.getName(op->owner(), mod) << " -> "
+               << namer.getName(ip->owner(), mod) 
+               << "[" << attrs(namer, op, ip) << "];\n";
+        }
+    }
+}
+
+void printIO(std::ostream& os,
+             ObjectNamer& namer,
+             ContainerModule* cm) {
+    for (InputPort* ip: cm->inputs()) {
+        auto dummy = cm->getDriver(ip)->owner();
+        os << "    " << namer.getName(dummy, cm)
+           << "[" << attrs(namer, dummy) << "];\n";
+
+    }
+}
+
 void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     ObjectNamer& namer = mod->design().namer();
 
@@ -64,28 +119,40 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     assert(conns != NULL);
 
     os << "digraph " << mod->name() << " {\n";
-    Schedule* sched = mod->schedule();
-    sched->buildSchedule();
 
-    for (auto sr: sched->regions()) {
-        os << boost::format("    subgraph cluster_sr%1% {\n"
-                            "        color=black;\n")
-                                % sr->id();
-        for (Block* b: sr->blocks()) {
-            os << "        " << namer.getName(b, mod)
-               << "[" << attrs(namer, b) << "];\n";
+
+    ContainerModule* cmMod = dynamic_cast<ContainerModule*>(mod);
+    if (cmMod) {
+        printIO(os, namer, cmMod);
+    }
+
+    vector<Block*> blocks;
+    mod->blocks(blocks);
+
+    for (auto block: blocks) {
+        ContainerModule* cm = dynamic_cast<ContainerModule*>(block);
+        if (cm) {
+            os << boost::format("    subgraph cluster_%1% {\n"
+                                "        color=black;\n")
+                                    % cm->name();
+
+            vector<Block*> crblocks;
+            cm->blocks(crblocks);
+            for (Block* b: crblocks) {
+                os << "        " << namer.getName(b, mod)
+                   << "[" << attrs(namer, b) << "];\n";
+            }
+            printConns(os, namer, mod, cm->conns()->raw());
+            os << "    }\n";
+
+        } else {
+            os << "        " << namer.getName(block, mod)
+               << "[" << attrs(namer, block) << "];\n";
         }
-        os << "    }\n";
     }
 
     const set<Connection>& rawConns = conns->raw();
-    for (auto conn: rawConns) {
-        auto op = conn.source();
-        auto ip = conn.sink();
-        os << "    " << namer.getName(op->owner(), mod) << " -> "
-           << namer.getName(ip->owner(), mod) 
-           << "[" << attrs(namer, op, ip) << "];\n";
-    }
+    printConns(os, namer, mod, rawConns);
 
     os << "}\n";
 }

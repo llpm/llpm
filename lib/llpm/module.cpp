@@ -30,6 +30,16 @@ InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
     return extIp;
 }
 
+void ContainerModule::removeInputPort(InputPort* ip) {
+    auto f = _inputMap.find(ip);
+    if (f == _inputMap.end())
+        throw InvalidArgument("Cannot remove InputPort which doesn't seem to exist!");
+    _inputMap.erase(f);
+    auto vecLoc = find(_inputs.begin(), _inputs.end(), ip);
+    _inputs.erase(vecLoc);
+    delete ip;
+}
+
 OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
     if (name == "")
         name = str(boost::format("output%1%") % outputs().size());
@@ -40,6 +50,16 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
     conns()->blacklist(dummy);
     this->conns()->connect(op, dummy->din());
     return extOp;
+}
+
+void ContainerModule::removeOutputPort(OutputPort* op) {
+    auto f = _outputMap.find(op);
+    if (f == _outputMap.end())
+        throw InvalidArgument("Cannot remove OutputPort which doesn't seem to exist!");
+    _outputMap.erase(f);
+    auto vecLoc = find(_outputs.begin(), _outputs.end(), op);
+    _outputs.erase(vecLoc);
+    delete op;
 }
 
 bool ContainerModule::refine(ConnectionDB& conns) const

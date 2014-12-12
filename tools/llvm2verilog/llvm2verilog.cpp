@@ -4,6 +4,7 @@
 
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
+#include <llpm/control_region.hpp>
 #include <libraries/core/std_library.hpp>
 #include <frontends/llvm/translate.hpp>
 #include <refinery/refinery.hpp>
@@ -44,6 +45,7 @@ int main(int argc, const char** argv) {
 
         PassManager pm(d);
         pm.append(new SimplifyPass(d));
+        pm.append(new FormControlRegionPass(d));
 
         GraphvizOutput gv(d);
         VerilatorWedge vw(&vs);
@@ -90,7 +92,7 @@ int main(int argc, const char** argv) {
                 printf("Module still has cycle!\n");
             }
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
-            vw.writeModule(fs, mod);
+            // vw.writeModule(fs, mod);
         }
 
     } catch (Exception& e) {

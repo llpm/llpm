@@ -88,12 +88,7 @@ public:
  * be sub-classed to define input and output ports.
  */
 class ContainerModule : public MutableModule {
-    // The blocks which I directly contain
-    // set<Block*> _blocks;
-
-    // My submodules
-    // set<Module*> _modules;
-
+protected:
     // The connections between blocks in this module
     ConnectionDB _conns;
 
@@ -107,9 +102,10 @@ class ContainerModule : public MutableModule {
     Schedule* _schedule;
     Pipeline* _pipeline;
 
-protected:
     InputPort* addInputPort(InputPort* ip, std::string name = "");
+    void removeInputPort(InputPort* ip);
     OutputPort* addOutputPort(OutputPort* op, std::string name = "");
+    void removeOutputPort(OutputPort* ip);
 
 public:
     ContainerModule(Design& design, std::string name) :
