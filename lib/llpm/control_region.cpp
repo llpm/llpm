@@ -190,16 +190,17 @@ bool ControlRegion::add(Block* b) {
         }
     }
 
-    bool internallyDriven = false;
     for (InputPort* ip: b->inputs()) {
         auto f = internalizedOutputs.find(ip);
+        // auto f = internalizedOutputs.end();
         if (f != internalizedOutputs.end()) {
             // Special case: merging block connected to this guy, so just
             // bring the connection internal
+            assert(ip == f->first);
             pdb->disconnect(f->first, f->second);
             InputPort* internalSink = getSink(f->second);
-            _conns.remap(internalSink, ip);
-            internallyDriven = true;
+            OutputPort* internalDriver = _conns.findSource(internalSink);
+            _conns.connect(internalDriver, f->first);
 
             vector<InputPort*> remainingExtSinks;
             pdb->findSinks(f->second, remainingExtSinks);
@@ -288,10 +289,10 @@ void ControlRegion::validityCheck() const {
         set<InputPort*>(inputs().begin(), inputs().end());
     for (OutputPort* op: outputs()) {
         auto deps = findDependences(op);
-        assert(cannonDeps == deps &&
-               "Error: control region may introduce a deadlock. "
-               "This is a known problem, but was not expected to occur "
-               "in practice. Please report this problem!");
+        // assert(cannonDeps == deps &&
+               // "Error: control region may introduce a deadlock. "
+               // "This is a known problem, but was not expected to occur "
+               // "in practice. Please report this problem!");
     }
 }
 

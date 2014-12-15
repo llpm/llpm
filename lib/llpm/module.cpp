@@ -49,6 +49,10 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
 }
 
 void ContainerModule::removeOutputPort(OutputPort* op) {
+    InputPort* internalSink = getSink(op);
+    OutputPort* internalDriver = _conns.findSource(internalSink);
+    if (internalDriver)
+        _conns.disconnect(internalDriver, internalSink);
     auto f = _outputMap.find(op);
     if (f == _outputMap.end())
         throw InvalidArgument("Cannot remove OutputPort which doesn't seem to exist!");
