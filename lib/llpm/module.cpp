@@ -123,6 +123,12 @@ void ContainerModule::validityCheck() const {
     for (Block* b: blocks) {
         assert(b->module() == this);
     }
+
+    vector<Module*> sm;
+    this->submodules(sm);
+    for (Module* m: sm) {
+        m->validityCheck();
+    }
 }
 
 bool ContainerModule::hasCycle() const {

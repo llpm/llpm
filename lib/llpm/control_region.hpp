@@ -10,6 +10,8 @@ class ControlRegion : public ContainerModule {
     MutableModule* _parent;
     bool add(Block*);
 
+    set<InputPort*> findDependences(OutputPort*) const;
+
 public:
     ControlRegion(MutableModule* parent, Block* seed, std::string name="") :
         ContainerModule(parent->design(), name),
@@ -28,6 +30,8 @@ public:
     bool canGrow(InputPort* ip);
     bool canGrow(OutputPort* op);
     bool canGrow(Port* p);
+
+    virtual void validityCheck() const;
 };
 
 class FormControlRegionPass : public ModulePass {

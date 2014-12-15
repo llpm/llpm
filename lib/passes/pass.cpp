@@ -6,6 +6,7 @@ void ModulePass::run() {
     auto mods = _design.modules();
     for (Module* m: mods) {
         run(m);
+        m->validityCheck();
     }
 }
 

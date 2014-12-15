@@ -1,5 +1,7 @@
 #include "control_region.hpp"
 
+#include <analysis/graph.hpp>
+
 #include <boost/format.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -169,19 +171,19 @@ bool ControlRegion::add(Block* b) {
 
         // Must be adjacent
         if (!foundAsDriver && !foundAsSink) {
-            printf("not adj\n");
+            // printf("not adj\n");
             return false;
         }
 
         // Must not create additional valid bits within CR
         if (foundAsDriver && !foundAsSink && b->outputsIndependent()) {
-            printf("is router\n");
+            // printf("is router\n");
             return false;
         }
 
         // Must not create additional back pressure bits with CR
         if (foundAsSink && !foundAsDriver && b->firing() == OR) {
-            printf("is select\n");
+            // printf("is select\n");
             return false;
         }
     }
@@ -190,8 +192,8 @@ bool ControlRegion::add(Block* b) {
     for (InputPort* ip: b->inputs()) {
         auto f = internalizedOutputs.find(ip);
         if (f != internalizedOutputs.end()) {
-            // Special case: merging block connected to this guy, so just bring
-            // the connection internal
+            // Special case: merging block connected to this guy, so just
+            // bring the connection internal
             pdb->disconnect(f->first, f->second);
             InputPort* internalSink = getSink(f->second);
             _conns.remap(internalSink, ip);
@@ -241,6 +243,51 @@ bool ControlRegion::add(Block* b) {
     }
 
     return true;
+}
+
+typedef Edge<InputPort, OutputPort> OIEdge;
+
+struct OIEdgeVisitor : public Visitor<OIEdge> {
+    set<InputPort*> deps;
+    map<OutputPort*, InputPort*> inputDrivers;
+
+    OIEdgeVisitor(const ContainerModule* cm) {
+        for (auto ip: cm->inputs())
+            inputDrivers[cm->getDriver(ip)] = ip;
+    }
+
+    // Visit a vertex in the graph
+    Terminate visit(const ConnectionDB*,
+                    const OIEdge& edge) {
+        OutputPort* current = edge.endPort();
+        auto f = inputDrivers.find(current);
+        if (f != inputDrivers.end())
+            deps.insert(f->second);
+        return Continue;
+    }
+};
+
+set<InputPort*> ControlRegion::findDependences(OutputPort* op) const {
+    OIEdgeVisitor visitor(this);
+    GraphSearch<OIEdgeVisitor, DFS> search(&_conns, visitor);
+    search.go(std::vector<InputPort*>({getSink(op)}));
+    return visitor.deps;
+}
+
+void ControlRegion::validityCheck() const {
+    ContainerModule::validityCheck();
+
+    // NO cycles!
+    assert(!hasCycle());
+
+    // Check to make sure all outputs have the same deps as the module as a
+    // whole
+    set<InputPort*> cannonDeps =
+        set<InputPort*>(inputs().begin(), inputs().end());
+    for (OutputPort* op: outputs()) {
+        auto deps = findDependences(op);
+        assert(cannonDeps == deps);
+    }
 }
 
 } // namespace llpm

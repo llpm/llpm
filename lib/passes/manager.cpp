@@ -14,6 +14,7 @@ void PassManager::run(Module* mod) {
         if (mp)
             mp->run(mod);
     }
+    mod->validityCheck();
 }
 
 };

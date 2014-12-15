@@ -163,5 +163,7 @@ public:
 
 };
 
+#include "graph_impl.hpp"
+
 #endif // __ANALYSIS_GRAPH_HPP__
 

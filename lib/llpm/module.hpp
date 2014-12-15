@@ -51,8 +51,8 @@ public:
     virtual Pipeline* pipeline() = 0;
     virtual void validityCheck() const = 0;
 
-    virtual OutputPort* getDriver(InputPort* ip)  = 0;
-    virtual InputPort* getSink(OutputPort* op) = 0;
+    virtual OutputPort* getDriver(InputPort* ip) const = 0;
+    virtual InputPort* getSink(OutputPort* op) const = 0;
 
     // Modules are assumed to have independent inputs
     virtual FiringRule firing() const {
@@ -122,14 +122,14 @@ public:
 
     virtual void validityCheck() const;
 
-    OutputPort* getDriver(InputPort* ip) {
+    OutputPort* getDriver(InputPort* ip) const {
         auto f = _inputMap.find(ip);
         assert(f != _inputMap.end());
         OutputPort* internalIPDriver = f->second->dout();
         return internalIPDriver;
     }
 
-    InputPort* getSink(OutputPort* op) {
+    InputPort* getSink(OutputPort* op) const {
         auto f = _outputMap.find(op);
         assert(f != _outputMap.end());
         InputPort* internalOPSink = f->second->din();
