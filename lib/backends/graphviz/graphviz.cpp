@@ -41,9 +41,8 @@ static std::string attrs(ObjectNamer& namer, Block* b) {
     return attrs(a);
 }
 
-static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip) {
-    std::map<std::string, std::string> a;
-
+static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
+                         std::map<std::string, std::string> a = { }) {
     auto opName = op->name();
     if (opName == "")
         opName = str(boost::format("%1%") % op->owner()->outputNum(op));
@@ -66,7 +65,8 @@ bool is_hidden(Block* b, Module* topMod) {
 void printConns(std::ostream& os,
                 ObjectNamer& namer,
                 Module* mod,
-                const set<Connection>& rawConns) {
+                const set<Connection>& rawConns,
+                std::map<std::string, std::string> extra_attr = {}) {
     for (auto conn: rawConns) {
         auto op = conn.source();
         auto ip = conn.sink();
@@ -96,7 +96,7 @@ void printConns(std::ostream& os,
 
             os << "    " << namer.getName(op->owner(), mod) << " -> "
                << namer.getName(ip->owner(), mod) 
-               << "[" << attrs(namer, op, ip) << "];\n";
+               << "[" << attrs(namer, op, ip, extra_attr) << "];\n";
         }
     }
 }
@@ -152,7 +152,8 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     }
 
     const set<Connection>& rawConns = conns->raw();
-    printConns(os, namer, mod, rawConns);
+    printConns(os, namer, mod, rawConns,
+               {{"style", "bold"}});
 
     os << "}\n";
 }

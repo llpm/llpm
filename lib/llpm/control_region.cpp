@@ -38,8 +38,10 @@ void FormControlRegionPass::run(Module* mod) {
             continue;
 
         Block* b = opDriver->owner();
-        if (dynamic_cast<ControlRegion*>(b) != NULL)
+        if (dynamic_cast<ControlRegion*>(b) != NULL ||
+            dynamic_cast<DummyBlock*>(b) != NULL)
             // It's already a control region? Cool
+            // It's a dummy block? Don't mess with it
             continue;
 
         std::string crName = str(boost::format("cr%1%") % counter);
@@ -84,14 +86,53 @@ bool ControlRegion::growUp() {
 }
 
 bool ControlRegion::growDown() {
+    ConnectionDB* pdb = _parent->conns();
+    for (OutputPort* op: this->outputs()) {
+        vector<InputPort*> sinks;
+        pdb->findSinks(op, sinks);
+        for (auto sink: sinks)
+            if (add(sink->owner()))
+                return true;
+    }
     return false;
+}
+
+bool ControlRegion::canGrow(InputPort* ip) {
+    auto driver = getDriver(ip);
+    vector<InputPort*> sinks;
+    _conns.findSinks(driver, sinks);
+    for (auto sink: sinks) {
+        if (sink->owner()->firing() == OR)
+            return false;
+    }
+    return true;
+}
+
+bool ControlRegion::canGrow(OutputPort* op) {
+    auto sink = getSink(op);
+    auto driver = _conns.findSource(sink);
+    return !(driver && driver->owner()->outputsIndependent());
+}
+
+bool ControlRegion::canGrow(Port* p) {
+    auto op = dynamic_cast<OutputPort*>(p);
+    if (op)
+        return canGrow(op);
+
+    auto ip = dynamic_cast<InputPort*>(p);
+    if (ip)
+        return canGrow(ip);
+
+    throw InvalidArgument("What in the hell sort of port did you pass me?!");
 }
 
 bool ControlRegion::add(Block* b) {
     ConnectionDB* pdb = _parent->conns();
 
-    if (dynamic_cast<Module*>(b) != NULL) {
+    if (dynamic_cast<Module*>(b) != NULL ||
+        dynamic_cast<DummyBlock*>(b) != NULL) {
         // Don't merge in unrefined modules
+        // or dummy I/O blocks
         return false;
     }
 
@@ -99,27 +140,32 @@ bool ControlRegion::add(Block* b) {
         // Don't allow cycles
         return false;
 
+    map<InputPort*, OutputPort*> internalizedOutputs;
+    map<OutputPort*, set<InputPort*> > internalizedInputs;
     if (_conns.raw().size() != 0) {
         // Make sure the block is adjacent to this CR
-        bool foundAsSink = false;
         for (InputPort* ip: b->inputs()) {
             OutputPort* oldSource = pdb->findSource(ip);
-            if (oldSource && oldSource->owner() == this)
-                foundAsSink = true;
+            if (oldSource &&
+                oldSource->owner() == this &&
+                canGrow(oldSource))
+                internalizedOutputs[ip] = oldSource;
         } 
 
-        bool foundAsDriver = false;
         for (OutputPort* op: b->outputs()) {
             vector<InputPort*> oldSinks;
             pdb->findSinks(op, oldSinks);
             for (auto ip: oldSinks)
-                if (ip->owner() == this)
-                    foundAsDriver = true;
+                if (ip->owner() == this &&
+                    canGrow(ip))
+                    internalizedInputs[op].insert(ip);
         }
 
         /**
          * Maintain the constraints:
          */
+        bool foundAsSink = internalizedOutputs.size() > 0;
+        bool foundAsDriver = internalizedInputs.size() > 0;
 
         // Must be adjacent
         if (!foundAsDriver && !foundAsSink) {
@@ -128,13 +174,13 @@ bool ControlRegion::add(Block* b) {
         }
 
         // Must not create additional valid bits within CR
-        if (b->outputsIndependent()) {
+        if (foundAsDriver && !foundAsSink && b->outputsIndependent()) {
             printf("is router\n");
             return false;
         }
 
         // Must not create additional back pressure bits with CR
-        if (b->firing() == OR) {
+        if (foundAsSink && !foundAsDriver && b->firing() == OR) {
             printf("is select\n");
             return false;
         }
@@ -142,23 +188,25 @@ bool ControlRegion::add(Block* b) {
 
     bool internallyDriven = false;
     for (InputPort* ip: b->inputs()) {
-        OutputPort* oldSource = pdb->findSource(ip);
-        if (oldSource)
-            pdb->disconnect(ip, oldSource);
-
-        if (oldSource && oldSource->owner() == this &&
-            oldSource->owner()->firing() == AND) {
+        auto f = internalizedOutputs.find(ip);
+        if (f != internalizedOutputs.end()) {
             // Special case: merging block connected to this guy, so just bring
             // the connection internal
-            InputPort* internalSink = getSink(oldSource);
+            pdb->disconnect(f->first, f->second);
+            InputPort* internalSink = getSink(f->second);
             _conns.remap(internalSink, ip);
             internallyDriven = true;
 
             vector<InputPort*> remainingExtSinks;
-            pdb->findSinks(oldSource, remainingExtSinks);
+            pdb->findSinks(f->second, remainingExtSinks);
             if (remainingExtSinks.size() == 0)
-                removeOutputPort(oldSource);
+                removeOutputPort(f->second);
         } else {
+            // Make a new input port
+            OutputPort* oldSource = pdb->findSource(ip);
+            if (oldSource)
+                pdb->disconnect(ip, oldSource);
+
             auto newIP = addInputPort(ip);
             if (oldSource)
                 pdb->connect(newIP, oldSource);
@@ -166,6 +214,19 @@ bool ControlRegion::add(Block* b) {
     }
 
     for (OutputPort* op: b->outputs()) {
+
+        auto f = internalizedInputs.find(op);
+        if (f != internalizedInputs.end()) {
+            // Special case: outputs drive us, so connect internally
+           for (InputPort* ip: f->second) {
+                pdb->disconnect(f->first, ip);
+                auto internalDriver = getDriver(ip);
+                _conns.remap(internalDriver, op);
+                removeInputPort(ip);
+            }
+        }
+
+        // Find remaining old sinks
         vector<InputPort*> oldSinks;
         pdb->findSinks(op, oldSinks);
         for (auto ip: oldSinks)
@@ -173,18 +234,9 @@ bool ControlRegion::add(Block* b) {
 
         OutputPort* newOP = NULL;
         for (auto ip: oldSinks) {
-            if (ip->owner() == this &&
-                !ip->owner()->outputsIndependent() &&
-                !internallyDriven) {
-                // Special case: outputs drive us, so connect internally
-                auto internalDriver = getDriver(ip);
-                _conns.remap(internalDriver, op);
-                removeInputPort(ip);
-            } else {
-                if (newOP == NULL)
-                    newOP = addOutputPort(op);
-                pdb->connect(ip, newOP);
-            }
+            if (newOP == NULL)
+                newOP = addOutputPort(op);
+            pdb->connect(ip, newOP);
         }
     }
 

@@ -24,6 +24,10 @@ public:
     bool growUp();
     bool growDown();
     bool grow();
+
+    bool canGrow(InputPort* ip);
+    bool canGrow(OutputPort* op);
+    bool canGrow(Port* p);
 };
 
 class FormControlRegionPass : public ModulePass {
