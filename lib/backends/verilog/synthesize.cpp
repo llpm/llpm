@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
+#include <libraries/synthesis/pipeline.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
 #include <refinery/refinery.hpp>
@@ -12,6 +12,7 @@
 #include <libraries/core/std_library.hpp>
 
 #include <llvm/IR/Constants.h>
+
 
 #include <boost/format.hpp>
 
@@ -70,23 +71,19 @@ void VerilogSynthesizer::writeModule(FileSet::File* f, Module* mod) {
     f->close();
 }
 
-void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
-    Context ctxt(os, mod);
 
-    printf("Scheduling...\n");
-    Schedule* s = mod->schedule();
-    s->buildSchedule();
+void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
+    // Write out header
+    os << header;
+    writeModuleOnly(os, mod);
+}
+
+void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
+    Context ctxt(os, mod);
 
     printf("Pipelining...\n");
     Pipeline* p = mod->pipeline();
     p->build();
-
-    for (StaticRegion* region: s->regions()) {
-        region->schedule(p);
-    }
-
-    // Write out header
-    ctxt << header;
 
     ctxt << "\n\n";
     ctxt << "// The \"" << mod->name() << "\" module of type "
@@ -98,12 +95,20 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     ctxt.namer().reserveName("resetn", mod);
 
     writeIO(ctxt);
-
-    for (StaticRegion* region: s->regions()) {
-        writeStaticRegion(region, ctxt);
-    }
+    writeBlocks(ctxt);
 
     ctxt << "endmodule\n";
+
+
+    vector<Module*> submodules;
+    mod->submodules(submodules);
+    for (Module* sm: submodules) {
+        ControlRegion* cr = dynamic_cast<ControlRegion*>(sm);
+        if (cr != NULL) {
+            ctxt << "\n";
+            writeModuleOnly(os, cr);
+        }
+    }
 }
 
 void VerilogSynthesizer::writeIO(Context& ctxt) {
@@ -176,51 +181,12 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
     ctxt << "\n";
 }
 
-#if 0
-void VerilogSynthesizer::writeSpecialStaticRegion(StaticRegion* region, Context& ctxt) {
+void VerilogSynthesizer::writeBlocks(Context& ctxt) {
     ConnectionDB* conns = ctxt.module()->conns();
-
-    ctxt << "// --- Static region " << region->id() << " --- \n\n";
-
-    ctxt.region = region;
-
-    for (auto&& block: region->blocks()) {
-        vector<Connection> blockConns;
-        conns->find(block, blockConns);
-
-        for (auto c: blockConns) {
-            switch (region->classifyConnection(c)) {
-            case StaticRegion::Input:
-                ctxt.updateMapping(c.source(), ctxt.name(c.source()) + "_extern");
-                break;
-            default:
-                break;
-            }
-        }
-    }
-
-    for (Block* b: region->blocks()) {
-        print(ctxt, b);
-    }
-}
-#endif
-
-void VerilogSynthesizer::writeStaticRegion(StaticRegion* region, Context& ctxt) {
-#if 0
-    if (region->type() == StaticRegion::IO) 
-        return;
-#endif
-
-    // if (region->type() == StaticRegion::Special)
-        // return writeSpecialStaticRegion(region, ctxt);
-
-    ConnectionDB* conns = ctxt.module()->conns();
-
-    ctxt.region = region;
-    unsigned regID = region->id();
-    ctxt << "// --- Static region " << regID << " --- \n\n";
-
-    for (Block* b: region->blocks()) {
+    
+    vector<Block*> blocks;
+    ctxt.module()->blocks(blocks);
+    for (Block* b: blocks) {
         if (dynamic_cast<DummyBlock*>(b) != NULL)
             continue;
 
@@ -295,11 +261,12 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
                             % blockName
                             % cpp_demangle(typeid(*b).name())));
     } else {
-        assert(!b->outputsIndependent());
         auto printer = possible_printers.front();
         printer->print(ctxt, b);
 
         if (!printer->customLID()) {
+            assert(!b->outputsIndependent());
+
             std::string joinOp;
             std::string terminator;
             switch (b->firing()) {
@@ -770,6 +737,47 @@ public:
     }
 };
 
+class ModulePrinter: public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<Module*>(b) != NULL;
+    }
+
+    virtual bool customLID() const {
+        return true;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* b) const {
+        Module* mod = dynamic_cast<Module*>(b);
+        assert(mod != NULL);
+
+        ctxt << boost::format("    %1% %2% (\n")
+                    % mod->name()
+                    % ctxt.name(mod);
+
+        for (InputPort* ip: mod->inputs()) {
+            ctxt << boost::format("        .%1%(%2%),\n"
+                                  "        .%1%_valid(%2%_valid),\n"
+                                  "        .%1%_bp(%2%_bp),\n")
+                    % ctxt.name(ip, true)
+                    % ctxt.name(ip);
+        }
+
+        for (OutputPort* op: mod->outputs()) {
+            ctxt << boost::format("        .%1%(%2%),\n"
+                                  "        .%1%_valid(%2%_valid),\n"
+                                  "        .%1%_bp(%2%_bp),\n")
+                    % ctxt.name(op, true)
+                    % ctxt.name(op);
+        }
+
+        ctxt << "        .clk(clk),\n"
+             << "        .resetn(resetn)\n";
+
+        ctxt << "    );\n";
+    }
+};
+
 void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new BinaryOpPrinter<IntAddition>("+"));
     _printers.appendEntry(new BinaryOpPrinter<IntSubtraction>("-"));
@@ -797,6 +805,8 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(new MultiplexerPrinter());
     _printers.appendEntry(new RouterPrinter());
+
+    _printers.appendEntry(new ModulePrinter());
 }
 
 bool VerilogSynthesizer::blockIsPrimitive(Block* b) {

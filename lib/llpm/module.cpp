@@ -1,6 +1,5 @@
 #include "module.hpp"
 
-#include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
 #include <analysis/graph_queries.hpp>
 
@@ -11,9 +10,6 @@
 namespace llpm {
 
 ContainerModule::~ContainerModule() {
-    if (_schedule)
-        delete _schedule;
-
     if (_pipeline)
         delete _pipeline;
 }
@@ -87,19 +83,6 @@ unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
 
     auto passes = design().refinery().refine(blocksTmp, _conns, sc);
     return passes;
-}
-
-Schedule* ContainerModule::schedule() {
-    if (_schedule == NULL) {
-        _schedule = new Schedule(this);
-
-        // Add dummy I/O blocks to special IO region
-        for (auto p: _inputMap)
-            _schedule->createModuleIORegion()->add(p.second);
-        for (auto p: _outputMap)
-            _schedule->createModuleIORegion()->add(p.second);
-    }
-    return _schedule;
 }
 
 Pipeline* ContainerModule::pipeline() {

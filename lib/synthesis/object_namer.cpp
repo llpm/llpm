@@ -10,18 +10,7 @@
 namespace llpm {
 
 static std::string addContext(std::string base, Block* b, Module* ctxt) {
-    assert(ctxt != NULL);
-    std::string name = base;
-    Module* mod = b->module();
-    while (mod != ctxt && mod != NULL) {
-        name = mod->name() + "_" + name;
-        mod = mod->module();
-        if (mod == NULL) {
-            throw InvalidArgument("Module ctxt does not appear to be a parent of Block b!");
-        }
-    }
-
-    return name;
+    return base;
 }
 
 void ObjectNamer::assignName(Port* p, Module* ctxt, std::string name) {

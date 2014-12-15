@@ -91,8 +91,8 @@ int main(int argc, const char** argv) {
             if (mod->hasCycle()) {
                 printf("Module still has cycle!\n");
             }
+            vw.writeModule(fs, mod);
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
-            // vw.writeModule(fs, mod);
         }
 
     } catch (Exception& e) {

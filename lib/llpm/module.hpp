@@ -12,7 +12,6 @@
 namespace llpm {
 
 class Design;
-class Schedule;
 class Pipeline;
 
 class Module : public Block {
@@ -47,7 +46,6 @@ public:
         this->blocks(crude);
         return sc->refined(crude);
     }
-    virtual Schedule* schedule() = 0;
     virtual Pipeline* pipeline() = 0;
     virtual void validityCheck() const = 0;
 
@@ -98,8 +96,6 @@ protected:
     map<InputPort*, DummyBlock*> _inputMap;
     map<OutputPort*, DummyBlock*> _outputMap;
 
-    // Schedule
-    Schedule* _schedule;
     Pipeline* _pipeline;
 
     InputPort* addInputPort(InputPort* ip, std::string name = "");
@@ -111,7 +107,7 @@ public:
     ContainerModule(Design& design, std::string name) :
         MutableModule(design, name),
         _conns(this),
-        _schedule(NULL)
+        _pipeline(NULL)
     { }
 
     virtual ~ContainerModule();
@@ -229,7 +225,6 @@ public:
     
     virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);
 
-    virtual Schedule* schedule();
     virtual Pipeline* pipeline();
 };
 

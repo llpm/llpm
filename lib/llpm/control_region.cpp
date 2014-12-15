@@ -46,7 +46,9 @@ void FormControlRegionPass::run(Module* mod) {
             // It's a dummy block? Don't mess with it
             continue;
 
-        std::string crName = str(boost::format("cr%1%") % counter);
+        std::string crName = str(boost::format("%1%_cr%2%") 
+                                    % mod->name()
+                                    % counter);
         ControlRegion* cr = new ControlRegion(cm, opDriver->owner(), crName);
         cr->grow();
         regions.insert(cr);
@@ -286,7 +288,10 @@ void ControlRegion::validityCheck() const {
         set<InputPort*>(inputs().begin(), inputs().end());
     for (OutputPort* op: outputs()) {
         auto deps = findDependences(op);
-        assert(cannonDeps == deps);
+        assert(cannonDeps == deps &&
+               "Error: control region may introduce a deadlock. "
+               "This is a known problem, but was not expected to occur "
+               "in practice. Please report this problem!");
     }
 }
 

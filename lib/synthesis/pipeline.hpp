@@ -8,15 +8,15 @@
 #include <llpm/connection.hpp>
 #include <llpm/module.hpp>
 #include <refinery/priority_collection.hpp>
-#include <synthesis/schedule.hpp>
 
 namespace llpm {
 
 class Pipeline {
     MutableModule* _module;
-    Schedule* _schedule;
 
     std::map<Connection, unsigned> _stages;
+
+    void insertPipelineRegs();
 
 public:
     Pipeline(MutableModule* mod);

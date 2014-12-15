@@ -5,11 +5,11 @@
 
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
+#include <llpm/control_region.hpp>
 #include <refinery/refinery.hpp>
 #include <frontends/llvm/objects.hpp>
 #include <synthesis/object_namer.hpp>
 #include <refinery/priority_collection.hpp>
-#include <synthesis/schedule.hpp>
 #include <backends/backend.hpp>
 
 // fwd def
@@ -34,8 +34,6 @@ public:
             _namer(ctxt->design().namer()),
             _ctxt(ctxt)
         { }
-
-        StaticRegion* region;
 
         void updateMapping(OutputPort* op, std::string name) {
             _mapping[op] = name;
@@ -99,8 +97,7 @@ public:
     };
 
     void writeIO(Context&);
-    void writeStaticRegion(StaticRegion*, Context&);
-    void writeSpecialStaticRegion(StaticRegion*, Context& ctxt);
+    void writeBlocks(Context&);
 
 private:
     Design& _design;
@@ -108,6 +105,8 @@ private:
     BaseLibraryStopCondition _stops;
 
     void addDefaultPrinters();
+
+    void writeModuleOnly(std::ostream& os, Module* mod);
 
 public:
     VerilogSynthesizer(Design& design);

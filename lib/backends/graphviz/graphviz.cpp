@@ -3,7 +3,6 @@
 #include <libraries/synthesis/pipeline.hpp>
 #include <util/misc.hpp>
 #include <util/llvm_type.hpp>
-#include <synthesis/schedule.hpp>
 #include <synthesis/pipeline.hpp>
 #include <llpm/control_region.hpp>
 
