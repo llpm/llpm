@@ -24,6 +24,10 @@ static bool is_module(Block* b) {
     return dynamic_cast<Module*>(b) != NULL;
 }
 
+static bool is_dummy(Block* b) {
+    return dynamic_cast<DummyBlock*>(b) != NULL;
+}
+
 void Pipeline::buildMinimum() {
     _stages.clear();
 
@@ -33,9 +37,13 @@ void Pipeline::buildMinimum() {
         Block* b = c.sink()->owner();
 
         if (is_module(a) || is_module(b)) {
-            // Connections between modules and other things need to be
-            // pipelined 
+            // Connections between modules and other things generally need to
+            // be pipelined 
             _stages[c] = 1;
+
+            if (is_dummy(b))
+                // Exception: module outputs can be passed through
+                _stages[c] = 0;
         } else if (dynamic_cast<ControlRegion*>(_module)) {
             // If we are pipelining a control region, connections can avoid
             // pipelining.
