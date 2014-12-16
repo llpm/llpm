@@ -1,5 +1,6 @@
 #include "comm_intr.hpp"
 
+#include <util/misc.hpp>
 #include <boost/format.hpp>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -8,15 +9,6 @@ using namespace std;
 
 namespace llpm {
 using namespace llvm;
-
-static unsigned clog2(uint64_t n) {
-    for (unsigned i=64; i>0; i--) {
-        if (n & (1ull << (i - 1))) {
-            return i - 1;
-        }
-    }
-    return 0;
-}
 
 Identity::Identity(llvm::Type* type) :
     Function(type, type)
