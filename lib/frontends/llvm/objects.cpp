@@ -454,7 +454,8 @@ std::vector<unsigned> LLVMEntry::ValueMap(llvm::Function* func,
 }
 
 LLVMFunction::LLVMFunction(llpm::Design& design, llvm::Function* func) :
-    ContainerModule(design, func->getName())
+    ContainerModule(design, func->getName()),
+    _call(NULL)
 {
     build(func);
 }
@@ -465,10 +466,8 @@ LLVMFunction::~LLVMFunction() {
 void LLVMFunction::regBBMemPort(llvm::Value* val,
                                 OutputPort* req,
                                 InputPort* resp) {
-    _memReqs[val] =
-        addOutputPort(req, LLVMInstruction::NameInstruction(val) + "_mreq");
-    _memResps[val] =
-        addInputPort(resp, LLVMInstruction::NameInstruction(val) + "_mresp");
+    _memInterfaces[val] =
+        addClientInterface(req, resp, LLVMInstruction::NameInstruction(val) + "_mem");
 }
 
 void LLVMFunction::build(llvm::Function* func) {
@@ -532,8 +531,9 @@ void LLVMFunction::build(llvm::Function* func) {
     connect(_entry->dout(), entryPort);
 
     // Connect input/output
-    _call = addInputPort(_entry->din(), "call");
-    _ret = addOutputPort(_exit->dout(), "ret");
+    _call = addServerInterface(_entry->din(), _exit->dout(), "call");
+    _call->din()->name("call");
+    _call->dout()->name("ret");
 }
 
 void LLVMFunction::connectReturn(OutputPort* retPort) {

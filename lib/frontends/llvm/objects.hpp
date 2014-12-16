@@ -4,6 +4,7 @@
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
 #include <refinery/refinery.hpp>
+#include <libraries/core/interface.hpp>
 #include <libraries/util/types.hpp>
 
 namespace llpm {
@@ -38,13 +39,10 @@ class LLVMFunction: public ContainerModule {
     LLVMEntry* _entry;
     LLVMExit* _exit;
 
-    InputPort* _call;
-    OutputPort* _ret;
+    Interface* _call;
 
     // Memory load request ports
-    std::map<llvm::Value*, OutputPort*> _memReqs;
-    // Memory load response ports
-    std::map<llvm::Value*, InputPort*> _memResps;
+    std::map<llvm::Value*, Interface*> _memInterfaces;
 
     LLVMFunction(Design&, llvm::Function*);
     void build(llvm::Function* func);
@@ -53,7 +51,6 @@ public:
     virtual ~LLVMFunction();
 
     DEF_GET_NP(call);
-    DEF_GET_NP(ret);
 
     LLVMControl* getControl(llvm::BasicBlock* bb) const {
         auto f = _controlMap.find(bb);

@@ -19,8 +19,9 @@ Register::~Register() {
 Interface* Register::newRead() {
     auto iface =
         new Interface(this,
-                      llvm::Type::getVoidTy(_write.cin()->type()->getContext()),
-                      _write.cin()->type(),
+                      llvm::Type::getVoidTy(_write.reqType()->getContext()),
+                      _write.respType(),
+                      true,
                       str(boost::format("read%1%") % _read.size()));
     _read.push_back(iface);
     return iface;
@@ -42,9 +43,11 @@ llvm::Type* Array::GetReadOutputType(llvm::Type* type, unsigned depth) {
 
 Array::Array(llvm::Type* ty, unsigned depth) :
     _write(this, GetWriteInputType(ty, depth),
-           llvm::Type::getVoidTy(ty->getContext()), "write"),
+           llvm::Type::getVoidTy(ty->getContext()),
+           true, "write"),
     _read(this, GetReadInputType(ty, depth),
-          GetReadOutputType(ty, depth), "read")
+          GetReadOutputType(ty, depth),
+          true, "read")
 { }
 
 } // namespace llpm

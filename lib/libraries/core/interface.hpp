@@ -8,25 +8,50 @@
 namespace llpm {
 
 class Interface {
-    InputPort _cin;
-    OutputPort _cout;
+    InputPort _din;
+    OutputPort _dout;
+    bool _server;
 
 public:
     Interface(Block* owner,
               llvm::Type* inpType,
               llvm::Type* outType,
+              bool server,
               std::string name = "") :
-        _cin(owner, inpType, name + "_cin"),
-        _cout(owner, outType, name + "_cout")
+        _din(owner, inpType, name + "_din"),
+        _dout(owner, outType, name + "_dout"),
+        _server(server)
     { }
 
-    DEF_GET(cin);
-    DEF_GET(cout);
+    DEF_GET(din);
+    DEF_GET(dout);
+    DEF_GET(server);
+
+    const Port* req() const {
+        if (_server)
+            return &_dout;
+        else
+            return &_din;
+    }
+
+    const Port* resp() const {
+        if (_server)
+            return &_din;
+        else
+            return &_dout;
+    }
+
+    llvm::Type* respType() const {
+        return resp()->type();
+    }
+
+    llvm::Type* reqType() const {
+        return req()->type();
+    }
 };
 
 class InterfaceMultiplexer : public Block {
-    OutputPort _sin;
-    InputPort  _sout;
+    Interface _client;
 
     std::vector<Interface*> _interfaces;
 
@@ -34,20 +59,23 @@ public:
     InterfaceMultiplexer(llvm::Type* inpType,
                          llvm::Type* outType,
                          std::string name) :
-        _sin(this, inpType, name + "_sin"),
-        _sout(this, outType, name = "_sout")
+        _client(this, inpType, outType, false, name)
     {
         this->name(name);
     }
 
-    DEF_GET(sin);
-    DEF_GET(sout);
+    DEF_GET(client);
 
     Interface* createInterface() {
         std::string iname = str(boost::format("%1%_iface%2%")
                                 % name()
                                 % _interfaces.size());
-        Interface* i = new Interface(this, _sin.type(), _sout.type(), iname);
+        Interface* i =
+            new Interface(this,
+                          _client.reqType(),
+                          _client.respType(), 
+                          true,
+                          iname);
         _interfaces.push_back(i);
         return i;
     }

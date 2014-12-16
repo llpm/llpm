@@ -34,6 +34,7 @@ public:
     }
 
     DEF_GET_NP(name);
+    DEF_SET(name);
 };
 
 class InputPort : public Port {

@@ -6,6 +6,7 @@
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
 #include <libraries/core/comm_intr.hpp>
+#include <libraries/core/interface.hpp>
 
 #include <boost/foreach.hpp>
 
@@ -95,6 +96,7 @@ protected:
     // port on the corresponding pass through block.
     std::map<InputPort*, DummyBlock*> _inputMap;
     std::map<OutputPort*, DummyBlock*> _outputMap;
+    std::set<Interface*> _interfaces;
 
     Pipeline* _pipeline;
 
@@ -102,6 +104,13 @@ protected:
     void removeInputPort(InputPort* ip);
     OutputPort* addOutputPort(OutputPort* op, std::string name = "");
     void removeOutputPort(OutputPort* ip);
+    Interface* addClientInterface(OutputPort* req,
+                                  InputPort* resp,
+                                  std::string name = "");
+    Interface* addServerInterface(InputPort* req,
+                                  OutputPort* resp,
+                                  std::string name = "");
+    void removeInterface(Interface* iface);
 
 public:
     ContainerModule(Design& design, std::string name) :

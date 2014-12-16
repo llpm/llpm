@@ -19,8 +19,7 @@ CPPHDLClass::CPPHDLClass(Design& design,
 }
 
 void CPPHDLClass::addMember(std::string name, LLVMFunction* func) {
-    addInputPort(func->call(), name + "_call");
-    addOutputPort(func->ret(), name + "_ret");
+    addServerInterface(func->call()->din(), func->call()->dout(), name);
     _methods[name] = func;
 }
 

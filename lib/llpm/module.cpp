@@ -64,6 +64,46 @@ void ContainerModule::removeOutputPort(OutputPort* op) {
     delete op;
 }
 
+Interface* ContainerModule::addClientInterface(
+        OutputPort* req, InputPort* resp, std::string name) {
+    auto iface = new Interface(this, resp->type(), req->type(), false, name);
+    _interfaces.insert(iface);
+
+    auto opdummy = new DummyBlock(req->type());
+    _outputMap.insert(make_pair(iface->dout(), opdummy));
+    opdummy->name(name + "_opdummy");
+    conns()->blacklist(opdummy);
+    conns()->connect(req, opdummy->din());
+
+    auto ipdummy = new DummyBlock(resp->type());
+    _inputMap.insert(make_pair(iface->din(), ipdummy));
+    ipdummy->name(name + "_ipdummy");
+    conns()->blacklist(ipdummy);
+    conns()->connect(resp, ipdummy->dout());
+
+    return iface;
+}
+
+Interface* ContainerModule::addServerInterface(
+        InputPort* req, OutputPort* resp, std::string name) {
+    auto iface = new Interface(this, req->type(), resp->type(), true, name);
+    _interfaces.insert(iface);
+
+    auto opdummy = new DummyBlock(resp->type());
+    _outputMap.insert(make_pair(iface->dout(), opdummy));
+    opdummy->name(name + "_opdummy");
+    conns()->blacklist(opdummy);
+    conns()->connect(resp, opdummy->din());
+
+    auto ipdummy = new DummyBlock(req->type());
+    _inputMap.insert(make_pair(iface->din(), ipdummy));
+    ipdummy->name(name + "_ipdummy");
+    conns()->blacklist(ipdummy);
+    conns()->connect(req, ipdummy->dout());
+
+    return iface;
+}
+
 bool ContainerModule::refine(ConnectionDB& conns) const
 {
     conns.update(_conns);
