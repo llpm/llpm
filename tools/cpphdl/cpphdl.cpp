@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
 
         PassManager pm(d);
         // pm.append(new SimplifyPass(d));
-        pm.append(new FormControlRegionPass(d));
+        // pm.append(new FormControlRegionPass(d));
 
         for(auto&& m: modules) {
             m->validityCheck();

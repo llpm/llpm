@@ -129,6 +129,9 @@ public:
         _dout(this, GetOutput(ins), "a")
     { }
 
+    DEF_GET(din);
+    DEF_GET(dout);
+
     virtual bool refinable() const {
         return false;
     }

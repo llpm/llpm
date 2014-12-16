@@ -29,6 +29,24 @@ public:
     }
 };
 
+// Waits for inputs to arrive on N control channels and one data
+// channel then passes through the data token.
+class Wait: public CommunicationIntrinsic {
+    InputPort _din;
+    OutputPort _dout;
+    std::vector<InputPort*> _controls;
+
+public:
+    Wait(llvm::Type*);
+    virtual ~Wait();
+
+    DEF_GET(din);
+    DEF_GET(dout);
+    DEF_ARRAY_GET(controls);
+
+    InputPort* newControl(llvm::Type*);
+};
+
 // Convert one data type to another. Usually compiles down to a
 // no-op
 class Cast : public CommunicationIntrinsic, public Function {

@@ -1,6 +1,6 @@
 #include "comm_intr.hpp"
 
-#include <boost/foreach.hpp>
+#include <boost/format.hpp>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 
@@ -21,6 +21,24 @@ static unsigned clog2(uint64_t n) {
 Identity::Identity(llvm::Type* type) :
     Function(type, type)
 {
+}
+
+Wait::Wait(llvm::Type* type) :
+    _din(this, type, "din"),
+    _dout(this, type, "dout")
+{ }
+
+Wait::~Wait() {
+    for (auto ip: _controls) {
+        delete ip;
+    }
+}
+
+InputPort* Wait::newControl(llvm::Type* t) {
+    auto name = str(boost::format("control%1%") % _controls.size());
+    auto ip = new InputPort(this, t, name);
+    _controls.push_back(ip);
+    return ip;
 }
 
 Cast::Cast(llvm::CastInst* cast) :
