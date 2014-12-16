@@ -41,7 +41,7 @@ void Pipeline::buildMinimum() {
             // be pipelined 
             _stages[c] = 1;
 
-            if (is_dummy(b))
+            if (is_dummy(a) || is_dummy(b))
                 // Exception: module outputs can be passed through
                 _stages[c] = 0;
         } else if (dynamic_cast<ControlRegion*>(_module)) {

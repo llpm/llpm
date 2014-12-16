@@ -240,6 +240,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     os << "#define __MOD_" << mod->name() << "_LLPM_WEDGE__\n\n";
 
     os << "#include <string>\n"
+       << "#include <deque>\n"
        << "#include <stdint.h>\n\n";
 
     os << "// Forward declaration for ugly verilator classes\n";
@@ -261,6 +262,9 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     for (InputPort* ip: mod->inputs()) {
         os << "    // Input port '" << ip->name() << "'\n";
         auto sig = typeSig(ip->type(), false, false);
+        os << boost::format("    void %1%_pack(%2%    );\n")
+                    % ip->name()
+                    % sig;
         os << boost::format("    bool %1%_nonblock(%2%    );\n")
                     % ip->name()
                     % sig;
@@ -273,6 +277,9 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     for (OutputPort* op: mod->outputs()) {
         os << "    // Output port '" << op->name() << "'\n";
         auto sig = typeSig(op->type(), true, false);
+        os << boost::format("    void %1%_unpack(%2%    );\n")
+                    % op->name()
+                    % sig;
         os << boost::format("    bool %1%_nonblock(%2%    );\n")
                     % op->name()
                     % sig;
@@ -290,8 +297,20 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
        << "    uint64_t cycles() const { return cycleCount; }\n";
 
     os << "\nprivate:\n";
+    os << "    void readOutputs();\n";
     os << "    V" << mod->name() << "* simulator;\n";
     os << "    uint64_t cycleCount;\n";
+    os << "    \n";
+
+    for (OutputPort* op: mod->outputs()) {
+        auto sig = typeSig(op->type(), false, false);
+        os << boost::format("    std::deque<%2%> %1%_incoming;\n")
+                    % op->name()
+                    % sig;
+        os << "\n";
+    }
+
+    os << "    \n";
     os << "    VerilatedVcdC* tfp;\n";
     os << "};\n";
 
@@ -329,6 +348,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
     for (unsigned i=0; i<cycles; i++) {
         simulator->clk = 1;
         simulator->eval();
+        readOutputs();
         if (this->tfp)
             tfp->dump(this->cycleCount * 2);
         simulator->clk = 0;
@@ -341,6 +361,24 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         this->tfp->flush();
 }
 )STRING";
+
+    os << "void " << mod->name() << "::readOutputs() {\n";
+    for (OutputPort* op: mod->outputs()) {
+        auto sig = typeSig(op->type(), false, false);
+        os << boost::format("    if (simulator->%1%_valid &&\n"
+                            "        !simulator->%1%_bp) {\n"
+                            "        %1%_incoming.resize(%1%_incoming.size()+1);\n"
+                            "        %1%_unpack(&%1%_incoming.back());\n"
+                            "    }\n"
+                            "    if (%1%_incoming.size() >= 10)\n"
+                            "        simulator->%1%_bp = 1;\n"
+                            "    else\n"
+                            "        simulator->%1%_bp = 0;\n"
+                            )
+                    % op->name();
+        os << "\n";
+    }
+    os << "};\n";
 
     os << "void " << mod->name() << "::reset() {"
        << R"STRING(
@@ -370,16 +408,10 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
     for (InputPort* ip: mod->inputs()) {
         os << "// Input port '" << ip->name() << "'\n";
         auto sig = typeSig(ip->type(), false, true);
-        os << boost::format("bool %3%::%1%_nonblock(%2%    ) {\n")
+        os << boost::format("void %3%::%1%_pack(%2%    ) {\n")
                     % ip->name()
                     % sig
                     % mod->name();
-        os << boost::format(
-R"STRING(
-    if ((simulator->%1%_bp & 1) == 1)
-        return false;
-    simulator->%1%_valid = 1;
-)STRING") % ip->name();
 
         auto type = ip->type();
         auto args = numArgs(type);
@@ -413,6 +445,30 @@ R"STRING(
                         % ip->name()
                         % (4 * numwords);
         }
+        os << "}\n\n";
+
+        os << boost::format("bool %3%::%1%_nonblock(%2%    ) {\n")
+                    % ip->name()
+                    % sig
+                    % mod->name();
+
+        os << boost::format("    %1%_pack(") % ip->name();
+        for (unsigned arg = 0; arg < args; arg++) {
+            os << boost::format("arg%1%") % arg;
+            if (arg != args - 1)
+                os << ", ";
+        }
+        os << ");\n";
+
+        os << boost::format(
+R"STRING(
+    simulator->%1%_valid = 1;
+    simulator->eval();
+    if ((simulator->%1%_bp & 1) == 1) {
+        simulator->%1%_valid = 0;
+        return false;
+    }
+)STRING") % ip->name();
 
         os << boost::format(
 R"STRING(
@@ -440,23 +496,10 @@ R"STRING(
     for (OutputPort* op: mod->outputs()) {
         os << "// Input port '" << op->name() << "'\n";
         auto sig = typeSig(op->type(), true, true);
-        os << boost::format("bool %3%::%1%_nonblock(%2%    ) {\n")
+        os << boost::format("void %3%::%1%_unpack(%2%    ) {\n")
                     % op->name()
                     % sig
                     % mod->name();
-        os << boost::format(
-R"STRING(
-    simulator->%1%_bp = 0;
-    bool pulsed = false;
-    if ((simulator->%1%_valid & 1) == 0) {
-        this->run(1);
-        pulsed = true;
-        simulator->%1%_bp = 1;
-        if ((simulator->%1%_valid & 1) == 0) {
-            return false;
-        }
-    }
-)STRING") % op->name();
 
         auto type = op->type();
         auto args = numArgs(type);
@@ -490,15 +533,17 @@ R"STRING(
                 os << "    " << argName(arg) << " = arg." << argName(arg) << ";\n";
             }
         }
+        os << "}\n\n";
 
-        os << boost::format(
-R"STRING(
-    if (!pulsed)
-        this->run(1);
-    simulator->%1%_bp = 1;
-    return true;
-}
-)STRING") % op->name();
+        os << boost::format("bool %3%::%1%_nonblock(%2%    ) {\n"
+                            "    if (%1%_incoming.size() == 0)\n"
+                            "        return false;\n"
+                            "    *arg0 = %1%_incoming.front();\n"
+                            "    return true;\n"
+                            "}\n")
+                    % op->name()
+                    % sig
+                    % mod->name();
 
         os << boost::format("void %3%::%1%(%2%    ) {\n")
                     % op->name()
@@ -510,7 +555,7 @@ R"STRING(
             if (arg < (args-1))
                 os << ", ";
         }
-        os << ")) { }\n"
+        os << ")) { this->run(1); }\n"
            << "}\n";
     }
 
