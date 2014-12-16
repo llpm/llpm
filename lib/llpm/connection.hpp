@@ -9,8 +9,6 @@
 #include <map>
 #include <unordered_map>
 
-using namespace std;
-
 namespace llpm {
 
 class Connection {
@@ -58,7 +56,7 @@ class ConnectionDB {
     std::set<Block*> _blacklist;
     std::unordered_map<Block*, uint64_t> _blockUseCounts;
     std::set<Block*> _newBlocks;
-    std::map<const InputPort*, vector<InputPort*> > _inputRewrites;
+    std::map<const InputPort*, std::vector<InputPort*> > _inputRewrites;
     std::map<const OutputPort*, OutputPort*> _outputRewrites;
 
     void registerBlock(Block* block);
@@ -75,7 +73,7 @@ public:
 
     DEF_GET(module);
 
-    const set<Connection>& raw() const {
+    const std::set<Connection>& raw() const {
         return _connections;
     }
 
@@ -93,7 +91,7 @@ public:
         _newBlocks.clear();
     }
 
-    void findAllBlocks(set<Block*>& blocks) const {
+    void findAllBlocks(std::set<Block*>& blocks) const {
         for (auto pr: _blockUseCounts) {
             if (pr.second >= 1 && _blacklist.count(pr.first) == 0)
                 blocks.insert(pr.first);
@@ -139,7 +137,7 @@ public:
                    std::vector<InputPort*>& out) const;
 
     OutputPort* findSource(const InputPort* ip) const;
-    void find(Block* b, vector<Connection>&) const;
+    void find(Block* b, std::vector<Connection>&) const;
     bool find(const InputPort* ip, Connection& c) const;
     void find(const OutputPort* op, std::vector<Connection>& out) const;
 
@@ -166,9 +164,9 @@ public:
      * connection database, the remaps are stored so they may be
      * processed later by an update or a connect.
      */
-    void remap(const InputPort* origPort, const vector<InputPort*>& newPorts);
+    void remap(const InputPort* origPort, const std::vector<InputPort*>& newPorts);
     void remap(const InputPort* origPort, InputPort* newPort) {
-        vector<InputPort*> newPorts = {newPort};
+        std::vector<InputPort*> newPorts = {newPort};
         remap(origPort, newPorts);
     }
     void remap(const OutputPort* origPort, OutputPort* newPort);

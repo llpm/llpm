@@ -11,6 +11,8 @@
 #include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 void LLVMInstruction::createName() {

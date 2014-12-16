@@ -36,13 +36,13 @@ public:
     // For opaque modules, this may return NULL
     virtual ConnectionDB* conns() = 0;
 
-    virtual void blocks(vector<Block*>&) const = 0;
-    virtual void submodules(vector<Module*>&) const = 0;
-    virtual void submodules(vector<Block*>& vec) const = 0;
+    virtual void blocks(std::vector<Block*>&) const = 0;
+    virtual void submodules(std::vector<Module*>&) const = 0;
+    virtual void submodules(std::vector<Block*>& vec) const = 0;
 
     virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL) = 0;
     virtual bool refined(Refinery::StopCondition* sc) {
-        vector<Block*> crude;
+        std::vector<Block*> crude;
         this->blocks(crude);
         return sc->refined(crude);
     }
@@ -93,8 +93,8 @@ protected:
     // Each container module input and output port have a pass
     // through block and a mapping to the internal output and input
     // port on the corresponding pass through block.
-    map<InputPort*, DummyBlock*> _inputMap;
-    map<OutputPort*, DummyBlock*> _outputMap;
+    std::map<InputPort*, DummyBlock*> _inputMap;
+    std::map<OutputPort*, DummyBlock*> _outputMap;
 
     Pipeline* _pipeline;
 
@@ -189,13 +189,13 @@ public:
         return false;
     }
 
-    virtual void blocks(vector<Block*>& vec) const {
+    virtual void blocks(std::vector<Block*>& vec) const {
         std::set<Block*> blocks;
         _conns.findAllBlocks(blocks);
         vec.insert(vec.end(), blocks.begin(), blocks.end());
     }
 
-    virtual void submodules(vector<Block*>& vec) const {
+    virtual void submodules(std::vector<Block*>& vec) const {
         std::set<Block*> blocks;
         _conns.findAllBlocks(blocks);
         for (Block* b: blocks) {
@@ -205,7 +205,7 @@ public:
         }
     }
 
-    virtual void submodules(vector<Module*>& vec) const {
+    virtual void submodules(std::vector<Module*>& vec) const {
         std::set<Block*> blocks;
         _conns.findAllBlocks(blocks);
         for (Block* b: blocks) {

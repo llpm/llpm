@@ -2,6 +2,8 @@
 #include <llpm/block.hpp>
 #include <boost/foreach.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 void ConnectionDB::registerBlock(Block* block) {

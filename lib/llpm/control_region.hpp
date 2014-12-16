@@ -10,7 +10,7 @@ class ControlRegion : public ContainerModule {
     MutableModule* _parent;
     bool add(Block*);
 
-    set<InputPort*> findDependences(OutputPort*) const;
+    std::set<InputPort*> findDependences(OutputPort*) const;
 
 public:
     ControlRegion(MutableModule* parent, Block* seed, std::string name="") :

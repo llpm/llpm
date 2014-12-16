@@ -16,6 +16,7 @@
 #include <passes/transforms/simplify.hpp>
 
 using namespace llpm;
+using namespace std;
 
 int main(int argc, const char** argv) {
     try {

@@ -7,6 +7,8 @@
 
 #include <deque>
 
+using namespace std;
+
 namespace llpm {
 
 ContainerModule::~ContainerModule() {

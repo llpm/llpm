@@ -10,6 +10,8 @@
 
 #include <util/llvm_type.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 class LLVMBasicBlockRefiner : public LLVMRefiner<LLVMBasicBlock> {

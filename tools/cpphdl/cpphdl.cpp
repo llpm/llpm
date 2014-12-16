@@ -16,6 +16,7 @@
 
 using namespace llpm;
 using namespace cpphdl;
+using namespace std;
 
 int main(int argc, const char** argv) {
     try {

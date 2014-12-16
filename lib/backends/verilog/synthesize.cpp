@@ -13,8 +13,9 @@
 
 #include <llvm/IR/Constants.h>
 
-
 #include <boost/format.hpp>
+
+using namespace std;
 
 namespace llpm {
 

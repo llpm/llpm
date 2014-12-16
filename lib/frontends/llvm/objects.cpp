@@ -9,6 +9,8 @@
 #include <llvm/IR/CFG.h>
 #include <llvm/Support/Casting.h>
 
+using namespace std;
+
 namespace llpm {
 
 #if 0

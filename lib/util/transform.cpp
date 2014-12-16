@@ -1,5 +1,7 @@
 #include "transform.hpp"
 
+using namespace std;
+
 namespace llpm {
 
 void Transformer::remove(Block* b) {

@@ -5,6 +5,8 @@
 #include <boost/foreach.hpp>
 #include <llvm/IR/DerivedTypes.h>
 
+using namespace std;
+
 namespace llpm {
 using namespace llvm;
 

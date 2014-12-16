@@ -4,6 +4,8 @@
 
 #include <deque>
 
+using namespace std;
+
 namespace llpm {
 
 void SimplifyPass::run(Module* m) {

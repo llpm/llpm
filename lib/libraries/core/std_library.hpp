@@ -213,7 +213,7 @@ namespace llpm {
         DEF_GET(isSigned);
 
         virtual std::string print() const {
-            string ret = _isSigned ? "s " : "u ";
+            std::string ret = _isSigned ? "s " : "u ";
             switch (_op) {
             case EQ:
                 ret += "==";

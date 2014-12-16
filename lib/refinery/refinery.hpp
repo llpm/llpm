@@ -40,15 +40,15 @@ public:
     class StopCondition {
     public:
         virtual bool stopRefine(Block*) = 0;
-        virtual void unrefined(vector<Block*>& crude) {
-            vector<Block*> unref;
+        virtual void unrefined(std::vector<Block*>& crude) {
+            std::vector<Block*> unref;
             for(Block* c: crude) {
                 if (!stopRefine(c))
                     unref.push_back(c);
             }
             unref.swap(crude);
         }
-        virtual bool refined(const vector<Block*>& crude) {
+        virtual bool refined(const std::vector<Block*>& crude) {
             for (Block* c: crude) {
                 if (this->stopRefine(c) == false)
                     return false;

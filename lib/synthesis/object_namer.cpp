@@ -7,6 +7,8 @@
 #include <boost/format.hpp>
 #include <cctype>
 
+using namespace std;
+
 namespace llpm {
 
 static std::string addContext(std::string base, Block* b, Module* ctxt) {

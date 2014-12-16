@@ -2,6 +2,8 @@
 
 #include <llpm/module.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 bool BlockRefiner::refine(Block* c) const {

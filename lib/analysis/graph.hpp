@@ -60,7 +60,7 @@ public:
     }
 
     std::pair<SrcPort*, DstPort*> end() const {
-        return make_pair(_src, _dst);
+        return std::make_pair(_src, _dst);
     }
     DstPort* endPort() const {
         return _dst;
@@ -86,12 +86,12 @@ public:
     typedef DstPort DstPortTy;
 
     Path(SrcPort* src, DstPort* dst) {
-        _path.push_back(make_pair(src, dst));
+        _path.push_back(std::make_pair(src, dst));
     }
 
     Path(const Path* p, SrcPort* src, DstPort* dst) :
         _path(p->_path) {
-        _path.push_back(make_pair(src, dst));
+        _path.push_back(std::make_pair(src, dst));
     }
 
     Path push(SrcPort* sp, DstPort* dp) const {

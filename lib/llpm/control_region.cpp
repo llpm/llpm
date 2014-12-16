@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <deque>
 
+using namespace std;
+
 namespace llpm {
 
 void FormControlRegionPass::run(Module* mod) {

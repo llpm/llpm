@@ -4,6 +4,8 @@
 #include <analysis/graph.hpp>
 #include <analysis/graph_impl.hpp>
 
+using namespace std;
+
 namespace llpm {
 namespace queries {
 

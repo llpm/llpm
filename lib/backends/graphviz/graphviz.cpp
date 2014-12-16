@@ -8,6 +8,8 @@
 
 #include <boost/format.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 void GraphvizOutput::writeModule(FileSet::File* fn, Module* mod) {

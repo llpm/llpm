@@ -6,7 +6,7 @@
 namespace llpm {
 namespace queries {
 
-bool BlockCycleExists(const ConnectionDB* conns, vector<OutputPort*> init);
+bool BlockCycleExists(const ConnectionDB* conns, std::vector<OutputPort*> init);
 
 };
 };

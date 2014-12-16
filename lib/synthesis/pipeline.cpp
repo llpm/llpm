@@ -3,6 +3,8 @@
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 Pipeline::Pipeline(MutableModule* mod) :

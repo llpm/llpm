@@ -12,10 +12,7 @@
 #include <util/macros.hpp>
 #include <boost/foreach.hpp>
 
-using namespace std;
-
 namespace llpm {
-
 
 // Forward decl. Stupid c++!
 class Function;

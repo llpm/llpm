@@ -46,10 +46,10 @@ public:
 
 // Takes N inputs and concatenates them into one output
 class Join : public CommunicationIntrinsic {
-    vector<InputPort*> _din;
+    std::vector<InputPort*> _din;
     OutputPort _dout;
 public:
-    Join(const vector<llvm::Type*>& inputs);
+    Join(const std::vector<llvm::Type*>& inputs);
     Join(llvm::Type* output);
     virtual ~Join() { }
 
@@ -60,7 +60,7 @@ public:
 // Takes N inputs of the same type and outputs them in 
 // the order in which they arrive
 class Select : public CommunicationIntrinsic {
-    vector<InputPort*> _din;
+    std::vector<InputPort*> _din;
     OutputPort _dout;
 public:
     Select(unsigned N, llvm::Type* type);
@@ -77,10 +77,10 @@ public:
 // Takes N inputs of different types and outputs them
 // in the order in which they arrive
 class SelectUnion : public CommunicationIntrinsic {
-    vector<InputPort*> _din;
+    std::vector<InputPort*> _din;
     OutputPort _dout;
 public:
-    SelectUnion(const vector<llvm::Type*>& inputs);
+    SelectUnion(const std::vector<llvm::Type*>& inputs);
     // Note: unimplemented for now since LLVM lacks a union type!
     virtual ~SelectUnion() { }
 
@@ -95,10 +95,10 @@ public:
 // Splits a single input into N constituent parts
 class Split : public CommunicationIntrinsic {
     InputPort _din;
-    vector<OutputPort*> _dout;
+    std::vector<OutputPort*> _dout;
 
 public:
-    Split(const vector<llvm::Type*>& outputs);
+    Split(const std::vector<llvm::Type*>& outputs);
     Split(llvm::Type* input);
     virtual ~Split() { }
 
@@ -108,10 +108,10 @@ public:
 
 // Extract a single element from a message
 class Extract : public CommunicationIntrinsic, public Function {
-    vector<unsigned> _path;
+    std::vector<unsigned> _path;
 
 public:
-    Extract(llvm::Type* t, vector<unsigned> path);
+    Extract(llvm::Type* t, std::vector<unsigned> path);
     virtual ~Extract() { }
 
     virtual bool hasState() const {
@@ -143,7 +143,7 @@ public:
 class Router : public CommunicationIntrinsic {
     static llvm::Type* GetInput(unsigned N, llvm::Type* type);
     InputPort _din;
-    vector<OutputPort*> _dout;
+    std::vector<OutputPort*> _dout;
 
 public:
     Router(unsigned N, llvm::Type* type);

@@ -59,7 +59,7 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
     std::set<PathTy> enqueued;
     std::deque<PathTy> queue;
     for (SrcPortTy* src: init) {
-        vector<DstPortTy*> dsts;
+        std::vector<DstPortTy*> dsts;
         _conns->find(src, dsts);
 
         for (DstPortTy* dst: dsts) {

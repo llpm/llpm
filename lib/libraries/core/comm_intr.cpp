@@ -4,6 +4,8 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 
+using namespace std;
+
 namespace llpm {
 using namespace llvm;
 

@@ -83,7 +83,7 @@ protected:
     llvm::BasicBlock* _basicBlock;
 
     std::map<llvm::Value*, unsigned> _inputMap;
-    std::map<llvm::Value*, set<llvm::BasicBlock*> > _valueSources;
+    std::map<llvm::Value*, std::set<llvm::BasicBlock*> > _valueSources;
     std::map<llvm::Value*, unsigned> _outputMap;
     std::map<llvm::BasicBlock*, unsigned> _successorMap;
     std::set<llvm::Value*> _passthroughs;
@@ -298,8 +298,8 @@ public:
     }
 
     void construct();
-    InputPort* addPredecessor(LLVMControl* pred, vector<llvm::Value*>& inputData);
-    InputPort* entryPort(vector<llvm::Value*>& inputData);
+    InputPort* addPredecessor(LLVMControl* pred, std::vector<llvm::Value*>& inputData);
+    InputPort* entryPort(std::vector<llvm::Value*>& inputData);
 };
 
 } // namespace llpm
