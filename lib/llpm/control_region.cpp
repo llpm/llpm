@@ -13,6 +13,9 @@ using namespace std;
 namespace llpm {
 
 void FormControlRegionPass::runInternal(Module* mod) {
+    if (dynamic_cast<ControlRegion*>(mod) != NULL)
+        return;
+
     ContainerModule* cm = dynamic_cast<ContainerModule*>(mod);
     if (cm == NULL)
         return;
@@ -23,6 +26,7 @@ void FormControlRegionPass::runInternal(Module* mod) {
     unsigned counter = 1;
 
     set<ControlRegion*> regions;
+    set<Block*> seen;
     deque<InputPort*> crInputs;
 
     // Start with outputs
@@ -42,11 +46,22 @@ void FormControlRegionPass::runInternal(Module* mod) {
             continue;
 
         Block* b = opDriver->owner();
+        if (b->module() != mod)
+            // This block has been relocated since it was put in the list
+            continue;
+
         if (dynamic_cast<ControlRegion*>(b) != NULL ||
-            dynamic_cast<DummyBlock*>(b) != NULL)
+            dynamic_cast<DummyBlock*>(b) != NULL) {
             // It's already a control region? Cool
             // It's a dummy block? Don't mess with it
+            // But, we have to find its drivers to continue the search
+            if (seen.count(b) == 0) {
+                crInputs.insert(crInputs.end(),
+                                b->inputs().begin(), b->inputs().end());
+                seen.insert(b);
+            }
             continue;
+        }
 
         std::string crName = str(boost::format("%1%_cr%2%") 
                                     % mod->name()
