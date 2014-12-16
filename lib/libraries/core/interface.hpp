@@ -18,8 +18,8 @@ public:
               llvm::Type* outType,
               bool server,
               std::string name = "") :
-        _din(owner, inpType, name + "_din"),
-        _dout(owner, outType, name + "_dout"),
+        _din(owner, inpType, name + (server ? "_req" : "_resp")),
+        _dout(owner, outType, name + (server ? "_resp" : "_req")),
         _server(server)
     { }
 

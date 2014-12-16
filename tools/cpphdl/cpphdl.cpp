@@ -10,6 +10,7 @@
 #include <backends/verilog/synthesize.hpp>
 #include <backends/graphviz/graphviz.hpp>
 #include <wedges/verilator/verilator.hpp>
+#include <util/llvm_type.hpp>
 
 #include <passes/manager.hpp>
 #include <passes/transforms/simplify.hpp>
@@ -80,12 +81,23 @@ int main(int argc, const char** argv) {
         pm.run();
         printf("Done optimizing.\n");
 
+
         GraphvizOutput gv(d);
         VerilatorWedge vw(&vs);
 
 
         FileSet fs(true, dirName, true);
         for (Module* mod: d.modules()) {
+            printf("Interfaces: \n");
+            for (InputPort* ip: mod->inputs()) {
+                printf("  -> %s : %s\n",
+                       ip->name().c_str(), typestr(ip->type()).c_str());
+            }
+            for (OutputPort* op: mod->outputs()) {
+                printf("  <- %s : %s\n",
+                       op->name().c_str(), typestr(op->type()).c_str());
+            }
+
             printf("Writing graphviz output...\n");
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
             // printf("Writing Verilog output...\n");

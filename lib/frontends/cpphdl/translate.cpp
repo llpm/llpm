@@ -34,9 +34,15 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
     for (auto&& func: lm->getFunctionList()) {
         auto demangledName = cpp_demangle(func.getName().str().c_str());
         if (demangledName.find(fnPrefix) == 0) {
+            auto fnNameArgs = demangledName.substr(fnPrefix.size());
+            auto fnName = fnNameArgs;
+            auto parenLoc = fnNameArgs.find_first_of('(');
+            if (parenLoc != string::npos) {
+                fnName = fnNameArgs.substr(0, parenLoc);
+            }
             printf("Found class member: %s\n", demangledName.c_str());
             chClass->addMember(
-                demangledName.substr(fnPrefix.size()),
+                fnName,
                 _llvmTranslator.translate(&func)
                 );
         } else {
