@@ -12,7 +12,7 @@ using namespace std;
 
 namespace llpm {
 
-void FormControlRegionPass::run(Module* mod) {
+void FormControlRegionPass::runInternal(Module* mod) {
     ContainerModule* cm = dynamic_cast<ContainerModule*>(mod);
     if (cm == NULL)
         return;

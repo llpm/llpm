@@ -46,6 +46,7 @@ int main(int argc, const char** argv) {
 
         PassManager pm(d);
         // pm.append(new SimplifyPass(d));
+        pm.append(new FormControlRegionPass(d));
 
         for(auto&& m: modules) {
             m->validityCheck();
@@ -87,8 +88,8 @@ int main(int argc, const char** argv) {
         for (Module* mod: d.modules()) {
             printf("Writing graphviz output...\n");
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
-            printf("Writing Verilog output...\n");
-            vw.writeModule(fs, mod);
+            // printf("Writing Verilog output...\n");
+            // vw.writeModule(fs, mod);
         }
 
     } catch (Exception& e) {

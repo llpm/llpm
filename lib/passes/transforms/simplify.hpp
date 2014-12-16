@@ -11,7 +11,7 @@ public:
         ModulePass(d) 
     { }
 
-    virtual void run(Module*);
+    virtual void runInternal(Module*);
 };
 
 };

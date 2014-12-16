@@ -8,7 +8,7 @@ using namespace std;
 
 namespace llpm {
 
-void SimplifyPass::run(Module* m) {
+void SimplifyPass::runInternal(Module* m) {
     Transformer t(m);
 
     ConnectionDB* conns = m->conns();

@@ -19,13 +19,15 @@ public:
 };
 
 class ModulePass : public Pass {
+protected:
+    virtual void runInternal(Module* mod) = 0;
 public:
     ModulePass(Design& design) :
         Pass(design)
     { }
 
     virtual void run();
-    virtual void run(Module* mod) = 0;
+    void run(Module* mod);
 };
 
 };
