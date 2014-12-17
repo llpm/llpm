@@ -11,6 +11,9 @@
 
 namespace llpm {
 
+// Fwd. defs. Silly rabbit, modern parsing is for kids!
+class Interface;
+
 class Connection {
     OutputPort* _source;
     InputPort* _sink;
@@ -102,6 +105,7 @@ public:
     void connect(InputPort* i, OutputPort* o) {
         connect(o, i);
     }
+    void connect(Interface*, Interface*);
     void disconnect(OutputPort* o, InputPort* i);
     void disconnect(InputPort* i, OutputPort* o) {
         disconnect(o, i);

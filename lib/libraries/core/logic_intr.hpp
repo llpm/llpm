@@ -1,6 +1,7 @@
 #ifndef __LLPM_LIBRARIES_CORE_LOGIC_INTR_HPP__
 #define __LLPM_LIBRARIES_CORE_LOGIC_INTR_HPP__
 
+#include <llpm/design.hpp>
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Constant.h>
@@ -49,6 +50,10 @@ public:
     DEF_GET(dout);
     DEF_GET_NP(value);
     DEF_SET_NONULL(value);
+
+    static Constant* getVoid(Design& d) {
+        return new Constant(llvm::Type::getVoidTy(d.context()));
+    }
 };
 
 } // namespace llpm

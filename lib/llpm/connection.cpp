@@ -1,6 +1,8 @@
 #include "connection.hpp"
+
 #include <llpm/block.hpp>
-#include <boost/foreach.hpp>
+#include <util/llvm_type.hpp>
+#include <libraries/core/interface.hpp>
 
 using namespace std;
 
@@ -73,7 +75,9 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     assert(o);
     assert(i);
     if (o->type() != i->type())
-        throw TypeError("Ports being connected must have matching types!");
+        throw TypeError("Ports being connected must have matching types! "
+                        " OP: " + typestr(o->type()) +
+                        " IP: " + typestr(i->type()));
 
     if (_outputRewrites.find(o) != _outputRewrites.end())
         throw InvalidArgument("The output port being connected has been rewritten!");
@@ -95,6 +99,15 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
         assert(cf.source() == o);
     }
 #endif
+}
+
+void ConnectionDB::connect(Interface* a, Interface* b) {
+    if (a->server() == b->server()) {
+        throw InvalidArgument("Error: when connecting interfaces, one "
+                              "must be a server and one a client!");
+    }
+    connect(a->dout(), b->din());
+    connect(a->din(), b->dout());
 }
 
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {

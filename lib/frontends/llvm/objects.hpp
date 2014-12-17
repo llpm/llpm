@@ -52,6 +52,10 @@ public:
 
     DEF_GET_NP(call);
 
+    const std::map<llvm::Value*, Interface*>& mem() const {
+        return _memInterfaces;
+    }
+
     LLVMControl* getControl(llvm::BasicBlock* bb) const {
         auto f = _controlMap.find(bb);
         if (f == _controlMap.end())

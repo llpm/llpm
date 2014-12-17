@@ -9,23 +9,24 @@ namespace llpm {
 
 // Accepts an input on the write interface and stores it. Outputs the
 // stored input when a request arrives on a read interface. Has separate
-// read/write ports so that reads are not serialized.
+// read/write ports so that reads are not serialized with writes. Later
+// optimizations are likely to create multiple read ports if an
+// InterfaceMultiplexer is connected to the read port, depending on the
+// target technology.
 class Register : public Block {
     Interface _write;
-    std::vector<Interface*> _read;
+    Interface _read;
 
 public:
     Register(llvm::Type* type);
-    virtual ~Register();
+    virtual ~Register() { }
 
     virtual bool hasState() const {
         return true;
     }
 
     DEF_GET(write);
-    DEF_ARRAY_GET(read);
-
-    Interface* newRead();
+    DEF_GET(read);
 };
 
 // RAM. Has one write port and one read port which can be multiplexed.

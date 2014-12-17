@@ -11,6 +11,7 @@
 // Fwd. defs. Why am I basing this language on such a stupid language?
 namespace llvm {
     class StructType;
+    class GetElementPtrInst;
 }
 
 namespace llpm {
@@ -27,6 +28,10 @@ class CPPHDLClass : public ContainerModule {
     std::map<unsigned, Array*>     _arrays;
     std::map<unsigned, Module*>    _modules;
 
+    // Read and write ports may require interface multiplexers
+    std::map<unsigned, InterfaceMultiplexer*> _writePorts;
+    std::map<unsigned, InterfaceMultiplexer*> _readPorts;
+
     // All member variables, in order
     std::vector<Block*>            _variables;
     // All member methods, in order
@@ -37,6 +42,8 @@ class CPPHDLClass : public ContainerModule {
                 llvm::StructType* ty);
 
     void addMember(std::string name, LLVMFunction*);
+    void connectMem(LLVMFunction*);
+    unsigned resolveMember(llvm::Value*) const;
     void buildVariables();
     Block* buildVariable(unsigned i);
 };

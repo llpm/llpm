@@ -466,6 +466,8 @@ LLVMFunction::~LLVMFunction() {
 void LLVMFunction::regBBMemPort(llvm::Value* val,
                                 OutputPort* req,
                                 InputPort* resp) {
+    if (_memInterfaces.count(val) != 0)
+        throw InvalidArgument("Can only register one memory port per instruction");
     _memInterfaces[val] =
         addClientInterface(req, resp, LLVMInstruction::NameInstruction(val) + "_mem");
 }

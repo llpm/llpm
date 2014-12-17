@@ -11,6 +11,7 @@ class Interface {
     InputPort _din;
     OutputPort _dout;
     bool _server;
+    std::string _name;
 
 public:
     Interface(Block* owner,
@@ -20,25 +21,27 @@ public:
               std::string name = "") :
         _din(owner, inpType, name + (server ? "_req" : "_resp")),
         _dout(owner, outType, name + (server ? "_resp" : "_req")),
-        _server(server)
+        _server(server),
+        _name(name)
     { }
 
     DEF_GET(din);
     DEF_GET(dout);
-    DEF_GET(server);
+    DEF_GET_NP(server);
+    DEF_GET_NP(name);
 
     const Port* req() const {
         if (_server)
-            return &_dout;
-        else
             return &_din;
+        else
+            return &_dout;
     }
 
     const Port* resp() const {
         if (_server)
-            return &_din;
-        else
             return &_dout;
+        else
+            return &_din;
     }
 
     llvm::Type* respType() const {
@@ -56,17 +59,20 @@ class InterfaceMultiplexer : public Block {
     std::vector<Interface*> _interfaces;
 
 public:
-    InterfaceMultiplexer(llvm::Type* inpType,
-                         llvm::Type* outType,
-                         std::string name) :
-        _client(this, inpType, outType, false, name)
+    InterfaceMultiplexer(Interface* iface) :
+        _client(this, iface->respType(), iface->reqType(),
+                false, iface->name() + "_mux_client")
     {
-        this->name(name);
+        if (!iface->server()) {
+            throw InvalidArgument(
+                "Can only multiplex a server interface!");
+        }
+        this->name(iface->name() + "mux");
     }
 
     DEF_GET(client);
 
-    Interface* createInterface() {
+    Interface* createServer() {
         std::string iname = str(boost::format("%1%_iface%2%")
                                 % name()
                                 % _interfaces.size());
@@ -78,6 +84,10 @@ public:
                           iname);
         _interfaces.push_back(i);
         return i;
+    }
+
+    virtual bool hasState() const {
+        return false;
     }
 };
 

@@ -7,25 +7,9 @@ using namespace std;
 namespace llpm {
 
 Register::Register(llvm::Type* ty) :
-    _write(this, ty, llvm::Type::getVoidTy(ty->getContext()), "write")
+    _write(this, ty, llvm::Type::getVoidTy(ty->getContext()), true, "write"),
+    _read(this, llvm::Type::getVoidTy(ty->getContext()), ty, true, "read")
 { }
-
-Register::~Register() {
-    for (auto iface: _read) {
-        delete iface;
-    }
-}
-
-Interface* Register::newRead() {
-    auto iface =
-        new Interface(this,
-                      llvm::Type::getVoidTy(_write.reqType()->getContext()),
-                      _write.respType(),
-                      true,
-                      str(boost::format("read%1%") % _read.size()));
-    _read.push_back(iface);
-    return iface;
-}
 
 llvm::Type* Array::GetWriteInputType(llvm::Type* type, unsigned depth) {
     return llvm::StructType::get(
