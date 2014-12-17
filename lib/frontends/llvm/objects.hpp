@@ -169,11 +169,9 @@ public:
         return f->second;
     }
 
-    virtual OutputPort* reqPort(llvm::Value*) const {
-        throw InvalidCall("This LLVMBasicBlock does not have memory ports!");
-    }
-    virtual InputPort*  respPort(llvm::Value*) const {
-        throw InvalidCall("This LLVMBasicBlock does not have memory ports!");
+    virtual Interface* mem(llvm::Value* v) const {
+        throw InvalidCall(
+            "This LLVMBasicBlock does not have memory ports!");
     }
 };
 
@@ -257,7 +255,7 @@ public:
     virtual Interface* mem(llvm::Value* v) const {
         auto f = _mem.find(v);
         if (f == _mem.end())
-            throw InvalidArgument("Could not find memory port allocated for value!");
+            return NULL; 
         return f->second;
     }
 };

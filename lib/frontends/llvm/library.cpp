@@ -41,11 +41,16 @@ public:
 
             // Connect up memory ports, if any
             auto req = block->memReqPort();
-            if (req)
-                conns.remap(lbb->reqPort(&ins), req);
+            auto iface = lbb->mem(&ins);
+            if (req) {
+                assert(iface != NULL);
+                conns.remap(iface->dout(), req);
+            }
             auto resp = block->memRespPort();
-            if (resp)
-                conns.remap(lbb->respPort(&ins), resp);
+            if (resp) {
+                assert(iface != NULL);
+                conns.remap(iface->din(), resp);
+            }
         }
 
         // Construct any constants it produces
