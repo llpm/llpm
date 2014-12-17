@@ -352,7 +352,8 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Value*>& 
         auto idx = pr.second;
         // printf("%u: %s\n", idx, v->getName().str().c_str());
 
-        const std::set<llvm::BasicBlock*>& sources = _basicBlock->valueSources(v);
+        const std::set<llvm::BasicBlock*>& sources =
+            _basicBlock->valueSources(v);
         assert(sources.size() > 0);
         llvm::BasicBlock* predBB =
             (pred == NULL) ?
@@ -362,49 +363,6 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Value*>& 
             inputData[idx] = v;
         }
     }
-
-#if 0
-    for(llvm::Instruction& ins: bb->getInstList()) {
-        // Verify all inputs come from predecessor
-
-
-        unsigned numOperands = ins.getNumOperands();
-        for (unsigned i=0; i<numOperands; i++) {
-            auto operand = ins.getOperand(i);
-            llvm::Constant* c = llvm::dyn_cast<llvm::Constant>(operand);
-            if (c != NULL && inputMap.find(operand) == inputMap.end()) {
-                throw ImplementationError("All LLVM basic blocks being translated must take "
-                                          "all of their inputs from their input map!");
-            }
-        }
-
-        if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
-            if (pred == NULL) {
-                // NULL pred means we are building entry port!
-                throw new InvalidArgument("Entry blocks cannot have PHI nodes!");
-            }
-
-            // PHI instructions are special
-            for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
-                llvm::BasicBlock* predBB = phi->getIncomingBlock(i);
-                if (predBB == pred->_basicBlock->basicBlock()) {
-                    llvm::Value* v = phi->getIncomingValue(i);
-                    unsigned idx = _basicBlock->mapInput(v);
-                    inputData[idx] = v;
-                }
-            }
-        } else {
-            unsigned numOperands = ins.getNumOperands();
-            for (unsigned i=0; i<numOperands; i++) {
-                llvm::Value* operand = ins.getOperand(i);
-                if (!isLocalOrConst(bb, operand)) {
-                    auto idx = _basicBlock->mapInput(operand);
-                    inputData[idx] = operand;
-                }
-            }
-        }
-    }
-#endif
 
     for (unsigned i=0; i<inputData.size(); i++) {
         assert(inputData[i] != NULL);

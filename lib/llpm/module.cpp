@@ -34,6 +34,7 @@ void ContainerModule::removeInputPort(InputPort* ip) {
         throw InvalidArgument("Cannot remove InputPort which doesn't seem to exist!");
     _inputMap.erase(f);
     auto vecLoc = find(_inputs.begin(), _inputs.end(), ip);
+    assert(vecLoc != _inputs.end());
     _inputs.erase(vecLoc);
     delete ip;
 }

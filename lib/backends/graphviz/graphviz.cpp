@@ -29,13 +29,14 @@ static std::string attrs(const std::map<std::string, std::string>& a) {
 
 static std::string label(ObjectNamer& namer, Block* b) {
     return "\"" + namer.getName(b, b->module()) + "\\n" 
-                + b->print() 
-                + str(boost::format("%1% | %2% | %3%") 
+                + str(boost::format("[ %1% ] %2% | %3% | %4%") 
+                        % b->print()
                         % b->inputs().size()
                         % b->outputs().size()
                         % b->interfaces().size() )
                 + "\\n"
-                + cpp_demangle(typeid(*b).name()) + "\"";
+                + cpp_demangle(typeid(*b).name()) 
+                + "\"";
 }
 
 static std::string attrs(ObjectNamer& namer, Block* b,
@@ -135,6 +136,34 @@ void printIO(std::ostream& os,
     }
 }
 
+void printBlock(std::ostream& os,
+                ObjectNamer& namer,
+                Module* mod,
+                Block* block)
+{
+    ContainerModule* cm = dynamic_cast<ContainerModule*>(block);
+    if (cm) {
+        os << boost::format("    subgraph cluster_%1% {\n"
+                            "        color=black;\n"
+                            "        label=%2%;\n")
+                                % cm->name()
+                                % label(namer, cm);
+
+        vector<Block*> crblocks;
+        cm->blocks(crblocks);
+        for (Block* b: crblocks) {
+            printBlock(os, namer, mod, b);
+        }
+        printConns(os, namer, mod, cm->conns()->raw(),
+                   {{"style", "dashed"}});
+        os << "    }\n";
+
+    } else {
+        os << "        " << namer.getName(block, mod)
+           << "[" << attrs(namer, block) << "];\n";
+    }
+}
+
 void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     ObjectNamer& namer = mod->design().namer();
 
@@ -153,28 +182,7 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     mod->blocks(blocks);
 
     for (auto block: blocks) {
-        ContainerModule* cm = dynamic_cast<ContainerModule*>(block);
-        if (cm) {
-            os << boost::format("    subgraph cluster_%1% {\n"
-                                "        color=black;\n"
-                                "        label=%2%;\n")
-                                    % cm->name()
-                                    % label(namer, cm);
-
-            vector<Block*> crblocks;
-            cm->blocks(crblocks);
-            for (Block* b: crblocks) {
-                os << "        " << namer.getName(b, mod)
-                   << "[" << attrs(namer, b) << "];\n";
-            }
-            printConns(os, namer, mod, cm->conns()->raw(),
-                       {{"style", "dashed"}});
-            os << "    }\n";
-
-        } else {
-            os << "        " << namer.getName(block, mod)
-               << "[" << attrs(namer, block) << "];\n";
-        }
+        printBlock(os, namer, mod, block);
     }
 
     const set<Connection>& rawConns = conns->raw();

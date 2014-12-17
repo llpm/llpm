@@ -241,9 +241,17 @@ public:
         return false;
     }
 
-    void resetTypes(llvm::Type* input, llvm::Type* output) {
-        _din = InputPort(this, input);
-        _dout = OutputPort(this, output);
+    virtual FiringRule firing() const {
+        return OR;
+    }
+
+    virtual bool outputsIndependent() const {
+        return true;
+    }
+
+    virtual void resetTypes(llvm::Type* input, llvm::Type* output) {
+        _din.reset(input);
+        _dout.reset(output);
     }
 
     virtual Interface* mem(llvm::Value* v) const {

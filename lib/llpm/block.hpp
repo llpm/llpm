@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <algorithm>
 #include <llpm/ports.hpp>
 #include <llpm/exceptions.hpp>
 #include <llpm/connection.hpp>
@@ -52,13 +53,21 @@ protected:
     friend class Interface;
 
     virtual void definePort(InputPort* ip) {
-        _inputs.push_back(ip);
+        assert(ip->owner() == this);
+        // assert(((uint64_t)(void*)ip) < 0x700000000000);
+        if (std::find(_inputs.begin(), _inputs.end(), ip) == _inputs.end())
+            _inputs.push_back(ip);
     }
     virtual void definePort(OutputPort* op) {
-        _outputs.push_back(op);
+        assert(op->owner() == this);
+        // assert(((uint64_t)(void*)op) < 0x700000000000);
+        if (std::find(_outputs.begin(), _outputs.end(), op) == _outputs.end())
+            _outputs.push_back(op);
     }
     virtual void defineInterface(Interface* iface) {
-        _interfaces.push_back(iface);
+        if (std::find(_interfaces.begin(), _interfaces.end(), iface) == 
+                _interfaces.end())
+            _interfaces.push_back(iface);
     }
 
 
@@ -193,8 +202,8 @@ protected:
     virtual ~Function() { }
 
     void resetTypes(llvm::Type* input, llvm::Type* output) {
-        _din = InputPort(this, input);
-        _dout = OutputPort(this, output);
+        _din.reset(input);
+        _dout.reset(output);
     }
 
 public:

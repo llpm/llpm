@@ -33,6 +33,10 @@ public:
         return _owner;
     }
 
+    void reset(llvm::Type* ty) {
+        _type = ty;
+    }
+
     DEF_GET_NP(name);
     DEF_SET(name);
 };
@@ -41,12 +45,20 @@ class InputPort : public Port {
 public:
     InputPort(Block* owner, llvm::Type* type, std::string name = "");
     ~InputPort();
+
+    // Deleted defaults
+    InputPort(const InputPort&) = delete;
+    InputPort* operator=(const InputPort&) = delete;
 };
 
 class OutputPort : public Port {
 public:
     OutputPort(Block* owner, llvm::Type* type, std::string name = "");
     ~OutputPort();
+
+    // Deleted defaults
+    OutputPort(const OutputPort&) = delete;
+    OutputPort* operator=(const OutputPort&) = delete;
 };
 
 } //llpm
