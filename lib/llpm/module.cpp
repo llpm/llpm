@@ -112,12 +112,14 @@ bool ContainerModule::refine(ConnectionDB& conns) const
         auto f = _inputMap.find(ip);
         assert(f != _inputMap.end());
         conns.remap(ip, f->second->din());
+        conns.deblacklist(getDriver(ip)->owner());
     }
 
     for(OutputPort* op: _outputs) {
         auto f = _outputMap.find(op);
         assert(f != _outputMap.end());
         conns.remap(op, f->second->dout());
+        conns.deblacklist(getSink(op)->owner());
     }
 
     return true;

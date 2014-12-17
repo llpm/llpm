@@ -84,6 +84,10 @@ public:
         _blacklist.insert(b);
     }
 
+    void deblacklist(Block* b) {
+        _blacklist.erase(b);
+    }
+
     void readAndClearNewBlocks(std::set<Block*>& nb) {
         nb.clear();
         nb.swap(_newBlocks);
