@@ -3,6 +3,7 @@
 #include <llpm/block.hpp>
 #include <util/llvm_type.hpp>
 #include <libraries/core/interface.hpp>
+#include <analysis/graph_queries.hpp>
 
 using namespace std;
 
@@ -85,6 +86,12 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     if (_inputRewrites.find(i) != _inputRewrites.end())
         throw InvalidArgument("The input port being connected has been rewritten!");
 
+#ifndef LLPM_NO_DEBUG
+    {
+        assert(findSource(i) == NULL);
+    }
+#endif
+
     Connection c(o, i);
     _connections.insert(c);
     registerBlock(o->owner());
@@ -165,6 +172,12 @@ void ConnectionDB::update(const ConnectionDB& newdb) {
     }
     _blacklist.insert(newdb._blacklist.begin(),
                       newdb._blacklist.end());
+}
+
+bool ConnectionDB::createsCycle(Connection c) const {
+    std::set<Block*> dominators;
+    queries::FindDominators(this, c.source()->owner(), dominators);
+    return dominators.count(c.sink()->owner()) > 0;
 }
 
 } // namespace llpm

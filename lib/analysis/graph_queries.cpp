@@ -46,5 +46,25 @@ bool BlockCycleExists(const ConnectionDB* conns, vector<OutputPort*> init) {
 }
 
 
+typedef Edge<InputPort, OutputPort> IOEdge;
+struct DominatorVisitor : public Visitor<IOEdge> {
+    std::set<Block*> dominators;
+
+    Terminate visit(const ConnectionDB*,
+                    const IOEdge& edge) {
+        dominators.insert(edge.endPort()->owner());
+        return Continue;
+    }
+};
+
+void FindDominators(const ConnectionDB* conns,
+                    Block* b,
+                    std::set<Block*>& dominators) {
+    DominatorVisitor visitor;
+    GraphSearch<DominatorVisitor, DFS> search(conns, visitor);
+    search.go(b->inputs());
+    dominators.swap(visitor.dominators);
 }
-}
+
+} // namespace queries
+} // namespace llpm

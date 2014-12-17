@@ -118,6 +118,8 @@ public:
         disconnect(c.source(), c.sink());
     }
 
+    bool createsCycle(Connection c) const;
+
     bool isUsed(Block* b) const {
         auto f = _blockUseCounts.find(b);
         if (f == _blockUseCounts.end())

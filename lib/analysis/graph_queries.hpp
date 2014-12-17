@@ -6,8 +6,12 @@
 namespace llpm {
 namespace queries {
 
-bool BlockCycleExists(const ConnectionDB* conns, std::vector<OutputPort*> init);
+bool BlockCycleExists(const ConnectionDB* conns,
+                      std::vector<OutputPort*> init);
 
+void FindDominators(const ConnectionDB* conns,
+                    Block* b,
+                    std::set<Block*>& dominators);
 };
 };
 

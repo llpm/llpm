@@ -207,38 +207,12 @@ bool ControlRegion::add(Block* b) {
         }
     }
 
-    for (InputPort* ip: b->inputs()) {
-        auto f = internalizedOutputs.find(ip);
-        // auto f = internalizedOutputs.end();
-        if (f != internalizedOutputs.end()) {
-            // Special case: merging block connected to this guy, so just
-            // bring the connection internal
-            assert(ip == f->first);
-            pdb->disconnect(f->first, f->second);
-            InputPort* internalSink = getSink(f->second);
-            OutputPort* internalDriver = _conns.findSource(internalSink);
-            _conns.connect(internalDriver, f->first);
-
-            vector<InputPort*> remainingExtSinks;
-            pdb->findSinks(f->second, remainingExtSinks);
-            if (remainingExtSinks.size() == 0)
-                removeOutputPort(f->second);
-        } else {
-            // Make a new input port
-            OutputPort* oldSource = pdb->findSource(ip);
-            if (oldSource)
-                pdb->disconnect(ip, oldSource);
-
-            auto newIP = addInputPort(ip);
-            if (oldSource)
-                pdb->connect(newIP, oldSource);
-        }
-    }
-
+    bool internallyDriven = false;
     for (OutputPort* op: b->outputs()) {
 
         auto f = internalizedInputs.find(op);
         if (f != internalizedInputs.end()) {
+            internallyDriven = true;
             // Special case: outputs drive us, so connect internally
            for (InputPort* ip: f->second) {
                 pdb->disconnect(f->first, ip);
@@ -260,6 +234,37 @@ bool ControlRegion::add(Block* b) {
                 newOP = addOutputPort(op);
             pdb->connect(ip, newOP);
         }
+    }
+
+    for (InputPort* ip: b->inputs()) {
+        auto f = internalizedOutputs.find(ip);
+        if (f != internalizedOutputs.end()) {
+            // Special case: merging block connected to this guy, so just
+            // bring the connection internal
+            assert(ip == f->first);
+            InputPort* internalSink = getSink(f->second);
+            OutputPort* internalDriver = _conns.findSource(internalSink);
+
+            if (!_conns.createsCycle(Connection(internalDriver, f->first))) {
+                pdb->disconnect(f->first, f->second);
+                _conns.connect(internalDriver, f->first);
+
+                vector<InputPort*> remainingExtSinks;
+                pdb->findSinks(f->second, remainingExtSinks);
+                if (remainingExtSinks.size() == 0)
+                    removeOutputPort(f->second);
+                continue;
+            }
+        }
+
+        // Make a new input port
+        OutputPort* oldSource = pdb->findSource(ip);
+        if (oldSource)
+            pdb->disconnect(ip, oldSource);
+
+        auto newIP = addInputPort(ip);
+        if (oldSource)
+            pdb->connect(newIP, oldSource);
     }
 
     return true;
@@ -306,10 +311,10 @@ void ControlRegion::validityCheck() const {
         set<InputPort*>(inputs().begin(), inputs().end());
     for (OutputPort* op: outputs()) {
         auto deps = findDependences(op);
-        // assert(cannonDeps == deps &&
-               // "Error: control region may introduce a deadlock. "
-               // "This is a known problem, but was not expected to occur "
-               // "in practice. Please report this problem!");
+        assert(cannonDeps == deps &&
+               "Error: control region may introduce a deadlock. "
+               "This is a known problem, but was not expected to occur "
+               "in practice. Please report this problem!");
     }
 }
 

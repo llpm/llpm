@@ -156,7 +156,8 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
                 os << "        " << namer.getName(b, mod)
                    << "[" << attrs(namer, b) << "];\n";
             }
-            printConns(os, namer, mod, cm->conns()->raw());
+            printConns(os, namer, mod, cm->conns()->raw(),
+                       {{"style", "dashed"}});
             os << "    }\n";
 
         } else {
