@@ -72,7 +72,7 @@ public:
         return f->second;
     }
 
-    void regBBMemPort(llvm::Value*, OutputPort*, InputPort*);
+    void regBBMemPort(llvm::Value*, Interface*);
 };
 
 
@@ -215,11 +215,8 @@ class LLVMImpureBasicBlock: public LLVMBasicBlock {
     OutputPort _dout;
 
     // Memory load request ports
-    std::map<llvm::Value*, OutputPort*> _memReqs;
+    std::map<llvm::Value*, Interface*> _mem;
 
-    // Memory load response ports
-    std::map<llvm::Value*, InputPort*> _memResps;
-    
     LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb);
 
 public:
@@ -249,15 +246,9 @@ public:
         _dout = OutputPort(this, output);
     }
 
-    virtual OutputPort* reqPort(llvm::Value* v) const {
-        auto f = _memReqs.find(v);
-        if (f == _memReqs.end())
-            throw InvalidArgument("Could not find memory port allocated for value!");
-        return f->second;
-    }
-    virtual InputPort*  respPort(llvm::Value* v) const {
-        auto f = _memResps.find(v);
-        if (f == _memResps.end())
+    virtual Interface* mem(llvm::Value* v) const {
+        auto f = _mem.find(v);
+        if (f == _mem.end())
             throw InvalidArgument("Could not find memory port allocated for value!");
         return f->second;
     }

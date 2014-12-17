@@ -271,13 +271,13 @@ void LLVMImpureBasicBlock::buildIO() {
     llvm::BasicBlock* bb = basicBlock();
     for(llvm::Instruction& ins: bb->getInstList()) {
         if (ins.mayReadOrWriteMemory()) {
-            auto req = 
-                new OutputPort(this, LLVMInstruction::GetInput(&ins));
-            _memReqs[&ins] = req;
-            auto resp = 
-                new InputPort(this, LLVMInstruction::GetOutput(&ins));
-            _memResps[&ins] = resp;
-            _function->regBBMemPort(&ins, req, resp);
+            auto iface = new Interface(this,
+                                       LLVMInstruction::GetOutput(&ins),
+                                       LLVMInstruction::GetInput(&ins),
+                                       false,
+                                       ins.getName().str() + "_mem");
+            _mem[&ins] = iface;
+            _function->regBBMemPort(&ins, iface);
         }
     }
 }
@@ -463,13 +463,13 @@ LLVMFunction::LLVMFunction(llpm::Design& design, llvm::Function* func) :
 LLVMFunction::~LLVMFunction() {
 }
 
-void LLVMFunction::regBBMemPort(llvm::Value* val,
-                                OutputPort* req,
-                                InputPort* resp) {
+void LLVMFunction::regBBMemPort(llvm::Value* val, Interface* iface) {
     if (_memInterfaces.count(val) != 0)
         throw InvalidArgument("Can only register one memory port per instruction");
     _memInterfaces[val] =
-        addClientInterface(req, resp, LLVMInstruction::NameInstruction(val) + "_mem");
+        addClientInterface(iface->dout(),
+                           iface->din(),
+                           iface->name());
 }
 
 void LLVMFunction::build(llvm::Function* func) {

@@ -67,7 +67,6 @@ void ContainerModule::removeOutputPort(OutputPort* op) {
 Interface* ContainerModule::addClientInterface(
         OutputPort* req, InputPort* resp, std::string name) {
     auto iface = new Interface(this, resp->type(), req->type(), false, name);
-    _interfaces.insert(iface);
 
     auto opdummy = new DummyBlock(req->type());
     _outputMap.insert(make_pair(iface->dout(), opdummy));
@@ -87,7 +86,6 @@ Interface* ContainerModule::addClientInterface(
 Interface* ContainerModule::addServerInterface(
         InputPort* req, OutputPort* resp, std::string name) {
     auto iface = new Interface(this, req->type(), resp->type(), true, name);
-    _interfaces.insert(iface);
 
     auto opdummy = new DummyBlock(resp->type());
     _outputMap.insert(make_pair(iface->dout(), opdummy));

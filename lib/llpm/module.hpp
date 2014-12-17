@@ -96,7 +96,6 @@ protected:
     // port on the corresponding pass through block.
     std::map<InputPort*, DummyBlock*> _inputMap;
     std::map<OutputPort*, DummyBlock*> _outputMap;
-    std::set<Interface*> _interfaces;
 
     Pipeline* _pipeline;
 

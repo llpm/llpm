@@ -17,6 +17,7 @@ namespace llpm {
 // Forward decl. Stupid c++!
 class Function;
 class Module;
+class Interface;
 
 
 /*******
@@ -40,6 +41,7 @@ protected:
     std::string _name;
     std::vector<InputPort*>  _inputs;
     std::vector<OutputPort*> _outputs;
+    std::vector<Interface*>  _interfaces;
 
     BlockHistory _history;
 
@@ -47,6 +49,7 @@ protected:
 
     friend class InputPort;
     friend class OutputPort;
+    friend class Interface;
 
     virtual void definePort(InputPort* ip) {
         _inputs.push_back(ip);
@@ -54,6 +57,10 @@ protected:
     virtual void definePort(OutputPort* op) {
         _outputs.push_back(op);
     }
+    virtual void defineInterface(Interface* iface) {
+        _interfaces.push_back(iface);
+    }
+
 
 public:
     virtual ~Block() { }
@@ -103,6 +110,10 @@ public:
     const std::vector<OutputPort*>& outputs() const {
         return _outputs;
     }
+    const std::vector<Interface*>& interfaces() const {
+        return _interfaces;
+    }
+
 
     void ports(std::vector<InputPort*>& iports) const {
         iports.insert(iports.end(), _inputs.begin(), _inputs.end());

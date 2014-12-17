@@ -23,7 +23,9 @@ public:
         _dout(owner, outType, name + (server ? "_resp" : "_req")),
         _server(server),
         _name(name)
-    { }
+    {
+        owner->defineInterface(this);
+    }
 
     DEF_GET(din);
     DEF_GET(dout);

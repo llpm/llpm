@@ -221,14 +221,12 @@ bool ControlRegion::add(Block* b) {
         }
     }
 
-    bool internallyDriven = false;
     for (OutputPort* op: b->outputs()) {
 
         auto f = internalizedInputs.find(op);
         if (f != internalizedInputs.end()) {
-            internallyDriven = true;
             // Special case: outputs drive us, so connect internally
-           for (InputPort* ip: f->second) {
+            for (InputPort* ip: f->second) {
                 pdb->disconnect(f->first, ip);
                 auto internalDriver = getDriver(ip);
                 _conns.remap(internalDriver, op);

@@ -27,6 +27,17 @@ static std::string attrs(const std::map<std::string, std::string>& a) {
     return rc;
 }
 
+static std::string label(ObjectNamer& namer, Block* b) {
+    return "\"" + namer.getName(b, b->module()) + "\\n" 
+                + b->print() 
+                + str(boost::format("%1% | %2% | %3%") 
+                        % b->inputs().size()
+                        % b->outputs().size()
+                        % b->interfaces().size() )
+                + "\\n"
+                + cpp_demangle(typeid(*b).name()) + "\"";
+}
+
 static std::string attrs(ObjectNamer& namer, Block* b,
                          std::map<std::string, std::string> o = { }) {
     std::map<std::string, std::string> a;
@@ -35,9 +46,7 @@ static std::string attrs(ObjectNamer& namer, Block* b,
         a["label"] = "reg";
     } else {
         a["shape"] = "component";
-        a["label"]="\"" + namer.getName(b, b->module()) + "\\n" 
-            + b->print() + "\\n"
-            + cpp_demangle(typeid(*b).name()) + "\"";
+        a["label"] = label(namer, b);
     }
     
     o.insert(a.begin(), a.end());
@@ -147,8 +156,10 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
         ContainerModule* cm = dynamic_cast<ContainerModule*>(block);
         if (cm) {
             os << boost::format("    subgraph cluster_%1% {\n"
-                                "        color=black;\n")
-                                    % cm->name();
+                                "        color=black;\n"
+                                "        label=%2%;\n")
+                                    % cm->name()
+                                    % label(namer, cm);
 
             vector<Block*> crblocks;
             cm->blocks(crblocks);
