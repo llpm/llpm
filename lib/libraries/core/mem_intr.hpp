@@ -21,12 +21,20 @@ public:
     Register(llvm::Type* type);
     virtual ~Register() { }
 
+    DEF_GET(write);
+    DEF_GET(read);
+
     virtual bool hasState() const {
         return true;
     }
 
-    DEF_GET(write);
-    DEF_GET(read);
+    virtual FiringRule firing() const {
+        return OR;
+    }
+
+    virtual bool outputsIndependent() const {
+        return true;
+    }
 };
 
 // RAM. Has one write port and one read port which can be multiplexed.
@@ -46,12 +54,20 @@ public:
     Array(llvm::Type* type, unsigned depth);
     virtual ~Array() { }
 
+    DEF_GET(write);
+    DEF_GET(read);
+
     virtual bool hasState() const {
         return true;
     }
 
-    DEF_GET(write);
-    DEF_GET(read);
+    virtual FiringRule firing() const {
+        return OR;
+    }
+
+    virtual bool outputsIndependent() const {
+        return true;
+    }
 };
 
 } // namespace llpm

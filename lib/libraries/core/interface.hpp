@@ -89,6 +89,14 @@ public:
     virtual bool hasState() const {
         return false;
     }
+
+    virtual FiringRule firing() const {
+        return OR;
+    }
+
+    virtual bool outputsIndependent() const {
+        return true;
+    }
 };
 
 };

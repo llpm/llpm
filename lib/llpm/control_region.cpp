@@ -165,14 +165,18 @@ bool ControlRegion::add(Block* b) {
     map<OutputPort*, set<InputPort*> > internalizedInputs;
     if (_conns.raw().size() != 0) {
         // Make sure the block is adjacent to this CR
+        bool createsInput = false;
         for (InputPort* ip: b->inputs()) {
             OutputPort* oldSource = pdb->findSource(ip);
             if (oldSource &&
                 oldSource->owner() == this &&
                 canGrow(oldSource))
                 internalizedOutputs[ip] = oldSource;
+            else
+                createsInput = true;
         } 
 
+        bool createsOutput = false;
         for (OutputPort* op: b->outputs()) {
             vector<InputPort*> oldSinks;
             pdb->findSinks(op, oldSinks);
@@ -180,6 +184,8 @@ bool ControlRegion::add(Block* b) {
                 if (ip->owner() == this &&
                     canGrow(ip))
                     internalizedInputs[op].insert(ip);
+                else
+                    createsOutput = true;
         }
 
         /**
@@ -193,6 +199,14 @@ bool ControlRegion::add(Block* b) {
             // printf("not adj\n");
             return false;
         }
+
+        if (createsInput && !foundAsDriver)
+            // This would break DEP
+            return false;
+
+        if (createsOutput && !foundAsSink)
+            // This would break DEP
+            return false;
 
         // Must not create additional valid bits within CR
         if (foundAsDriver && !foundAsSink && b->outputsIndependent()) {
@@ -312,9 +326,7 @@ void ControlRegion::validityCheck() const {
     for (OutputPort* op: outputs()) {
         auto deps = findDependences(op);
         assert(cannonDeps == deps &&
-               "Error: control region may introduce a deadlock. "
-               "This is a known problem, but was not expected to occur "
-               "in practice. Please report this problem!");
+               "Error: control region may introduce a deadlock.");
     }
 }
 
