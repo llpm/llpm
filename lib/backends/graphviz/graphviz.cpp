@@ -27,7 +27,8 @@ static std::string attrs(const std::map<std::string, std::string>& a) {
     return rc;
 }
 
-static std::string attrs(ObjectNamer& namer, Block* b) {
+static std::string attrs(ObjectNamer& namer, Block* b,
+                         std::map<std::string, std::string> o = { }) {
     std::map<std::string, std::string> a;
     if (dynamic_cast<PipelineRegister*>(b)) {
         a["shape"] = "rectangle";
@@ -38,12 +39,14 @@ static std::string attrs(ObjectNamer& namer, Block* b) {
             + b->print() + "\\n"
             + cpp_demangle(typeid(*b).name()) + "\"";
     }
-
-    return attrs(a);
+    
+    o.insert(a.begin(), a.end());
+    return attrs(o);
 }
 
 static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
-                         std::map<std::string, std::string> a = { }) {
+                         std::map<std::string, std::string> o = { }) {
+    std::map<std::string, std::string> a;
     auto opName = op->name();
     if (opName == "")
         opName = str(boost::format("%1%") % op->owner()->outputNum(op));
@@ -55,7 +58,8 @@ static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
         + typestr(op->type()) + "\"";
     a["fontsize"] = "8.0";
 
-    return attrs(a);
+    o.insert(a.begin(), a.end());
+    return attrs(o);
 }
 
 bool is_hidden(Block* b, Module* topMod) {
@@ -108,8 +112,17 @@ void printIO(std::ostream& os,
     for (InputPort* ip: cm->inputs()) {
         auto dummy = cm->getDriver(ip)->owner();
         os << "    " << namer.getName(dummy, cm)
-           << "[" << attrs(namer, dummy) << "];\n";
+           << "[" << attrs(namer, dummy,
+                           {{"label", ip->name()},
+                            {"shape", "house"}}) << "];\n";
+    }
 
+    for (OutputPort* op: cm->outputs()) {
+        auto dummy = cm->getSink(op)->owner();
+        os << "    " << namer.getName(dummy, cm)
+           << "[" << attrs(namer, dummy,
+                           {{"label", op->name()},
+                            {"shape", "invhouse"}}) << "];\n";
     }
 }
 
