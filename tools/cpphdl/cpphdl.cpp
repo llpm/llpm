@@ -47,8 +47,8 @@ int main(int argc, const char** argv) {
         StdLibStops(sc);
 
         PassManager pm(d);
-        // pm.append(new SimplifyPass(d));
-        // pm.append(new FormControlRegionPass(d));
+        pm.append(new SimplifyPass(d));
+        pm.append(new FormControlRegionPass(d));
         pm.append(new CheckConnectionsPass(d));
 
         for(auto&& m: modules) {
@@ -57,13 +57,15 @@ int main(int argc, const char** argv) {
             printf("Module inputs %lu, outputs %lu before refinement\n",
                    m->inputs().size(), m->outputs().size());
             // Refine each module until it cannot be further refined
-            // unsigned passes = m->internalRefine(&sc);
+            unsigned passes = m->internalRefine(&sc);
+#if 0
             unsigned passes = 0;
             vector<Module*> submodules;
             m->submodules(submodules);
             for (auto&& sm: submodules) {
                 passes += sm->internalRefine(&sc);
             }
+#endif
             printf("%u refinement passes on '%s'\n", passes, m->name().c_str());
             printf("Module inputs %lu, outputs %lu after refinement\n",
                    m->inputs().size(), m->outputs().size());

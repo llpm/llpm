@@ -143,6 +143,16 @@ bool WrapperInstruction<Identity>::refine(ConnectionDB& conns) const
 
     conns.remap(input(), b->din());
     conns.remap(output(), b->dout());
+
+    if (_ins->getNumOperands() == 0) {
+        // No input, need a constant
+        Constant* c;
+        if (_ins->getType()->isVoidTy())
+            c = new Constant(_ins->getType());
+        else
+            c = new Constant(llvm::Constant::getNullValue(_ins->getType()));
+        conns.connect(c->dout(), b->din());
+    }
     return true;
 }
 

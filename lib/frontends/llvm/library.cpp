@@ -89,7 +89,7 @@ public:
                 }
                 Join* inJoin = new Join(inTypes);
                 if (ins.hasName())
-                    inJoin->name(ins.getName().str() + "_input_join");
+                    inJoin->name("bb_" + ins.getName().str() + "_input_join");
                 conns.connect(inJoin->dout(), li->input());
                 unsigned hwNum = 0;
                 for (unsigned i=0; i<ins.getNumOperands(); i++) {

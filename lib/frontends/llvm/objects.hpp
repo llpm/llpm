@@ -170,8 +170,7 @@ public:
     }
 
     virtual Interface* mem(llvm::Value* v) const {
-        throw InvalidCall(
-            "This LLVMBasicBlock does not have memory ports!");
+        return NULL;
     }
 };
 
