@@ -40,7 +40,7 @@ static std::string label(ObjectNamer& namer, Block* b) {
 }
 
 static std::string attrs(ObjectNamer& namer, Block* b,
-                         std::map<std::string, std::string> o = { }) {
+                         std::map<std::string, std::string> o) {
     std::map<std::string, std::string> a;
     if (dynamic_cast<PipelineRegister*>(b)) {
         a["shape"] = "rectangle";
@@ -55,7 +55,7 @@ static std::string attrs(ObjectNamer& namer, Block* b,
 }
 
 static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
-                         std::map<std::string, std::string> o = { }) {
+                         std::map<std::string, std::string> o) {
     std::map<std::string, std::string> a;
     auto opName = op->name();
     if (opName == "")
@@ -81,7 +81,7 @@ void printConns(std::ostream& os,
                 ObjectNamer& namer,
                 Module* mod,
                 const set<Connection>& rawConns,
-                std::map<std::string, std::string> extra_attr = {}) {
+                std::map<std::string, std::string> extra_attr) {
     for (auto conn: rawConns) {
         auto op = conn.source();
         auto ip = conn.sink();
@@ -159,8 +159,9 @@ void printBlock(std::ostream& os,
         os << "    }\n";
 
     } else {
+        std::map<std::string, std::string> ea;
         os << "        " << namer.getName(block, mod)
-           << "[" << attrs(namer, block) << "];\n";
+           << "[" << attrs(namer, block, ea) << "];\n";
     }
 }
 
