@@ -34,6 +34,7 @@ static const std::vector<std::string> externalFiles = {
 
     // Verilog libraries
     "/support/backends/verilog/select.v",
+    "/support/backends/verilog/memory.v",
 };
 
 

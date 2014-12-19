@@ -753,10 +753,11 @@ public:
 struct AttributePrinter {
     template<typename T>
     void print(VerilogSynthesizer::Context& ctxt,
-               string k, T t) {
-        ctxt << boost::format("        .%1%(%2%),\n")
+               string k, T t, bool last = false) {
+        ctxt << boost::format("        .%1%(%2%)%3%\n")
                     % k
-                    % t;
+                    % t
+                    % (last ? "" : ",");
     }
 
 };
@@ -824,7 +825,7 @@ struct RTLRegAttr : public AttributePrinter {
         return "RTLReg";
     }
     void operator()(VerilogSynthesizer::Context& ctxt, RTLReg* r) {
-        print(ctxt, "Width", bitwidth(r->type()));
+        print(ctxt, "Width", bitwidth(r->type()), true);
     }
 };
 
