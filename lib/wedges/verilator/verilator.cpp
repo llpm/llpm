@@ -201,9 +201,9 @@ std::string typeSigPlain(llvm::Type* type, bool pointerize) {
     case llvm::Type::X86_FP80TyID:
             return "_float128";
     case llvm::Type::PointerTyID:
-            return "void*";
+            return "uint64_t";
     case llvm::Type::VoidTyID:
-            return "void";
+            return "char";
     case llvm::Type::StructTyID:
         {
             llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
@@ -423,8 +423,9 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         auto type = ip->type();
         auto args = numArgs(type);
         if (args == 1) {
-            os << boost::format("    simulator->%1% = arg0;\n")
-                    % ip->name();
+            if (bitwidth(type) > 0)
+                os << boost::format("    simulator->%1% = arg0;\n")
+                        % ip->name();
         } else {
             unsigned numbits = bitwidth(type);
             unsigned numwords = (numbits + 31) / 32;
@@ -438,14 +439,20 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                << "        struct {\n";
             for (unsigned arg=0; arg<args; arg++) {
                 auto argType = type->getContainedType(arg);
-                auto sig = typeSig(argType, false, false);
-                os << "            " << sig << " " << argName(arg) << ";\n";
+                if (bitwidth(argType) > 0) {
+                    auto sig = typeSig(argType, false, false);
+                    os << "            " << sig << " "
+                       << argName(arg) << ";\n";
+                }
             }
             os << "        };\n"
                << "    } arg;\n";
 
             for (unsigned arg=0; arg<args; arg++) {
-                os << "    arg." << argName(arg) << " = " << argName(arg) << ";\n";
+                auto argType = type->getContainedType(arg);
+                if (bitwidth(argType) > 0)
+                    os << "    arg." << argName(arg) << " = "
+                       << argName(arg) << ";\n";
             }
 
             os << boost::format("    memcpy(simulator->%1%, arg.arr, %2%);\n")
@@ -511,8 +518,11 @@ R"STRING(
         auto type = op->type();
         auto args = numArgs(type);
         if (args == 1) {
-            os << boost::format("    *arg0 = simulator->%1%;\n")
-                    % op->name();
+            if (bitwidth(type) > 0)
+                os << boost::format("    *arg0 = simulator->%1%;\n")
+                        % op->name();
+            else
+                os << "    *arg0 = 1;\n";
         } else {
             unsigned numbits = bitwidth(type);
             unsigned numwords = (numbits + 31) / 32;
@@ -526,8 +536,11 @@ R"STRING(
                << "        struct {\n";
             for (unsigned arg=0; arg<args; arg++) {
                 auto argType = type->getContainedType(arg);
-                auto sig = typeSig(argType, false, false);
-                os << "            " << sig << " " << argName(arg) << ";\n";
+                if (bitwidth(argType) > 0) {
+                    auto sig = typeSig(argType, false, false);
+                    os << "            " << sig << " "
+                       << argName(arg) << ";\n";
+                }
             }
             os << "        };\n"
                << "    } arg;\n";
@@ -537,7 +550,10 @@ R"STRING(
                         % numwords;
 
             for (unsigned arg=0; arg<args; arg++) {
-                os << "    " << argName(arg) << " = arg." << argName(arg) << ";\n";
+                auto argType = type->getContainedType(arg);
+                if (bitwidth(argType) > 0)
+                    os << "    " << argName(arg) << " = arg."
+                       << argName(arg) << ";\n";
             }
         }
         os << "}\n\n";
