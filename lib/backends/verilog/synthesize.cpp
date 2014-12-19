@@ -118,10 +118,11 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
     for (auto&& ip: mod->inputs()) {
         auto inputName = ctxt.name(ip, true);
         auto width = bitwidth(ip->type());
-        ctxt << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
-                % (width - 1)
-                % inputName
-                % typestr(ip->type());
+        if (!ip->type()->isVoidTy())
+            ctxt << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
+                    % (width - 1)
+                    % inputName
+                    % typestr(ip->type());
         ctxt << boost::format("    input %1%_valid,\n") % inputName;
         ctxt << boost::format("    output %1%_bp,\n") % inputName;
 
@@ -763,16 +764,22 @@ public:
                     % ctxt.name(mod);
 
         for (InputPort* ip: mod->inputs()) {
-            ctxt << boost::format("        .%1%(%2%),\n"
-                                  "        .%1%_valid(%2%_valid),\n"
+            if (!ip->type()->isVoidTy())
+                ctxt << boost::format("        .%1%(%2%),\n")
+                        % ctxt.name(ip, true)
+                        % ctxt.name(ip);
+            ctxt << boost::format("        .%1%_valid(%2%_valid),\n"
                                   "        .%1%_bp(%2%_bp),\n")
                     % ctxt.name(ip, true)
                     % ctxt.name(ip);
         }
 
         for (OutputPort* op: mod->outputs()) {
-            ctxt << boost::format("        .%1%(%2%),\n"
-                                  "        .%1%_valid(%2%_valid),\n"
+            if (!op->type()->isVoidTy())
+                ctxt << boost::format("        .%1%(%2%),\n")
+                        % ctxt.name(op, true)
+                        % ctxt.name(op);
+            ctxt << boost::format("        .%1%_valid(%2%_valid),\n"
                                   "        .%1%_bp(%2%_bp),\n")
                     % ctxt.name(op, true)
                     % ctxt.name(op);
