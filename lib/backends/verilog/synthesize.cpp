@@ -10,6 +10,7 @@
 
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/std_library.hpp>
+#include <libraries/synthesis/memory.hpp>
 
 #include <llvm/IR/Constants.h>
 
@@ -118,7 +119,7 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
     for (auto&& ip: mod->inputs()) {
         auto inputName = ctxt.name(ip, true);
         auto width = bitwidth(ip->type());
-        if (!ip->type()->isVoidTy())
+        if (bitwidth(ip->type()) > 0)
             ctxt << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
                     % (width - 1)
                     % inputName
@@ -131,10 +132,11 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
     for (auto&& op: mod->outputs()) {
         auto outputName = ctxt.name(op, true);
         auto width = bitwidth(op->type());
-        ctxt << boost::format("    output [%1%:0] %2%, //Type: %3%\n")
-                % (width - 1)
-                % outputName
-                % typestr(op->type());
+        if (bitwidth(op->type()) > 0)
+            ctxt << boost::format("    output [%1%:0] %2%, //Type: %3%\n")
+                    % (width - 1)
+                    % outputName
+                    % typestr(op->type());
         ctxt << boost::format("    output %1%_valid,\n") % outputName;
         ctxt << boost::format("    input %1%_bp,\n") % outputName;
     }
@@ -154,9 +156,9 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
     for (auto&& ip: mod->inputs()) {
         OutputPort* dummyOP = mod->getDriver(ip);
 
-        ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip));
+        ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip, true));
         ctxt << boost::format("    assign %1%_bp = \n")
-                    % ctxt.name(ip);
+                    % ctxt.name(ip, true);
 
         vector<InputPort*> sinks;
         conns->findSinks(dummyOP, sinks);
@@ -170,13 +172,14 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
 
     for (auto&& op: mod->outputs()) {
         InputPort* dummyIP = mod->getSink(op);
-        ctxt.namer().assignName(dummyIP, mod, ctxt.name(op));
+        ctxt.namer().assignName(dummyIP, mod, ctxt.name(op, true));
         OutputPort* source = conns->findSource(dummyIP);
-        ctxt << boost::format("    assign %1% = %2%;\n")
-                    % ctxt.name(op)
-                    % ctxt.name(source);
+        if (bitwidth(op->type()) > 0)
+            ctxt << boost::format("    assign %1% = %2%;\n")
+                        % ctxt.name(op, true)
+                        % ctxt.name(source);
         ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
-                    % ctxt.name(op)
+                    % ctxt.name(op, true)
                     % ctxt.name(source);
     }
 
@@ -208,7 +211,7 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                 opName = ctxt.name(c.source());
             }
 
-            if (ip->type()->isVoidTy()) {
+            if (bitwidth(ip->type()) == 0) {
                 ctxt << boost::format("    reg %1%_valid = %2%_valid;\n"
                                       "    reg %1%_bp;\n")
                             % ctxt.name(ip)
@@ -225,7 +228,7 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
 
         for (OutputPort* op: b->outputs()) {
 
-            if (op->type()->isVoidTy()) {
+            if (bitwidth(op->type()) == 0) {
                 ctxt << boost::format("    reg %1%_valid;\n"
                                       "    reg %1%_bp = \n")
                             % ctxt.name(op);
@@ -347,7 +350,7 @@ public:
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         PipelineRegister* reg = dynamic_cast<PipelineRegister*>(c);
         if (reg->controller() == NULL) {
-            if (!reg->din()->type()->isVoidTy())
+            if (bitwidth(reg->din()->type()) > 0)
                 ctxt << boost::format("    `DFF(%1%, %2%, %3%, %4%_ce);\n")
                             % bitwidth(reg->din()->type())
                             % ctxt.name(reg->dout())
@@ -485,7 +488,7 @@ public:
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Op* f = dynamic_cast<Op*>(c);
-        if (!f->din()->type()->isVoidTy())
+        if (bitwidth(f->din()->type()) > 0)
             ctxt << "    assign " << ctxt.name(f->dout()) << " = "
                  << ctxt.name(f->din()) << ";\n";
     }
@@ -500,13 +503,13 @@ public:
     static std::string toString(llvm::Constant* c) {
         switch (c->getType()->getTypeID()) {
             case llvm::Type::IntegerTyID:
-                return str(boost::format("%1%'d%2%") 
+                return str(boost::format("%1%'d%2%\n") 
                             % bitwidth(c->getType())
                             % llvm::dyn_cast<llvm::ConstantInt>(c)->
                                     getValue().toString(10, true));
             case llvm::Type::PointerTyID:
                 assert(c->isNullValue());
-                return str(boost::format("%1%'x%2%") 
+                return str(boost::format("%1%'h%2%\n") 
                             % bitwidth(c->getType())
                             % 0);
         default:
@@ -516,7 +519,7 @@ public:
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Constant* f = dynamic_cast<Constant*>(c);
-        if (!f->dout()->type()->isVoidTy())
+        if (bitwidth(f->dout()->type()) > 0)
             ctxt << "    assign " << ctxt.name(f->dout()) << " = "
                  << toString(f->value()) << ";";
     }
@@ -530,10 +533,12 @@ public:
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Join* j = dynamic_cast<Join*>(c);
+        if (bitwidth(j->dout()->type()) == 0)
+            return;
         ctxt << "    assign " << ctxt.name(j->dout()) << " = { ";
         bool first = true;
         for (signed i = j->din_size() - 1; i >= 0; i--) {
-            if (j->din(i)->type()->isVoidTy())
+            if (bitwidth(j->din(i)->type()) == 0)
                 continue;
             if (first)
                 first = false;
@@ -555,7 +560,7 @@ public:
         Split* s = dynamic_cast<Split*>(c);
         auto dinName = ctxt.name(s->din());
         for (unsigned i=0; i < s->dout_size(); i++) {
-            if (s->dout(i)->type()->isVoidTy())
+            if (bitwidth(s->dout(i)->type()) == 0)
                 continue;
             unsigned offset = bitoffset(s->din()->type(), i);
             unsigned width = bitwidth(s->din()->type()->getContainedType(i));
@@ -745,10 +750,24 @@ public:
     }
 };
 
-class ModulePrinter: public VerilogSynthesizer::Printer {
+struct AttributePrinter {
+    template<typename T>
+    void print(VerilogSynthesizer::Context& ctxt,
+               string k, T t) {
+        ctxt << boost::format("        .%1%(%2%),\n")
+                    % k
+                    % t;
+    }
+
+};
+
+
+
+template<typename BType, typename Attrs>
+class VModulePrinter: public VerilogSynthesizer::Printer {
 public:
     bool handles(Block* b) const {
-        return dynamic_cast<Module*>(b) != NULL;
+        return dynamic_cast<BType*>(b) != NULL;
     }
 
     virtual bool customLID() const {
@@ -756,15 +775,16 @@ public:
     }
 
     void print(VerilogSynthesizer::Context& ctxt, Block* b) const {
-        Module* mod = dynamic_cast<Module*>(b);
+        BType* mod = dynamic_cast<BType*>(b);
         assert(mod != NULL);
 
-        ctxt << boost::format("    %1% %2% (\n")
-                    % mod->name()
-                    % ctxt.name(mod);
+        Attrs a;
+        ctxt << "    " << a.name(mod) << " # ( \n";
+        a(ctxt, mod);
+        ctxt << "    ) " << ctxt.name(mod) << " (\n";
 
         for (InputPort* ip: mod->inputs()) {
-            if (!ip->type()->isVoidTy())
+            if (bitwidth(ip->type()) > 0)
                 ctxt << boost::format("        .%1%(%2%),\n")
                         % ctxt.name(ip, true)
                         % ctxt.name(ip);
@@ -775,7 +795,7 @@ public:
         }
 
         for (OutputPort* op: mod->outputs()) {
-            if (!op->type()->isVoidTy())
+            if (bitwidth(op->type()) > 0)
                 ctxt << boost::format("        .%1%(%2%),\n")
                         % ctxt.name(op, true)
                         % ctxt.name(op);
@@ -789,6 +809,22 @@ public:
              << "        .resetn(resetn)\n";
 
         ctxt << "    );\n";
+    }
+};
+
+struct ModulePrinter : public AttributePrinter {
+    std::string name(Module* m) {
+        return m->name();
+    }
+    void operator()(VerilogSynthesizer::Context& ctxt, Block* b) { }
+};
+
+struct RTLRegAttr : public AttributePrinter {
+    std::string name(Block* b) {
+        return "RTLReg";
+    }
+    void operator()(VerilogSynthesizer::Context& ctxt, RTLReg* r) {
+        print(ctxt, "Width", bitwidth(r->type()));
     }
 };
 
@@ -821,7 +857,8 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new MultiplexerPrinter());
     _printers.appendEntry(new RouterPrinter());
 
-    _printers.appendEntry(new ModulePrinter());
+    _printers.appendEntry(new VModulePrinter<RTLReg, RTLRegAttr>());
+    _printers.appendEntry(new VModulePrinter<Module, ModulePrinter>());
 }
 
 bool VerilogSynthesizer::blockIsPrimitive(Block* b) {

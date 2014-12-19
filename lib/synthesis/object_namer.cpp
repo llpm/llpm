@@ -72,6 +72,9 @@ std::string ObjectNamer::getName(Block* b, Module* ctxt, bool ignore) {
 }
 
 std::string ObjectNamer::getName(InputPort* p, Module* ctxt, bool io) {
+    if (io)
+        return p->name();
+
     std::string& base = _portNames[p];
     if (base == "") {
         base = p->name();
@@ -93,6 +96,9 @@ std::string ObjectNamer::getName(InputPort* p, Module* ctxt, bool io) {
 }
 
 std::string ObjectNamer::getName(OutputPort* p, Module* ctxt, bool io) {
+    if (io)
+        return p->name();
+
     std::string& base = _portNames[p];
     if (base == "") {
         base = p->name();

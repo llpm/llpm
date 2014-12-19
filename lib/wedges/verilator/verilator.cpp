@@ -199,6 +199,10 @@ std::string typeSigPlain(llvm::Type* type, bool pointerize) {
             return "double";
     case llvm::Type::X86_FP80TyID:
             return "_float128";
+    case llvm::Type::PointerTyID:
+            return "void*";
+    case llvm::Type::VoidTyID:
+            return "void";
     case llvm::Type::StructTyID:
         {
             llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
