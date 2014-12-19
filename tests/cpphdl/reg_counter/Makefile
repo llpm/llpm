@@ -16,7 +16,7 @@ default: ${NAME}_test ${ROOT}.pdf
 ${ROOT}.pdf: obj/${ROOT}.gv
 	dot -Tpdf -o ${ROOT}.pdf obj/${ROOT}.gv
 
-obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/llvm2verilog
+obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
 	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
 
 ${ROOT}.hpp: obj/${ROOT}.hpp

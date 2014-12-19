@@ -44,7 +44,7 @@ static std::string attrs(ObjectNamer& namer, Block* b,
     std::map<std::string, std::string> a;
     if (dynamic_cast<PipelineRegister*>(b)) {
         a["shape"] = "rectangle";
-        a["label"] = "reg";
+        a["label"] = "\"reg " + namer.getName(b, b->module()) + "\"";
     } else {
         a["shape"] = "component";
         a["label"] = label(namer, b);

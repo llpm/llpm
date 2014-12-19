@@ -3,7 +3,10 @@
  * This file contains memory implementations. Registers, block rams, etc..
  */
 
-module RTLReg(clk, resetn, write_req, write_req_valid, write_req_bp, write_resp_valid, write_resp_bp, read, read_valid, read_bp);
+module RTLReg(clk, resetn,
+    write_req, write_req_valid, write_req_bp,
+    write_resp_valid, write_resp_bp,
+    read, read_valid, read_bp);
 
 parameter Width = 8;
 
