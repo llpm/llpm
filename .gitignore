@@ -10,6 +10,7 @@
 *.o
 *.obj
 *.pyc
+*.os
 
 # LLVM bitcode object/disassembled files
 *.bc

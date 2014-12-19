@@ -6,32 +6,28 @@ if not os.path.isfile("./bin/llvm/bin/llvm-config"):
     print "Must compile llvm with ./build_llvm.sh first!"
     sys.exit(1)
 
-LibPaths = []
+LibPaths = [".", "llvm/lib"]
 
-llvm_libraries = map(lambda x: x[2:],
-    os.popen(" ".join("""
-./bin/llvm/bin/llvm-config --libs analysis bitreader
-bitwriter codegen core engine jit linker mcjit scalaropts
-support irreader
-""".splitlines())).read().split())
+env = Environment(
+    CXX="clang++",
+    LD="clang++",
+    CC="clang",
+    CPPPATH=['./lib', './bin/llvm/include/'],
+    CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
+            -Wall -g -std=c++1y -stdlib=libc++
+            -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
+            -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split(),
+    LDFLAGS="""-stdlib=libc++""".split(),
+    LIBS="""rt c dl z tinfo gc gccpp LLVM-3.5""".split(),
+    LIBPATH=map(lambda x: "bin/" + x, LibPaths),
+    LINKFLAGS=['-pthread', '-stdlib=libc++']
+              + map(lambda x: "-Wl,-rpath=\$$ORIGIN/%s" % x, LibPaths))
 
-env = Environment(CXX="clang++",
-                  LD="clang++",
-                  CC="clang",
-                  CPPPATH=['./lib', './bin/llvm/include/'],
-                  CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
-                            -Wall -g -std=c++1y -stdlib=libc++
-                            -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
-                            -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split(),
-                  LDFLAGS="""-stdlib=libc++""".split(),
-                  LIBS="""rt c dl z tinfo gc gccpp""".split() + llvm_libraries,
-                  LIBPATH=LibPaths + ["bin/llvm/lib/"],
-                  LINKFLAGS=['-pthread', '-stdlib=libc++'] + map(lambda x: "-Wl,-rpath=%s" % x, LibPaths))
-
-llpm = env.Library('bin/llpm', Glob("./lib/*.cpp") +
+libenv = env.Clone()
+llpm = libenv.SharedLibrary('bin/llpm', Glob("./lib/*.cpp") +
                                Glob("./lib/*/*.cpp") +
                                Glob("./lib/*/*/*.cpp"))
-env.Prepend(LIBS=[llpm])
+env.Prepend(LIBS=['llpm'])
 
 for d in Glob("./tools/*"):
     d = str(d).split("/")[-1]
