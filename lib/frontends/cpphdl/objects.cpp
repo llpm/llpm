@@ -58,8 +58,8 @@ Block* CPPHDLClass::buildVariable(unsigned i) {
     } else if (ty->isArrayTy()) {
         // Build a RAM
         llvm::ArrayType* arrTy = llvm::dyn_cast<llvm::ArrayType>(ty);
-        Array* array = new Array(arrTy->getElementType(),
-                                 arrTy->getNumElements());
+        FiniteArray* array = new FiniteArray(arrTy->getElementType(),
+                                             arrTy->getNumElements());
         _writePorts[i] = new InterfaceMultiplexer(array->write());
         _readPorts[i] = new InterfaceMultiplexer(array->read());
         _arrays[i] = array;

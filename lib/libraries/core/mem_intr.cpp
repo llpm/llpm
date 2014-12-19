@@ -6,32 +6,31 @@ using namespace std;
 
 namespace llpm {
 
-Register::Register(llvm::Type* ty) :
-    _write(this, ty, llvm::Type::getVoidTy(ty->getContext()), true, "write"),
-    _read(this, llvm::Type::getVoidTy(ty->getContext()), ty, true, "read")
+Memory::Memory(llvm::Type* datatype, llvm::Type* idxType) :
+    _write(this, GetWriteReq(datatype, idxType),
+           llvm::Type::getVoidTy(datatype->getContext()), true, "write"),
+    _read(this, GetReadReq(datatype, idxType), datatype, true, "read")
 { }
 
-llvm::Type* Array::GetWriteInputType(llvm::Type* type, unsigned depth) {
-    return llvm::StructType::get(
-        type->getContext(),
-        {type, llvm::Type::getIntNTy(type->getContext(), clog2(depth))});
+llvm::Type* Memory::GetWriteReq(llvm::Type* dt, llvm::Type* idx) {
+    if (idx->isVoidTy())
+        return dt;
+    else
+        return llvm::StructType::get(
+            dt->getContext(),
+            {dt, idx});
 }
 
-llvm::Type* Array::GetReadInputType(llvm::Type* type, unsigned depth) {
-    return llvm::Type::getIntNTy(type->getContext(), clog2(depth));
+llvm::Type* Memory::GetReadReq(llvm::Type* dt, llvm::Type* idx) {
+    return idx;
 }
 
-llvm::Type* Array::GetReadOutputType(llvm::Type* type, unsigned depth) {
-    return type;
-}
+Register::Register(llvm::Type* ty) :
+    Memory(ty, llvm::Type::getVoidTy(ty->getContext()))
+{ }
 
-Array::Array(llvm::Type* ty, unsigned depth) :
-    _write(this, GetWriteInputType(ty, depth),
-           llvm::Type::getVoidTy(ty->getContext()),
-           true, "write"),
-    _read(this, GetReadInputType(ty, depth),
-          GetReadOutputType(ty, depth),
-          true, "read")
+FiniteArray::FiniteArray(llvm::Type* ty, unsigned depth) :
+    Memory(ty, llvm::Type::getIntNTy(ty->getContext(), clog2(depth)))
 { }
 
 } // namespace llpm

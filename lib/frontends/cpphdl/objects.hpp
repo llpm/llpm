@@ -25,7 +25,7 @@ class CPPHDLClass : public ContainerModule {
 
     // Different member variable types
     std::map<unsigned, Register*>  _regs;
-    std::map<unsigned, Array*>     _arrays;
+    std::map<unsigned, FiniteArray*>     _arrays;
     std::map<unsigned, Module*>    _modules;
 
     // Read and write ports may require interface multiplexers
