@@ -13,6 +13,7 @@ namespace llpm {
 // will change the memory to something more realistic and whatever
 // arbitration may be necessary.
 class Memory : public Block {
+    llvm::Type* _type;
     Interface _write;
     Interface _read;
 
@@ -23,6 +24,7 @@ protected:
            llvm::Type* idxType);
 
 public:
+    DEF_GET_NP(type);
     DEF_GET(write);
     DEF_GET(read);
 

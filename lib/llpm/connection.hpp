@@ -117,6 +117,7 @@ public:
     void disconnect(Connection c) {
         disconnect(c.source(), c.sink());
     }
+    void disconnect(Interface* a, Interface* b);
 
     bool createsCycle(Connection c) const;
 
@@ -150,6 +151,8 @@ public:
     void find(Block* b, std::vector<Connection>&) const;
     bool find(const InputPort* ip, Connection& c) const;
     void find(const OutputPort* op, std::vector<Connection>& out) const;
+
+    Interface* findClient(Interface*) const;
 
     void find(const InputPort* ip, std::vector<OutputPort*>& out) const {
         Connection c;

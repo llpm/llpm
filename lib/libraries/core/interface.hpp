@@ -32,6 +32,10 @@ public:
     DEF_GET_NP(server);
     DEF_GET_NP(name);
 
+    Block* owner() const {
+        return _din.owner();
+    }
+
     const Port* req() const {
         if (_server)
             return &_din;
@@ -58,7 +62,7 @@ public:
 class InterfaceMultiplexer : public Block {
     Interface _client;
 
-    std::vector<Interface*> _interfaces;
+    std::vector<Interface*> _servers;
 
 public:
     InterfaceMultiplexer(Interface* iface) :
@@ -73,6 +77,7 @@ public:
     }
 
     DEF_GET(client);
+    DEF_ARRAY_GET(servers);
 
     Interface* createServer() {
         std::string iname = str(boost::format("%1%_iface%2%")
@@ -84,7 +89,7 @@ public:
                           _client.respType(), 
                           true,
                           iname);
-        _interfaces.push_back(i);
+        _servers.push_back(i);
         return i;
     }
 

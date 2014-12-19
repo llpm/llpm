@@ -72,6 +72,23 @@ void ConnectionDB::find(Block* b, std::vector<Connection>& out) const {
     }
 }
 
+Interface* ConnectionDB::findClient(Interface* server) const {
+    assert(server->server());
+    OutputPort* source = findSource(server->din());
+    if (source == NULL)
+        return NULL;
+
+    for (auto& iface: source->owner()->interfaces()) {
+        if (iface->server())
+            continue;
+        OutputPort* ifDriver = findSource(iface->din());
+        if (ifDriver == server->dout())
+            return iface;
+    }
+
+    return NULL;
+}
+
 void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     assert(o);
     assert(i);
@@ -133,6 +150,11 @@ void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
         assert(!found);
     }
 #endif
+}
+
+void ConnectionDB::disconnect(Interface* a, Interface* b) {
+    disconnect(a->dout(), b->din());
+    disconnect(a->din(), b->dout());
 }
 
 void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& newPorts) {

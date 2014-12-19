@@ -11,6 +11,7 @@
 #include <backends/graphviz/graphviz.hpp>
 #include <wedges/verilator/verilator.hpp>
 #include <util/llvm_type.hpp>
+#include <passes/transforms/synthesize_mem.hpp>
 
 #include <passes/manager.hpp>
 #include <passes/transforms/simplify.hpp>
@@ -47,6 +48,7 @@ int main(int argc, const char** argv) {
         StdLibStops(sc);
 
         PassManager pm(d);
+        pm.append(new SynthesizeMemoryPass(d));
         pm.append(new SimplifyPass(d));
         pm.append(new FormControlRegionPass(d));
         pm.append(new CheckConnectionsPass(d));

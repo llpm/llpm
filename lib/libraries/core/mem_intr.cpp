@@ -7,6 +7,7 @@ using namespace std;
 namespace llpm {
 
 Memory::Memory(llvm::Type* datatype, llvm::Type* idxType) :
+    _type(datatype),
     _write(this, GetWriteReq(datatype, idxType),
            llvm::Type::getVoidTy(datatype->getContext()), true, "write"),
     _read(this, GetReadReq(datatype, idxType), datatype, true, "read")
