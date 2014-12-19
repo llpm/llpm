@@ -11,20 +11,20 @@ OPT=../../../bin/llvm/bin/opt
 NAME=reg_counter
 ROOT=RegCounter
 
-default: ${NAME}_test ${NAME}.pdf
+default: ${NAME}_test ${ROOT}.pdf
 
 ${ROOT}.pdf: obj/${ROOT}.gv
 	dot -Tpdf -o ${ROOT}.pdf obj/${ROOT}.gv
 
-obj/${NAME}.hpp: ${NAME}.bc ../../../bin/llvm2verilog
+obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/llvm2verilog
 	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
 
-${NAME}.hpp: obj/${NAME}.hpp
-	cp obj/${NAME}.hpp .
+${ROOT}.hpp: obj/${ROOT}.hpp
+	cp obj/${ROOT}.hpp .
 
-${NAME}_test: ${NAME}_test.cpp ${NAME}.hpp
+${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	${CXX} -c -emit-llvm ${CXXFLAGS} ${NAME}_test.cpp -o ${NAME}_test.cpp.bc
-	${CXX} -o ${NAME}_test ${NAME}_test.cpp.bc obj/$(NAME}_verilator.bc
+	${CXX} -o ${NAME}_test ${NAME}_test.cpp.bc obj/${ROOT}_verilator.bc
 
 %.bc: %.cpp
 	${CLANGXX} -c -emit-llvm ${CFLAGS} $< -o $@.tmp
