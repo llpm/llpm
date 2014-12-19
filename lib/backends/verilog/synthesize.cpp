@@ -483,7 +483,7 @@ public:
     }
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
-        Function* f = dynamic_cast<Function*>(c);
+        Op* f = dynamic_cast<Op*>(c);
         if (!f->din()->type()->isVoidTy())
             ctxt << "    assign " << ctxt.name(f->dout()) << " = "
                  << ctxt.name(f->din()) << ";\n";
@@ -501,7 +501,13 @@ public:
             case llvm::Type::IntegerTyID:
                 return str(boost::format("%1%'d%2%") 
                             % bitwidth(c->getType())
-                            % llvm::dyn_cast<llvm::ConstantInt>(c)->getValue().toString(10, true));
+                            % llvm::dyn_cast<llvm::ConstantInt>(c)->
+                                    getValue().toString(10, true));
+            case llvm::Type::PointerTyID:
+                assert(c->isNullValue());
+                return str(boost::format("%1%'x%2%") 
+                            % bitwidth(c->getType())
+                            % 0);
         default:
             throw InvalidArgument("Constant type not yet supported");
         }
@@ -794,6 +800,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(new IdentityOpPrinter<Identity>());
     _printers.appendEntry(new IdentityOpPrinter<Cast>());
+    _printers.appendEntry(new IdentityOpPrinter<Wait>());
 
     _printers.appendEntry(new ConstantPrinter());
 
