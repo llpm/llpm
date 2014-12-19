@@ -104,6 +104,13 @@ public:
     virtual bool outputsIndependent() const {
         return true;
     }
+
+    virtual bool refinable() const {
+        // This mux is a no-op it only has one client
+        return _servers.size() <= 1;
+    }
+
+    virtual bool refine(ConnectionDB& conns) const;
 };
 
 };
