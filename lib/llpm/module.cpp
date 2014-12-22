@@ -169,4 +169,16 @@ bool ContainerModule::hasCycle() const {
     return queries::BlockCycleExists(&_conns, init);
 }
 
+DependenceRule ContainerModule::depRule(const OutputPort* op) const {
+    //TODO: Do a graph search to determine this precisely
+    return DependenceRule(DependenceRule::Custom,
+                          DependenceRule::Maybe);
+}
+
+const std::vector<InputPort*>& ContainerModule::deps(
+    const OutputPort*) const {
+    //TODO: Do a graph search to determine this precisely
+    return inputs();
+}
+
 } // namespace llpm

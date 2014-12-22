@@ -38,6 +38,14 @@ public:
     virtual const InputPort* input() const = 0;
     virtual const OutputPort* output() const = 0;
 
+    virtual const OutputPort* memReqPort() const {
+        return NULL;
+    }
+
+    virtual const InputPort* memRespPort() const {
+        return NULL;
+    }
+
     virtual OutputPort* memReqPort() {
         return NULL;
     }
@@ -90,10 +98,28 @@ public:
     }
 };
 
-class LLVMConstant : public LLVMInstruction, public Constant {
+class LLVMImpureInstruction: public LLVMInstruction {
+protected:
+    LLVMImpureInstruction(const LLVMBasicBlock* bb,
+                          llvm::Instruction* ins,
+                          InputPort* input) :
+        LLVMInstruction(bb, ins)
+    {
+        if (input != NULL)
+            _inputVec = {input};
+    }
+
+    std::vector<InputPort*> _inputVec;
+
+public:
+    virtual DependenceRule depRule(const OutputPort* op) const;
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+};
+
+class LLVMConstant : public LLVMImpureInstruction, public Constant {
 public:
     LLVMConstant(const LLVMBasicBlock* bb, llvm::Instruction* ins) :
-        LLVMInstruction(bb, ins),
+        LLVMImpureInstruction(bb, ins, NULL),
         Constant(GetOutput(ins))
     { }
 
@@ -117,14 +143,14 @@ public:
 };
 
 // To represent an instruction with which the base library cannot deal
-class LLVMMiscInstruction : public LLVMInstruction {
+class LLVMMiscInstruction : public LLVMImpureInstruction {
     InputPort _din;
     OutputPort _dout;
 
 public:
     LLVMMiscInstruction(const LLVMBasicBlock* bb,
                         llvm::Instruction* ins) :
-        LLVMInstruction(bb, ins),
+        LLVMImpureInstruction(bb, ins, &_din),
         _din(this, GetInput(ins), "x"),
         _dout(this, GetOutput(ins), "a")
     { }
@@ -155,7 +181,7 @@ public:
     }
 };
 
-class LLVMLoadInstruction : public LLVMInstruction {
+class LLVMLoadInstruction : public LLVMImpureInstruction {
     InputPort _din;
     OutputPort _dout;
     OutputPort _readReq;
@@ -167,6 +193,14 @@ public:
 
     DEF_GET(readReq);
     DEF_GET(readResp);
+
+    virtual const OutputPort* memReqPort() const {
+        return &_readReq;
+    }
+
+    virtual const InputPort* memRespPort() const {
+        return &_readResp;
+    }
 
     virtual OutputPort* memReqPort() {
         return &_readReq;
@@ -205,7 +239,7 @@ public:
     }
 };
 
-class LLVMStoreInstruction : public LLVMInstruction {
+class LLVMStoreInstruction : public LLVMImpureInstruction {
     InputPort _din;
     OutputPort _dout;
     OutputPort _writeReq;
@@ -217,6 +251,14 @@ public:
 
     DEF_GET(writeReq);
     DEF_GET(writeResp);
+
+    virtual const OutputPort* memReqPort() const {
+        return &_writeReq;
+    }
+
+    virtual const InputPort* memRespPort() const {
+        return &_writeResp;
+    }
 
     virtual OutputPort* memReqPort() {
         return &_writeReq;

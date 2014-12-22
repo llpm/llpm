@@ -113,6 +113,25 @@ LLVMImpureBasicBlock::LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock*
     _dout(this, NULL, "dout")
 { }
 
+DependenceRule LLVMImpureBasicBlock::depRule(
+    const OutputPort* op) const {
+    assert(std::find(outputs().begin(), outputs().end(), op)
+           != outputs().end());
+    if (op == output())
+        return DependenceRule(DependenceRule::AND, DependenceRule::Always);
+    else
+        return DependenceRule(DependenceRule::Custom, DependenceRule::Maybe);
+}
+
+const std::vector<InputPort*>& LLVMImpureBasicBlock::deps(
+    const OutputPort* op) const {
+    assert(std::find(outputs().begin(), outputs().end(), op)
+           != outputs().end());
+    return inputs();
+}
+
+
+
 void LLVMBasicBlock::addInput(llvm::Value* v) {
     if (_inputMap.find(v) != _inputMap.end())
         return;
@@ -291,6 +310,8 @@ LLVMControl::LLVMControl(LLVMFunction* func, LLVMBasicBlock* bb) :
 {
     if (bb->name() != "")
         this->name(bb->name() + "_control");
+
+    _bbOutputVec = {&_bbOutput};
 }
 
 void LLVMControl::construct() {
@@ -376,6 +397,26 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Value*>& 
 InputPort* LLVMControl::entryPort(vector<llvm::Value*>& inputData) {
     return addPredecessor(NULL, inputData);
 }
+
+DependenceRule LLVMControl::depRule(const OutputPort* op) const {
+    assert(std::find(outputs().begin(), outputs().end(), op)
+           != outputs().end());
+    if (op == &_bbInput)
+        return DependenceRule(DependenceRule::OR, DependenceRule::Always);
+    else
+        return DependenceRule(DependenceRule::AND, DependenceRule::Maybe);
+}
+
+const std::vector<InputPort*>& LLVMControl::deps(const OutputPort* op) const {
+    assert(std::find(outputs().begin(), outputs().end(), op)
+           != outputs().end());
+    if (op == &_bbInput)
+        return _predecessors;
+    else
+        return _bbOutputVec;
+}
+
+
 
 llvm::Type* LLVMEntry::FunctionType(llvm::Function* func) {
     vector<llvm::Type*> argTypes;
@@ -499,7 +540,6 @@ void LLVMFunction::build(llvm::Function* func) {
 void LLVMFunction::connectReturn(OutputPort* retPort) {
     _returnPorts.push_back(retPort);
 }
-
 
 } // namespace llpm
 

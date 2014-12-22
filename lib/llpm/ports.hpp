@@ -7,6 +7,7 @@
 namespace llpm {
 
 class Block;
+class OutputPort;
 
 class Port {
 protected:
@@ -51,14 +52,58 @@ public:
     InputPort* operator=(const InputPort&) = delete;
 };
 
+// Describes internal relationship of outputs to inputs.
+struct DependenceRule {
+    friend class OutputPort;
+public:
+    enum InputType {
+        AND,
+        OR,
+        Custom
+    };
+
+    enum OutputType {
+        Always,
+        Maybe
+    };
+
+protected:
+    InputType       _inputType;
+    OutputType      _outputType;
+
+public:
+    DependenceRule(InputType inpTy,
+                   OutputType outTy) :
+        _inputType(inpTy),
+        _outputType(outTy) { }
+
+    DEF_GET_NP(inputType);
+    DEF_GET_NP(outputType);
+    DEF_SET(inputType);
+    DEF_SET(outputType);
+
+    bool operator==(const DependenceRule& dr) const {
+        return dr._inputType == this->_inputType &&
+               dr._outputType == this->_outputType;
+    }
+
+    bool operator!=(const DependenceRule& dr) const {
+        return !operator==(dr);
+    }
+};
+
 class OutputPort : public Port {
 public:
-    OutputPort(Block* owner, llvm::Type* type, std::string name = "");
+    OutputPort(Block* owner, llvm::Type* type,
+               std::string name = "");
     ~OutputPort();
 
     // Deleted defaults
     OutputPort(const OutputPort&) = delete;
     OutputPort* operator=(const OutputPort&) = delete;
+
+    DependenceRule depRule() const;
+    const std::vector<InputPort*>& deps() const;
 };
 
 } //llpm

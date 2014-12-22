@@ -249,14 +249,18 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
             std::string joinOp;
             std::string terminator;
             switch (b->firing()) {
-            case Block::AND:
+            case DependenceRule::AND:
                 joinOp = "&";
                 terminator = "1'b1";
                 break;
-            case Block::OR:
+            case DependenceRule::OR:
                 joinOp = "|";
                 terminator = "1'b0";
                 break;
+            case DependenceRule::Custom:
+                assert(printer->customLID() &&
+                       "This default printer can't deal with custom"
+                       "firing rules!");
             }
 
             ctxt << "    wire " << ctxt.name(b) << "_valid = \n";

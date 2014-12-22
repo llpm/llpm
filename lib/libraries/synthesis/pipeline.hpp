@@ -50,6 +50,18 @@ public:
     DEF_GET(din);
     DEF_GET(dout);
     DEF_GET_NP(source);
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
+    }
 };
 
 };

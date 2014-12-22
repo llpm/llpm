@@ -16,6 +16,8 @@ class Memory : public Block {
     llvm::Type* _type;
     Interface _write;
     Interface _read;
+    std::vector<InputPort*> _writeDeps;
+    std::vector<InputPort*> _readDeps;
 
     llvm::Type* GetWriteReq(llvm::Type* dt, llvm::Type* idx);
     llvm::Type* GetReadReq(llvm::Type* dt, llvm::Type* idx);
@@ -32,12 +34,23 @@ public:
         return true;
     }
 
-    virtual FiringRule firing() const {
-        return OR;
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        if (op == _write.dout())
+            return DependenceRule(DependenceRule::AND,
+                                  DependenceRule::Always);
+        else if (op == _read.dout())
+            return DependenceRule(DependenceRule::Custom,
+                                  DependenceRule::Maybe);
+        else
+            assert(false);
     }
-
-    virtual bool outputsIndependent() const {
-        return true;
+    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+        if (op == _write.dout())
+            return _writeDeps;
+        else if (op == _read.dout())
+            return _readDeps;
+        else
+            assert(false);
     }
 };
 

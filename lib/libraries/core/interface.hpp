@@ -63,21 +63,43 @@ class InterfaceMultiplexer : public Block {
     Interface _client;
 
     std::vector<Interface*> _servers;
+    std::vector<InputPort*> _clientDinArr;
 
 public:
     InterfaceMultiplexer(Interface* iface) :
-        _client(this, iface->respType(), iface->reqType(),
-                false, iface->name() + "_mux_client")
+        _client(this, iface->respType(), iface->reqType(), false,
+                iface->name() + "_mux_client")
     {
         if (!iface->server()) {
             throw InvalidArgument(
                 "Can only multiplex a server interface!");
         }
         this->name(iface->name() + "mux");
+        _clientDinArr = {_client.din()};
     }
 
     DEF_GET(client);
     DEF_ARRAY_GET(servers);
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(std::find(outputs().begin(), outputs().end(), op)
+               != outputs().end());
+        if (op == _client.dout())
+            return DependenceRule(DependenceRule::Custom,
+                                  DependenceRule::Maybe);
+        else
+            return DependenceRule(DependenceRule::AND,
+                                  DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+        assert(std::find(outputs().begin(), outputs().end(), op)
+               != outputs().end());
+        if (op == _client.dout())
+            return inputs();
+        else
+            return _clientDinArr;
+    }
 
     Interface* createServer() {
         std::string iname = str(boost::format("%1%_iface%2%")
@@ -95,14 +117,6 @@ public:
 
     virtual bool hasState() const {
         return false;
-    }
-
-    virtual FiringRule firing() const {
-        return OR;
-    }
-
-    virtual bool outputsIndependent() const {
-        return true;
     }
 
     virtual bool refinable() const {

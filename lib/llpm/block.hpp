@@ -31,12 +31,6 @@ class Interface;
  * via "refine" method.
  */
 class Block : public gc_cleanup {
-public:
-    enum FiringRule {
-        AND, // All inputs must be available before this block is executed
-        OR   // Block fires when any input is available
-    };
-
 protected:
     Module* _module;
     std::string _name;
@@ -86,26 +80,25 @@ public:
     DEF_GET_NP(name);
     DEF_SET(name);
 
+    // Upon what conditions does a block accept inputs and execute?
+    // This routine only works properly when all the outputs have the same
+    // dependence rules. If not, it returns "Custom"
+    DependenceRule::InputType firing() const;
+
+    // False if this block has multiple outputs and their dependences
+    // differ or are maybes. Otherwise, output tokens are always produced
+    // based on the same rules, so they are "dependent"
+    bool outputsIndependent() const;
+
+    // Find the dependence rule for an output port
+    virtual DependenceRule depRule(const OutputPort*) const = 0;
+    // Find all of the inputs upon which an output depends.
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const = 0;
+
     // Does the logic in this block contain any cycles? Cycles mean that
     // logic cannot be completely combinatorial and prevents static
     // region formation
     virtual bool hasCycle() const {
-        return false;
-    }
-
-    // Does upon what conditions does a block accept inputs and execute?
-    //   AND: All inputs must be available before block execute
-    //   OR:  Any block input causes the block to execute
-    virtual FiringRule firing() const {
-        return AND;
-    }
-
-    /*
-     * If 'false' (the default), when this block produces an output an output
-     * appears on all output ports. If an output can appear on one output but
-     * not another then this method must return 'true'.
-     */
-    virtual bool outputsIndependent() const {
         return false;
     }
 
@@ -122,7 +115,6 @@ public:
     const std::vector<Interface*>& interfaces() const {
         return _interfaces;
     }
-
 
     void ports(std::vector<InputPort*>& iports) const {
         iports.insert(iports.end(), _inputs.begin(), _inputs.end());
@@ -153,6 +145,9 @@ public:
             return std::distance(_outputs.begin(), f);
     }
 
+    // Does this block contain architectural state? Answering false does
+    // not preclude microarchitectural state (like pipeline registers)
+    // from being added.
     virtual bool hasState() const = 0;
     bool isPure() const {
         return !hasState();
@@ -214,6 +209,17 @@ public:
     DEF_GET(din);
     DEF_GET(dout);
 
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
+    }
 };
 
 } // namespace llpm

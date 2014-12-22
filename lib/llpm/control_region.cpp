@@ -123,7 +123,7 @@ bool ControlRegion::canGrow(InputPort* ip) {
     vector<InputPort*> sinks;
     _conns.findSinks(driver, sinks);
     for (auto sink: sinks) {
-        if (sink->owner()->firing() == OR)
+        if (sink->owner()->firing() != DependenceRule::AND)
             return false;
     }
     return true;
@@ -215,7 +215,8 @@ bool ControlRegion::add(Block* b) {
         }
 
         // Must not create additional back pressure bits with CR
-        if (foundAsSink && !foundAsDriver && b->firing() == OR) {
+        if (foundAsSink && !foundAsDriver &&
+            b->firing() != DependenceRule::AND) {
             // printf("is select\n");
             return false;
         }

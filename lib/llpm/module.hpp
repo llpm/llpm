@@ -53,17 +53,7 @@ public:
     virtual OutputPort* getDriver(InputPort* ip) const = 0;
     virtual InputPort* getSink(OutputPort* op) const = 0;
 
-    // Modules are assumed to have independent inputs
-    virtual FiringRule firing() const {
-        return OR;
-    }
-
     virtual bool hasCycle() const = 0;
-
-    // Modules are assume to have independent outputs
-    virtual bool outputsIndependent() const {
-        return true;
-    }
 };
 
 class DummyBlock: public Identity {
@@ -234,6 +224,9 @@ public:
     virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);
 
     virtual Pipeline* pipeline();
+
+    virtual DependenceRule depRule(const OutputPort* op) const;
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
 };
 
 } // namespace llpm

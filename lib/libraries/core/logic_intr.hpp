@@ -26,7 +26,8 @@ class Constant : public Block {
     OutputPort   _dout;
 public:
     Constant(llvm::Value* value) :
-        _dout(this, value->getType())
+        _dout(this, value->getType(),
+              "c")
     {
         _value = llvm::dyn_cast<llvm::Constant>(value);
         if (_value == NULL) {
@@ -36,12 +37,12 @@ public:
 
     Constant(llvm::Constant* value) :
         _value(value),
-        _dout(this, value->getType())
+        _dout(this, value->getType(), "c")
     { }
 
     Constant(llvm::Type* t) :
         _value(NULL),
-        _dout(this, t)
+        _dout(this, t, "c")
     { }
 
     virtual bool hasState() const { return false; }
@@ -53,6 +54,16 @@ public:
 
     static Constant* getVoid(Design& d) {
         return new Constant(llvm::Type::getVoidTy(d.context()));
+    }
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
+        return inputs();
+    }
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
     }
 };
 

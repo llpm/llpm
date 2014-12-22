@@ -12,13 +12,23 @@ InputPort::InputPort(Block* owner, llvm::Type* type, std::string name) :
 
 InputPort::~InputPort() { }
 
-OutputPort::OutputPort(Block* owner, llvm::Type* type, std::string name) :
+OutputPort::OutputPort(
+    Block* owner, llvm::Type* type,
+    std::string name) :
     Port(owner, type, name)
 {
     owner->definePort(this);
 }
 
 OutputPort::~OutputPort() { }
+
+DependenceRule OutputPort::depRule() const {
+    return owner()->depRule(this);
+}
+
+const std::vector<InputPort*>& OutputPort::deps() const {
+    return owner()->deps(this);
+}
 
 } // namespace llpm
 

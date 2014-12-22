@@ -117,6 +117,24 @@ llvm::Type* LLVMInstruction::GetOutput(llvm::Instruction* ins) {
     }
 }
 
+DependenceRule LLVMImpureInstruction::depRule(
+    const OutputPort* op) const {
+    assert(std::find(outputs().begin(), outputs().end(), op)
+           != outputs().end());
+    return DependenceRule(DependenceRule::AND, DependenceRule::Always);
+}
+
+const std::vector<InputPort*>& LLVMImpureInstruction::deps(
+    const OutputPort* op) const {
+    assert(std::find(outputs().begin(), outputs().end(), op)
+           != outputs().end());
+    if (op == output())
+        return inputs();
+    else if (op == memReqPort())
+        return _inputVec;
+    assert(false && "Unknown port!");
+}
+
 template<typename Inner>
 class WrapperInstruction: public LLVMPureInstruction {
 public:
@@ -425,7 +443,7 @@ public:
 
 LLVMLoadInstruction::LLVMLoadInstruction(const LLVMBasicBlock* bb,
                                          llvm::Instruction* ins) :
-        LLVMInstruction(bb, ins),
+        LLVMImpureInstruction(bb, ins, &_din),
         _din(this, GetInput(ins), "x"),
         _dout(this, GetOutput(ins), "a"),
         _readReq(this, GetInput(ins), "readReq"),
@@ -443,7 +461,7 @@ bool LLVMLoadInstruction::refine(ConnectionDB& conns) const {
 
 LLVMStoreInstruction::LLVMStoreInstruction(const LLVMBasicBlock* bb,
                                            llvm::Instruction* ins) :
-    LLVMInstruction(bb, ins),
+    LLVMImpureInstruction(bb, ins, &_din),
     _din(this, GetInput(ins), "x"),
     _dout(this, GetOutput(ins), "a"),
     _writeReq(this, GetInput(ins), "writeReq"),

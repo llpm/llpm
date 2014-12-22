@@ -44,6 +44,18 @@ public:
     DEF_GET(dout);
     DEF_ARRAY_GET(controls);
 
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
+    }
+
     InputPort* newControl(llvm::Type*);
 };
 
@@ -73,6 +85,18 @@ public:
 
     DEF_ARRAY_GET(din);
     DEF_GET(dout);
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
+    }
 };
 
 // Takes N inputs of the same type and outputs them in 
@@ -87,8 +111,16 @@ public:
     DEF_ARRAY_GET(din);
     DEF_GET(dout);
 
-    virtual FiringRule firing() const {
-        return OR;
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::OR,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
     }
 };
 
@@ -105,8 +137,16 @@ public:
     DEF_ARRAY_GET(din);
     DEF_GET(dout);
 
-    virtual FiringRule firing() const {
-        return OR;
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::OR,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
     }
 };
 
@@ -122,6 +162,18 @@ public:
 
     DEF_GET(din);
     DEF_ARRAY_GET(dout);
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        return inputs();
+    }
 };
 
 // Extract a single element from a message
@@ -170,8 +222,16 @@ public:
     DEF_GET(din);
     DEF_ARRAY_GET(dout);
 
-    virtual bool outputsIndependent() const {
-        return true;
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Maybe);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        return inputs();
     }
 };
 

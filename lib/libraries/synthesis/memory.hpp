@@ -23,12 +23,20 @@ public:
         return true;
     }
 
-    virtual FiringRule firing() const {
-        return OR;
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        if (op == _write.dout())
+            return DependenceRule(DependenceRule::AND,
+                                  DependenceRule::Always);
+        else if (op == &_read)
+            return DependenceRule(DependenceRule::Custom,
+                                  DependenceRule::Maybe);
+        else
+            assert(false);
     }
-
-    virtual bool outputsIndependent() const {
-        return true;
+    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+        assert(op == _write.dout() ||
+               op == &_read);
+        return inputs();
     }
 };
 
