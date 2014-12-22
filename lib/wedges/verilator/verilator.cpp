@@ -346,7 +346,9 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
        << "    uint64_t cycles() const { return cycleCount; }\n";
 
     os << "\nprivate:\n";
+    os << "    void prepareOutputs();\n";
     os << "    void readOutputs();\n";
+    os << "    void prepareInputs();\n";
     os << "    void writeInputs();\n";
     os << "    V" << mod->name() << "* simulator;\n";
     os << "    uint64_t cycleCount;\n";
@@ -405,22 +407,52 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
     os << "void " << mod->name() << "::run(unsigned cycles) {"
        << R"STRING(
     for (unsigned i=0; i<cycles; i++) {
-        simulator->clk = 1;
-        simulator->eval();
-        readOutputs();
-        writeInputs();
-        if (this->tfp)
-            tfp->dump(this->cycleCount * 2);
+        prepareOutputs();
+        prepareInputs();
+
         simulator->clk = 0;
         simulator->eval();
         if (this->tfp)
-            tfp->dump((this->cycleCount * 2) + 1);
+            tfp->dump(this->cycleCount * 4);
+
+        readOutputs();
+        writeInputs();
+        simulator->clk = 1;
+        simulator->eval();
+        if (this->tfp)
+            tfp->dump(this->cycleCount * 4 + 1);
+
+        prepareOutputs();
+        prepareInputs();
+
+        simulator->clk = 1;
+        simulator->eval();
+        if (this->tfp)
+            tfp->dump(this->cycleCount * 4 + 2);
+
+        simulator->clk = 0;
+        simulator->eval();
+        if (this->tfp)
+            tfp->dump((this->cycleCount * 4) + 3);
         this->cycleCount += 1;
     }
     if (this->tfp && (this->cycleCount % 10) == 0)
         this->tfp->flush();
 }
 )STRING";
+
+    os << "void " << mod->name() << "::prepareOutputs() {\n";
+    for (OutputPort* op: mod->outputs()) {
+        auto sig = typeSig(op->type(), false, false);
+        os << boost::format("    if (%1%_incoming.size() >= 10)\n"
+                            "        simulator->%1%_bp = 1;\n"
+                            "    else\n"
+                            "        simulator->%1%_bp = 0;\n"
+                            )
+                    % op->name();
+        os << "\n";
+    }
+    os << "};\n";
 
     os << "void " << mod->name() << "::readOutputs() {\n";
     for (OutputPort* op: mod->outputs()) {
@@ -430,12 +462,23 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                             "        %1%_incoming.resize(%1%_incoming.size()+1);\n"
                             "        %1%_unpack(&%1%_incoming.back());\n"
                             "    }\n"
-                            "    if (%1%_incoming.size() >= 10)\n"
-                            "        simulator->%1%_bp = 1;\n"
-                            "    else\n"
-                            "        simulator->%1%_bp = 0;\n"
                             )
                     % op->name();
+        os << "\n";
+    }
+    os << "};\n";
+
+    os << "void " << mod->name() << "::prepareInputs() {\n";
+    for (InputPort* ip: mod->inputs()) {
+        auto sig = typeSig(ip->type(), false, false);
+        os << boost::format(
+            "    if (!%1%_outgoing.empty()) {\n"
+            "        %1%_pack(%1%_outgoing.front());\n"
+            "        simulator->%1%_valid = 1;\n"
+            "    } else {\n"
+            "        simulator->%1%_valid = 0;\n"
+            "    }\n")
+            % ip->name();
         os << "\n";
     }
     os << "};\n";
@@ -446,12 +489,6 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         os << boost::format(
             "    if (simulator->%1%_valid && !simulator->%1%_bp) {\n"
             "        %1%_outgoing.pop_front();\n"
-            "    }\n"
-            "    if (!%1%_outgoing.empty()) {\n"
-            "        %1%_pack(%1%_outgoing.front());\n"
-            "        simulator->%1%_valid = 1;\n"
-            "    } else {\n"
-            "        simulator->%1%_valid = 0;\n"
             "    }\n")
             % ip->name();
         os << "\n";
