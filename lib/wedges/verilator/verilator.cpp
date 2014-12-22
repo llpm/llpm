@@ -449,8 +449,10 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
             "    }\n"
             "    if (!%1%_outgoing.empty()) {\n"
             "        %1%_pack(%1%_outgoing.front());\n"
-            "    }\n"
-            "    simulator->%1%_valid = !%1%_outgoing.empty();\n")
+            "        simulator->%1%_valid = 1;\n"
+            "    } else {\n"
+            "        simulator->%1%_valid = 0;\n"
+            "    }\n")
             % ip->name();
         os << "\n";
     }

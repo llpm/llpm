@@ -15,5 +15,7 @@ int main() {
     rc->read_resp(&val);
     printf("Result: %lu\n", val);
     printf("Cycle count: %lu\n", rc->cycles() - start);
+    rc->run(2);
+    delete rc;
     return 0;
 }
