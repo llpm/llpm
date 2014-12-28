@@ -16,6 +16,7 @@
 #include <passes/manager.hpp>
 #include <passes/transforms/simplify.hpp>
 #include <passes/analysis/checks.hpp>
+#include <libraries/core/tags.hpp>
 
 using namespace llpm;
 using namespace cpphdl;
@@ -48,10 +49,10 @@ int main(int argc, const char** argv) {
         StdLibStops(sc);
 
         PassManager pm(d);
-        pm.append(new SynthesizeMemoryPass(d));
-        pm.append(new SimplifyPass(d));
-        pm.append(new FormControlRegionPass(d));
-        pm.append(new CheckConnectionsPass(d));
+        pm.append<SynthesizeMemoryPass>();
+        pm.append<SimplifyPass>();
+        pm.append<FormControlRegionPass>();
+        pm.append<CheckConnectionsPass>();
 
         for(auto&& m: modules) {
             m->validityCheck();

@@ -21,6 +21,11 @@ public:
         _passes.push_back(p);
     }
 
+    template<typename PASS>
+    void append() {
+        append(new PASS(_design));
+    }
+
     void prepend(Pass* p) {
         _passes.push_front(p);
     }
