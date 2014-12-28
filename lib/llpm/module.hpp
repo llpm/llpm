@@ -69,6 +69,48 @@ public:
         Module(design, name) { }
 
     virtual ConnectionDB* conns() = 0;
+    virtual const ConnectionDB* conns() const = 0;
+
+    virtual bool hasState() const {
+        std::set<Block*> blocks;
+        conns()->findAllBlocks(blocks);
+        for(Block* b: blocks) {
+            if (b->hasState())
+                return true;
+        }
+
+        return false;
+    }
+
+    virtual void blocks(std::vector<Block*>& vec) const {
+        std::set<Block*> blocks;
+        conns()->findAllBlocks(blocks);
+        vec.insert(vec.end(), blocks.begin(), blocks.end());
+    }
+
+    virtual void blocks(std::set<Block*>& blocks) const {
+        conns()->findAllBlocks(blocks);
+    }
+
+    virtual void submodules(std::vector<Block*>& vec) const {
+        std::set<Block*> blocks;
+        conns()->findAllBlocks(blocks);
+        for (Block* b: blocks) {
+            Module* m = dynamic_cast<Module*>(b);
+            if (m != NULL)
+                vec.push_back(m);
+        }
+    }
+
+    virtual void submodules(std::vector<Module*>& vec) const {
+        std::set<Block*> blocks;
+        conns()->findAllBlocks(blocks);
+        for (Block* b: blocks) {
+            Module* m = dynamic_cast<Module*>(b);
+            if (m != NULL)
+                vec.push_back(m);
+        }
+    }
 };
 
 /**********
@@ -113,6 +155,9 @@ public:
     ConnectionDB* conns() {
         return &_conns;
     }
+    const ConnectionDB* conns() const {
+        return &_conns;
+    } 
 
     virtual void validityCheck() const;
 
@@ -176,42 +221,7 @@ public:
         _conns.connect(source, sink);
     }
 
-    virtual bool hasState() const {
-        std::set<Block*> blocks;
-        _conns.findAllBlocks(blocks);
-        for(Block* b: blocks) {
-            if (b->hasState())
-                return true;
-        }
 
-        return false;
-    }
-
-    virtual void blocks(std::vector<Block*>& vec) const {
-        std::set<Block*> blocks;
-        _conns.findAllBlocks(blocks);
-        vec.insert(vec.end(), blocks.begin(), blocks.end());
-    }
-
-    virtual void submodules(std::vector<Block*>& vec) const {
-        std::set<Block*> blocks;
-        _conns.findAllBlocks(blocks);
-        for (Block* b: blocks) {
-            Module* m = dynamic_cast<Module*>(b);
-            if (m != NULL)
-                vec.push_back(m);
-        }
-    }
-
-    virtual void submodules(std::vector<Module*>& vec) const {
-        std::set<Block*> blocks;
-        _conns.findAllBlocks(blocks);
-        for (Block* b: blocks) {
-            Module* m = dynamic_cast<Module*>(b);
-            if (m != NULL)
-                vec.push_back(m);
-        }
-    }
     
     virtual bool refine(ConnectionDB& conns) const;
     virtual bool refinable() const {

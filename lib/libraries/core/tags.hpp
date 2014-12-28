@@ -2,6 +2,7 @@
 #define __LIBRARIES_CORE_TAGS_HPP__
 
 #include <libraries/core/interface.hpp>
+#include <passes/pass.hpp>
 
 namespace llpm {
 
@@ -46,6 +47,17 @@ public:
         else
             return _clientDinArr;
     }
+};
+
+class SynthesizeTagsPass : public ModulePass {
+    void synthesizeTagger(Tagger*);
+
+public:
+    SynthesizeTagsPass(Design& d) :
+        ModulePass(d)
+    { }
+
+    virtual void runInternal(Module*);
 };
 
 } // namespace llpm

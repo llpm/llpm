@@ -2,6 +2,8 @@
 
 #include <llvm/IR/DerivedTypes.h>
 
+using namespace std;
+
 namespace llpm {
 
 Tagger::Tagger(llvm::Type* serverReq,
@@ -24,6 +26,20 @@ llvm::Type* Tagger::GetServerInput(
 llvm::Type* Tagger::GetServerOutput(
     llvm::Type* serverReq, llvm::Type* serverResp, llvm::Type* tag) {
     return llvm::StructType::get(tag->getContext(), {tag, serverResp});
+}
+
+void SynthesizeTagsPass::runInternal(Module* mod) {
+    MutableModule* mm = dynamic_cast<MutableModule*>(mod);
+    set<Block*> blocks;
+    mm->blocks(blocks);
+    for (auto block: blocks) {
+        Tagger* tagger = dynamic_cast<Tagger*>(block);
+        if (tagger != NULL)
+            synthesizeTagger(tagger);
+    }
+}
+
+void SynthesizeTagsPass::synthesizeTagger(Tagger* tagger) {
 }
 
 } // namespace llpm

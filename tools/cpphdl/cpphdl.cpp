@@ -51,6 +51,7 @@ int main(int argc, const char** argv) {
         PassManager pm(d);
         pm.append<SynthesizeMemoryPass>();
         pm.append<SimplifyPass>();
+        pm.append<SynthesizeTagsPass>();
         pm.append<FormControlRegionPass>();
         pm.append<CheckConnectionsPass>();
 
