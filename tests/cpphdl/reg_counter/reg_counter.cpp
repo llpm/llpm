@@ -17,11 +17,9 @@ uint64_t RegCounter::read() {
     return _counter;
 }
 
-#if 0
 void RegCounter::inc() {
     _counter += 1;
 }
-#endif
 
 void RegCounter::set(uint64_t v) {
     _counter = v;

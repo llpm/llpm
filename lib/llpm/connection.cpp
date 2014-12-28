@@ -180,6 +180,11 @@ void ConnectionDB::remap(const OutputPort* origPort, OutputPort* newPort) {
     }
 }
 
+void ConnectionDB::remap(const Interface* origI, Interface* newI) {
+    remap(origI->din(), newI->din());
+    remap(origI->dout(), newI->dout());
+}
+
 void ConnectionDB::removeBlock(Block* b) {
     std::vector<Connection> conns;
     this->find(b, conns);

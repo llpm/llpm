@@ -183,6 +183,7 @@ public:
         remap(origPort, newPorts);
     }
     void remap(const OutputPort* origPort, OutputPort* newPort);
+    void remap(const Interface*, Interface*);
 };
 
 } // namespace llpm

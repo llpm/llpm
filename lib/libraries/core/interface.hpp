@@ -120,8 +120,7 @@ public:
     }
 
     virtual bool refinable() const {
-        // This mux is a no-op it only has one client
-        return _servers.size() <= 1;
+        return true;
     }
 
     virtual bool refine(ConnectionDB& conns) const;
