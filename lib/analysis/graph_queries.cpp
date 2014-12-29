@@ -121,7 +121,7 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
         OutputPort* current = path.endPort();
         Block* block = current->owner();
         auto pathCycle = path.hasCycle();
-        if (block->hasCycle() || pathCycle()) {
+        if (block->hasCycle() || pathCycle) {
             foundCycle = true;
         }
 
