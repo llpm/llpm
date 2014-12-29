@@ -607,6 +607,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                             "    if (%1%_incoming.size() == 0)\n"
                             "        return false;\n"
                             "    *arg = %1%_incoming.front();\n"
+                            "    %1%_incoming.pop_front();\n"
                             "    return true;\n"
                             "}\n")
                     % op->name()
