@@ -5,6 +5,7 @@
 #include <passes/pass.hpp>
 
 namespace llpm {
+    class MutableModule;
 
 class Tagger : public Block {
     Interface _server;
@@ -50,7 +51,7 @@ public:
 };
 
 class SynthesizeTagsPass : public ModulePass {
-    void synthesizeTagger(Tagger*);
+    void synthesizeTagger(MutableModule*, Tagger*);
 
 public:
     SynthesizeTagsPass(Design& d) :

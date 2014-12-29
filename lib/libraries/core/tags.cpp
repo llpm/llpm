@@ -1,6 +1,7 @@
 #include "tags.hpp"
 
 #include <llpm/module.hpp>
+#include <analysis/graph_queries.hpp>
 
 #include <llvm/IR/DerivedTypes.h>
 
@@ -37,11 +38,26 @@ void SynthesizeTagsPass::runInternal(Module* mod) {
     for (auto block: blocks) {
         Tagger* tagger = dynamic_cast<Tagger*>(block);
         if (tagger != NULL)
-            synthesizeTagger(tagger);
+            synthesizeTagger(mm, tagger);
     }
 }
 
-void SynthesizeTagsPass::synthesizeTagger(Tagger* tagger) {
+void SynthesizeTagsPass::synthesizeTagger(MutableModule* mm, Tagger* tagger) {
+    ConnectionDB* conns = mm->conns();
+    if (!queries::CouldReorderTokens(tagger->client())) {
+        // The server to which I am connected does not reorder tokens.
+        // In this case, I merely need to join responses with request tags
+        auto split = new Split(tagger->server()->din()->type());
+        auto join = new Join(tagger->server()->dout()->type());
+        conns->connect(split->dout(0), join->din(0));
+        conns->remap(tagger->server()->din(), split->din());
+        conns->remap(tagger->server()->dout(), join->dout());
+        conns->remap(tagger->client()->dout(), split->dout(1));
+        conns->remap(tagger->client()->din(), join->din(1));
+    } else {
+        // TODO: Need more strategies for embedding tags!
+        fprintf(stderr, "Warning: could not find strategy to embed tag!\n");
+    }
 }
 
 } // namespace llpm

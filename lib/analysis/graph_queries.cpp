@@ -66,5 +66,10 @@ void FindDominators(const ConnectionDB* conns,
     dominators.swap(visitor.dominators);
 }
 
+bool CouldReorderTokens(Interface* iface) {
+    // FIXME: This is very clearly wrong!
+    return false;
+}
+
 } // namespace queries
 } // namespace llpm

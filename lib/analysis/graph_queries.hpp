@@ -12,6 +12,10 @@ bool BlockCycleExists(const ConnectionDB* conns,
 void FindDominators(const ConnectionDB* conns,
                     Block* b,
                     std::set<Block*>& dominators);
+
+// Does this interface potentially deliver responses in the wrong order?
+bool CouldReorderTokens(Interface*);
+
 };
 };
 
