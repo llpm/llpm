@@ -52,6 +52,12 @@ public:
         else
             assert(false);
     }
+
+    virtual bool pipelineable(const OutputPort* op) const {
+        if (op == read()->dout())
+            return false;
+        return true; 
+    }
 };
 
 // Accepts an input on the write interface and stores it. Outputs the

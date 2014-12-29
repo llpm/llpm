@@ -56,8 +56,8 @@ public:
     virtual Pipeline* pipeline() = 0;
     virtual void validityCheck() const = 0;
 
-    virtual OutputPort* getDriver(InputPort* ip) const = 0;
-    virtual InputPort* getSink(OutputPort* op) const = 0;
+    virtual OutputPort* getDriver(const InputPort* ip) const = 0;
+    virtual InputPort* getSink(const OutputPort* op) const = 0;
 
     virtual bool hasCycle() const = 0;
 };
@@ -171,19 +171,23 @@ public:
 
     virtual void validityCheck() const;
 
-    OutputPort* getDriver(InputPort* ip) const {
-        auto f = _inputMap.find(ip);
+    OutputPort* getDriver(const InputPort* ip) const {
+        // Strip away const-ness for lookup. Just don't touch it
+        auto f = _inputMap.find((InputPort*)ip);
         assert(f != _inputMap.end());
         OutputPort* internalIPDriver = f->second->dout();
         return internalIPDriver;
     }
 
-    InputPort* getSink(OutputPort* op) const {
-        auto f = _outputMap.find(op);
+    InputPort* getSink(const OutputPort* op) const {
+        // Strip away const-ness for lookup. Just don't touch it
+        auto f = _outputMap.find((OutputPort*)op);
         assert(f != _outputMap.end());
         InputPort* internalOPSink = f->second->din();
         return internalOPSink;
     }
+
+    virtual bool pipelineable(const OutputPort*) const;
 
 #if 0
     void addBlock(Block* b) {

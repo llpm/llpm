@@ -38,7 +38,10 @@ void Pipeline::buildMinimum() {
         Block* a = c.source()->owner();
         Block* b = c.sink()->owner();
 
-        if (is_module(a) || is_module(b)) {
+        if (!c.source()->pipelineable()) {
+            // Don't add stages if output is not pipeline-able
+            _stages[c] = 0;
+        } else if (is_module(a) || is_module(b)) {
             // Connections between modules and other things generally need to
             // be pipelined 
             _stages[c] = 1;
@@ -64,6 +67,7 @@ void Pipeline::insertPipelineRegs() {
         unsigned stages = this->stages(c);
         if (stages > 0) {
             OutputPort* op = c.source();
+            assert(op->pipelineable());
             InputPort*  ip = c.sink();
             conns->disconnect(c);
             for (unsigned i=0; i<stages; i++) {

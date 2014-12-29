@@ -38,6 +38,12 @@ public:
                op == &_read);
         return inputs();
     }
+
+    virtual bool pipelineable(const OutputPort* op) const {
+        if (op == read())
+            return false;
+        return true;
+    }
 };
 
 } // namespace llpm

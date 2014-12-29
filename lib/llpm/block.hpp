@@ -95,6 +95,13 @@ public:
     // Find all of the inputs upon which an output depends.
     virtual const std::vector<InputPort*>& deps(const OutputPort*) const = 0;
 
+    // Can this output be pipelined? Almost always yes, but in some cases
+    // doing so may create distributed state, which must be specially dealt
+    // with. For now, we punt and disallow pipelining in those cases.
+    virtual bool pipelineable(const OutputPort*) const {
+        return true;
+    }
+
     // Does the logic in this block contain any cycles? Cycles mean that
     // logic cannot be completely combinatorial and prevents static
     // region formation

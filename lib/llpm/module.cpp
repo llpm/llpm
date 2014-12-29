@@ -103,6 +103,15 @@ Interface* ContainerModule::addServerInterface(
     return iface;
 }
 
+
+bool ContainerModule::pipelineable(const OutputPort* op) const {
+    auto intSink = getSink(op);
+    auto intSource = _conns.findSource(intSink);
+    if (intSource == NULL)
+        return true;
+    return intSource->pipelineable();
+}
+
 bool ContainerModule::refine(ConnectionDB& conns) const
 {
     conns.update(_conns);

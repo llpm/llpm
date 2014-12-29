@@ -104,6 +104,8 @@ public:
 
     DependenceRule depRule() const;
     const std::vector<InputPort*>& deps() const;
+
+    bool pipelineable() const;
 };
 
 } //llpm
