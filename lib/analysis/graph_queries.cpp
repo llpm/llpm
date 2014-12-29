@@ -120,7 +120,8 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
                     const IOPath& path) {
         OutputPort* current = path.endPort();
         Block* block = current->owner();
-        if (block->hasCycle() || path.hasCycle()) {
+        auto pathCycle = path.hasCycle();
+        if (block->hasCycle() || pathCycle()) {
             foundCycle = true;
         }
 
@@ -135,7 +136,10 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
             addSource(path);
             return TerminatePath;
         } else {
-            return Continue;
+            if (pathCycle)
+                return TerminatePath;
+            else
+                return Continue;
         }
     }
 
