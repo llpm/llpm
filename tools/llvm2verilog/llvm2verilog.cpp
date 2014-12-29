@@ -13,7 +13,11 @@
 #include <wedges/verilator/verilator.hpp>
 
 #include <passes/manager.hpp>
+#include <passes/transforms/synthesize_mem.hpp>
 #include <passes/transforms/simplify.hpp>
+#include <passes/transforms/refine.hpp>
+#include <passes/analysis/checks.hpp>
+#include <libraries/core/tags.hpp>
 
 using namespace llpm;
 using namespace std;
@@ -41,52 +45,23 @@ int main(int argc, const char** argv) {
             d.addModule(m);
         }
 
-        BaseLibraryStopCondition sc;
-        StdLibStops(sc);
+        d.elaborations()->append<SynthesizeMemoryPass>();
+        d.elaborations()->append<SynthesizeTagsPass>();
+        d.elaborations()->append<RefinePass>();
 
-        PassManager pm(d);
-        pm.append(new SimplifyPass(d));
-        pm.append(new FormControlRegionPass(d));
+        d.optimizations()->append<SimplifyPass>();
+        d.optimizations()->append<FormControlRegionPass>();
+        d.optimizations()->append<CheckConnectionsPass>();
+
+        printf("Elaborating...\n");
+        d.elaborate();
+        printf("Optimizing...\n");
+        d.optimize();
 
         GraphvizOutput gv(d);
         VerilatorWedge vw(&vs);
 
         FileSet fs(true, dirName, true);
-
-        for(auto&& m: modules) {
-            m->validityCheck();
-
-            printf("Module inputs %lu, outputs %lu before refinement\n",
-                   m->inputs().size(), m->outputs().size());
-            // Refine each module until it cannot be further refined
-            unsigned passes = m->internalRefine(&sc);
-            printf("%u refinement passes on '%s'\n",
-                   passes, m->name().c_str());
-            printf("Module inputs %lu, outputs %lu after refinement\n",
-                   m->inputs().size(), m->outputs().size());
-
-            vector<Block*> blocks;
-            m->blocks(blocks);
-
-            if (m->refined(&sc))
-                printf("Finished refinement\n");
-            else {
-                printf("Error: could not finish refining!\n");
-                printf("Remaining blocks to be refined: \n");
-                sc.unrefined(blocks);
-                for(Block* b: blocks) {
-                    printf("\t%s\n", typeid(*b).name());
-                }
-            }
-
-            m->validityCheck();
-
-            if (m->hasCycle()) {
-                printf("Module has cycle!\n");
-            }
-        }
-
-        pm.run();
 
         for (Module* mod: d.modules()) {
             if (mod->hasCycle()) {

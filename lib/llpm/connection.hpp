@@ -55,6 +55,7 @@ class Module;
 
 class ConnectionDB {
     Module* _module;
+    uint64_t _changeCounter;
     std::set<Connection> _connections;
     std::set<Block*> _blacklist;
     std::unordered_map<Block*, uint64_t> _blockUseCounts;
@@ -71,10 +72,12 @@ class ConnectionDB {
 
 public:
     ConnectionDB(Module* m) :
-        _module(m)
+        _module(m),
+        _changeCounter(0)
     { }
 
     DEF_GET(module);
+    DEF_GET_NP(changeCounter);
 
     const std::set<Connection>& raw() const {
         return _connections;
@@ -82,10 +85,12 @@ public:
 
     void blacklist(Block* b) {
         _blacklist.insert(b);
+        _changeCounter++;
     }
 
     void deblacklist(Block* b) {
         _blacklist.erase(b);
+        _changeCounter++;
     }
 
     void readAndClearNewBlocks(std::set<Block*>& nb) {
@@ -128,19 +133,19 @@ public:
         return f->second >= 1;
     }
 
-    bool exists(Connection c) {
+    bool exists(Connection c) const {
         return _connections.count(c) > 0;
     }
 
-    bool connected(OutputPort* op, InputPort* ip) {
+    bool connected(OutputPort* op, InputPort* ip) const {
         return exists(Connection(op, ip));
     }
 
-    bool connected(InputPort* ip, OutputPort* op) {
+    bool connected(InputPort* ip, OutputPort* op) const {
         return exists(Connection(op, ip));
     }
 
-    size_t numConnections() {
+    size_t numConnections() const {
         return _connections.size();
     }
 

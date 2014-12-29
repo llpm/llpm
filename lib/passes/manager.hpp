@@ -30,8 +30,8 @@ public:
         _passes.push_front(p);
     }
 
-    void run();
-    void run(Module* mod);
+    bool run();
+    bool run(Module* mod);
 };
 
 };

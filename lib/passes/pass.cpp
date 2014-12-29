@@ -1,24 +1,34 @@
 #include "pass.hpp"
 
+#include <llpm/module.hpp>
+#include <llpm/design.hpp>
+
+#include <vector>
+
 using namespace std;
 
 namespace llpm {
 
-void ModulePass::run() {
+bool ModulePass::run() {
+    bool ret = false;
     auto mods = _design.modules();
     for (Module* m: mods) {
-        run(m);
+        if (run(m))
+            ret = true;
         m->validityCheck();
     }
+    return ret;
 }
 
-void ModulePass::run(Module* mod) {
+bool ModulePass::run(Module* mod) {
+    uint64_t ctr = mod->changeCounter();
     runInternal(mod);
     vector<Module*> submodules;
     mod->submodules(submodules);
     for (auto sm: submodules) {
         this->run(sm);
     }
+    return mod->changeCounter() > ctr;
 }
 
 };

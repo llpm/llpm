@@ -17,6 +17,7 @@ void ConnectionDB::registerBlock(Block* block) {
 
     uint64_t& count = _blockUseCounts[block];
     count += 1;
+    _changeCounter++;
 }
 
 // TODO -- This is slow. Rewrite w/ an index
@@ -111,6 +112,7 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
 
     Connection c(o, i);
     _connections.insert(c);
+    _changeCounter++;
     registerBlock(o->owner());
     registerBlock(i->owner());
 
@@ -140,6 +142,7 @@ void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
     auto f = _connections.find(Connection(o, i));
     if (f != _connections.end())
         _connections.erase(f);
+    _changeCounter++;
     deregisterBlock(o->owner());
     deregisterBlock(i->owner());
 
@@ -159,6 +162,7 @@ void ConnectionDB::disconnect(Interface* a, Interface* b) {
 
 void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& newPorts) {
     _inputRewrites[origPort] = newPorts;
+    _changeCounter++;
 
     Connection c;
     if (find(origPort, c)) {
@@ -171,6 +175,7 @@ void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& ne
 
 void ConnectionDB::remap(const OutputPort* origPort, OutputPort* newPort) {
     _outputRewrites[origPort] = newPort;
+    _changeCounter++;
 
     std::vector<Connection> conns;
     find(origPort, conns);
@@ -199,6 +204,7 @@ void ConnectionDB::update(const ConnectionDB& newdb) {
     }
     _blacklist.insert(newdb._blacklist.begin(),
                       newdb._blacklist.end());
+    _changeCounter++;
 }
 
 bool ConnectionDB::createsCycle(Connection c) const {

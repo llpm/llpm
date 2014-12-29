@@ -7,6 +7,7 @@
 #include <synthesis/object_namer.hpp>
 #include <backends/backend.hpp>
 #include <util/macros.hpp>
+#include <passes/manager.hpp>
 
 #include <vector>
 
@@ -22,13 +23,18 @@ class Design {
     ObjectNamer* _namer;
     Backend* _backend;
 
+    PassManager _elaborations;
+    PassManager _optimizations;
+
 public:
     static llvm::LLVMContext& Default_LLVMContext;
 
     Design(llvm::LLVMContext& ctxt = Default_LLVMContext) :
         _context(ctxt),
         _refinery(new Refinery()),
-        _namer(NULL)
+        _namer(NULL),
+        _elaborations(*this),
+        _optimizations(*this)
     {
         _refinery->refiners().appendEntry(new BlockDefaultRefiner());
     }
@@ -39,6 +45,11 @@ public:
 
     DEF_GET_NP(backend);
     DEF_SET_NONULL(backend);
+    DEF_GET(elaborations);
+    DEF_GET(optimizations);
+
+    void elaborate();
+    void optimize();
 
     void refine(Module* m);
 

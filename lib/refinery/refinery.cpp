@@ -22,6 +22,7 @@ bool BlockDefaultRefiner::refine(
 
 unsigned Refinery::refine(std::vector<Block*> crude,
                           ConnectionDB& conns,
+                          int depth,
                           StopCondition* sc) {
     unsigned passes = 0;
     bool foundRefinement;
@@ -65,7 +66,7 @@ unsigned Refinery::refine(std::vector<Block*> crude,
                 throw ImplementationError("Refined block still present in connection DB!");
         }
         printf("Pass: %u done\n", passes);
-    } while (foundRefinement);
+    } while (foundRefinement && (depth == -1 || passes < depth));
 
     return passes;
 }

@@ -1,4 +1,6 @@
 #include "synthesize_mem.hpp"
+
+#include <llpm/module.hpp>
 #include <libraries/core/mem_intr.hpp>
 #include <libraries/synthesis/memory.hpp>
 

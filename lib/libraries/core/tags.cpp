@@ -1,5 +1,7 @@
 #include "tags.hpp"
 
+#include <llpm/module.hpp>
+
 #include <llvm/IR/DerivedTypes.h>
 
 using namespace std;

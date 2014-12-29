@@ -78,6 +78,7 @@ public:
 
     unsigned refine(std::vector<Block*> crude,
                     ConnectionDB& conns,
+                    int depth = -1,
                     StopCondition* sc = NULL);
 };
 

@@ -1,5 +1,6 @@
 #include "checks.hpp"
 
+#include <llpm/module.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
 

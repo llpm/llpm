@@ -36,12 +36,18 @@ public:
 
     // For opaque modules, this may return NULL
     virtual ConnectionDB* conns() = 0;
+    // Return the current change count -- useful for tracking if changes have
+    // been made to a module
+    virtual uint64_t changeCounter() = 0;
 
     virtual void blocks(std::vector<Block*>&) const = 0;
     virtual void submodules(std::vector<Module*>&) const = 0;
     virtual void submodules(std::vector<Block*>& vec) const = 0;
 
-    virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL) = 0;
+    virtual unsigned internalRefine(
+        int depth = -1,
+        Refinery::StopCondition* sc = NULL) = 0;
+
     virtual bool refined(Refinery::StopCondition* sc) {
         std::vector<Block*> crude;
         this->blocks(crude);
@@ -70,6 +76,10 @@ public:
 
     virtual ConnectionDB* conns() = 0;
     virtual const ConnectionDB* conns() const = 0;
+
+    virtual uint64_t changeCounter() {
+        return conns()->changeCounter();
+    }
 
     virtual bool hasState() const {
         std::set<Block*> blocks;
@@ -231,7 +241,8 @@ public:
     virtual bool hasCycle() const;
 
     
-    virtual unsigned internalRefine(Refinery::StopCondition* sc = NULL);
+    virtual unsigned internalRefine(int depth = -1,
+                                    Refinery::StopCondition* sc = NULL);
 
     virtual Pipeline* pipeline();
 

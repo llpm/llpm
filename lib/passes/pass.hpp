@@ -1,10 +1,9 @@
 #ifndef __LLPM_PASSES_PASS_HPP__
 #define __LLPM_PASSES_PASS_HPP__
 
-#include <llpm/design.hpp>
-#include <llpm/module.hpp>
-
 namespace llpm {
+    class Design;
+    class Module;
 
 class Pass {
 protected:
@@ -15,7 +14,7 @@ public:
         _design(design)
     { }
 
-    virtual void run() = 0;
+    virtual bool run() = 0;
 };
 
 class ModulePass : public Pass {
@@ -26,8 +25,8 @@ public:
         Pass(design)
     { }
 
-    virtual void run();
-    void run(Module* mod);
+    virtual bool run();
+    bool run(Module* mod);
 };
 
 };

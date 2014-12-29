@@ -124,11 +124,12 @@ bool ContainerModule::refine(ConnectionDB& conns) const
     return true;
 }
 
-unsigned ContainerModule::internalRefine(Refinery::StopCondition* sc) {
+unsigned ContainerModule::internalRefine(int depth,
+                                         Refinery::StopCondition* sc) {
     vector<Block*> blocksTmp;
     blocks(blocksTmp);
 
-    auto passes = design().refinery().refine(blocksTmp, _conns, sc);
+    auto passes = design().refinery().refine(blocksTmp, _conns, depth, sc);
     return passes;
 }
 
