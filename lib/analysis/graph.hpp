@@ -109,6 +109,10 @@ public:
         _path.pop_back();
     }
 
+    const std::vector< std::pair<SrcPort*, DstPort*> >& raw() const {
+        return _path;
+    }
+
     bool isValid(ConnectionDB*) const;
     bool canBackpressure() const;
     bool canBubble() const;

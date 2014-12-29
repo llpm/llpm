@@ -13,6 +13,21 @@ void FindDominators(const ConnectionDB* conns,
                     Block* b,
                     std::set<Block*>& dominators);
 
+
+/* Analyze the sources and ordering of tokens between a source and a sink. 
+ * - Returns false if the source does not appear to drive the sink.
+ * - Output: singleSource iff a token from source is required to observe
+ *   a token on sink.
+ * - Output: reorderPotenial iff tokens from source may become dis-ordered
+ *   by the time they are observed on sink.
+ * - Output: cyclic iff there exists a cycle between source and sink
+ */
+bool TokenOrderAnalysis(Port* source,
+                        Port* sink,
+                        bool& singleSource,
+                        bool& reorderPotential,
+                        bool& cyclic);
+
 // Does this interface potentially deliver responses in the wrong order?
 bool CouldReorderTokens(Interface*);
 

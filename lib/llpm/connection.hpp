@@ -93,6 +93,10 @@ public:
         _changeCounter++;
     }
 
+    bool isInternalDriver(OutputPort* op) const {
+        return _blacklist.count(op->owner()) > 0;
+    }
+
     void readAndClearNewBlocks(std::set<Block*>& nb) {
         nb.clear();
         nb.swap(_newBlocks);

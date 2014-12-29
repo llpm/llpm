@@ -50,6 +50,20 @@ public:
             return &_din;
     }
 
+    Port* req() {
+        if (_server)
+            return &_din;
+        else
+            return &_dout;
+    }
+
+    Port* resp() {
+        if (_server)
+            return &_dout;
+        else
+            return &_din;
+    }
+
     llvm::Type* respType() const {
         return resp()->type();
     }

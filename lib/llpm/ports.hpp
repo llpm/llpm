@@ -8,6 +8,7 @@ namespace llpm {
 
 class Block;
 class OutputPort;
+class InputPort;
 
 class Port {
 protected:
@@ -40,6 +41,12 @@ public:
 
     DEF_GET_NP(name);
     DEF_SET(name);
+
+    InputPort* asInput();
+    const InputPort* asInput() const;
+
+    OutputPort* asOutput();
+    const OutputPort* asOutput() const;
 };
 
 class InputPort : public Port {
@@ -107,6 +114,28 @@ public:
 
     bool pipelineable() const;
 };
+
+
+/* Out of line method definitions
+ *   I want these inlined, but they can't be in the classes above because
+ *   C++ is too stuck in the 70's.
+ */
+
+inline InputPort* Port::asInput() {
+    return dynamic_cast<InputPort*>(this);
+}
+
+inline const InputPort* Port::asInput() const {
+    return dynamic_cast<const InputPort*>(this);
+}
+
+inline OutputPort* Port::asOutput() {
+    return dynamic_cast<OutputPort*>(this);
+}
+
+inline const OutputPort* Port::asOutput() const {
+    return dynamic_cast<const OutputPort*>(this);
+}
 
 } //llpm
 
