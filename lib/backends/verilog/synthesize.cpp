@@ -605,8 +605,10 @@ public:
 
         for (unsigned i=0; i<r->dout_size(); i++) {
             auto op = r->dout(i);
-            ctxt << boost::format("    assign %8% = (%1%[%2%:%3%] == %4%) ? %1%[%5%:%6%] : {%7%{1'bx}};\n"
-                                  "    assign %8%_valid = (%1%[%2%:%3%] == %4%) ? %1%_valid : 1'b0;\n")
+            if (dinWidth > 0) {
+                ctxt << boost::format(
+                    "    assign %8% = (%1%[%2%:%3%] == %4%) ? \n"
+                    "        %1%[%5%:%6%] : {%7%{1'bx}};\n")
                     % dinName
                     % (selWidth + selOffset - 1)
                     % selOffset
@@ -615,6 +617,15 @@ public:
                     % dinOffset
                     % dinWidth
                     % ctxt.name(op);
+            }
+            ctxt << boost::format(
+                "    assign %5%_valid = (%1%[%2%:%3%] == %4%) ? \n"
+                "        %1%_valid : 1'b0;\n")
+                % dinName
+                % (selWidth + selOffset - 1)
+                % selOffset
+                % i
+                % ctxt.name(op);
         }
         ctxt << "    assign " << dinName << "_bp = \n";
         for (unsigned i=0; i<r->dout_size(); i++) {
