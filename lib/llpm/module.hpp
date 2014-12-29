@@ -58,6 +58,7 @@ public:
 
     virtual OutputPort* getDriver(const InputPort* ip) const = 0;
     virtual InputPort* getSink(const OutputPort* op) const = 0;
+    void internalDrivers(std::vector<OutputPort*>&) const;
 
     virtual bool hasCycle() const = 0;
 };

@@ -14,6 +14,7 @@ namespace llpm {
 class Pipeline {
     MutableModule* _module;
 
+    bool _built;
     std::map<Connection, unsigned> _stages;
 
     void insertPipelineRegs();
@@ -28,8 +29,8 @@ public:
         auto f = _stages.find(c);
         if (f != _stages.end())
             return f->second;
-        if (_module->conns()->exists(c))
-            throw ImplementationError("Could not find stages entry. Has the pipeline database been built?");
+        if (_module->conns()->exists(c) && _built)
+            return 0;
         throw InvalidArgument("Could not find stages entry because connection does not exist!");
     }
 

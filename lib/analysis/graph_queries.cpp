@@ -210,5 +210,46 @@ bool CouldReorderTokens(Interface* iface) {
     return singleSource && !reorderPotential;
 }
 
+typedef Path<OutputPort, InputPort> CyclePath;
+struct CycleFindingVisitor: public Visitor<CyclePath> {
+    deque< vector< std::pair<OutputPort*, InputPort*> > > cycles;
+
+    // Visit a vertex in the graph
+    Terminate visit(const ConnectionDB*,
+                    const CyclePath& path) {
+        if (path.hasCycle()) {
+            cycles.push_back(path.extractCycle());
+            return TerminatePath;
+        } else {
+            return Continue;
+        }
+    }
+};
+
+void FindAllCycles(Module* mod,
+                   std::vector< std::vector<Connection> >& cycles) {
+    CycleFindingVisitor visitor;
+    ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        throw InvalidArgument("Cannot analyze opaque module!");
+    GraphSearch<CycleFindingVisitor, DFS> search(conns, visitor);
+    vector<OutputPort*> init;
+    mod->internalDrivers(init);
+    search.go(init);
+
+    unsigned offset = cycles.size();
+    cycles.resize(offset + visitor.cycles.size());
+    for (unsigned i=0; i<visitor.cycles.size(); i++) {
+        const auto& cycleOrig = visitor.cycles[i];
+        auto& cycleDest = cycles[offset + i];
+
+        cycleDest.resize(cycleOrig.size());
+        for (unsigned j=0; j<cycleOrig.size(); j++) {
+            auto& p = cycleOrig[j];
+            cycleDest[j] = Connection(p.first, p.second);
+        }
+    }
+}
+
 } // namespace queries
 } // namespace llpm

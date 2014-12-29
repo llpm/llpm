@@ -2,13 +2,17 @@
 
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
+#include <analysis/graph_queries.hpp>
+
+#include <set>
 
 using namespace std;
 
 namespace llpm {
 
 Pipeline::Pipeline(MutableModule* mod) :
-    _module(mod)
+    _module(mod),
+    _built(false)
 { 
     if (mod == NULL)
         throw InvalidArgument("Module argument cannot be NULL!");
@@ -22,42 +26,63 @@ void Pipeline::build() {
     insertPipelineRegs();
 }
 
-static bool is_module(Block* b) {
-    return dynamic_cast<Module*>(b) != NULL;
-}
-
-static bool is_dummy(Block* b) {
-    return dynamic_cast<DummyBlock*>(b) != NULL;
-}
-
 void Pipeline::buildMinimum() {
     _stages.clear();
 
-    const set<Connection>& allConns = _module->conns()->raw();
-    for (const Connection& c: allConns) {
-        Block* a = c.source()->owner();
-        Block* b = c.sink()->owner();
+    // Strictly speaking, pipeline registers are only necessary for
+    // _correctness_ when there exists a cycle in the graph. Therefore,
+    // the _minimum_ pipelining is found by locating graph cycles and breaking
+    // them with pipeline regs. We can further reduce pipeline regs by
+    // breaking them starting with the most common edges in cycles --
+    // breaking those edges simultaneously breaks the most cycles!
+    //
+    vector< set<Connection> > unorderedCycles;
+    map<Connection, unsigned> occurrences;
+   
+    {
+        vector< vector<Connection> > cycles;
+        queries::FindAllCycles(_module, cycles);
 
-        if (!c.source()->pipelineable()) {
-            // Don't add stages if output is not pipeline-able
-            _stages[c] = 0;
-        } else if (is_module(a) || is_module(b)) {
-            // Connections between modules and other things generally need to
-            // be pipelined 
-            _stages[c] = 1;
-
-            if (is_dummy(a) || is_dummy(b))
-                // Exception: module outputs can be passed through
-                _stages[c] = 0;
-        } else if (dynamic_cast<ControlRegion*>(_module)) {
-            // If we are pipelining a control region, connections can avoid
-            // pipelining.
-            _stages[c] = 0;
-        } else {
-            // Conservatively make everything else pipelined
-            _stages[c] = 1;
+        for (auto&& cycle: cycles) {
+            unorderedCycles.emplace_back(cycle.begin(), cycle.end());
+            for (auto&& conn: cycle)
+                occurrences[conn] += 1;
         }
     }
+
+    while (!unorderedCycles.empty()) {
+        // Find the most common edge (connection)
+        Connection maxC;
+        unsigned   maxV = 0;
+        for (auto op: occurrences) {
+            if (!op.first.source()->pipelineable())
+                continue;
+            if (op.second > maxV) {
+                maxC = op.first;
+                maxV = op.second;
+            }
+        }
+
+        // maxC is the connection with the most occurrences. Pipeline it.
+        _stages[maxC] = 1;
+
+        // Remove all cycles which contained maxC -- they are broken
+        for (unsigned i=0; i<unorderedCycles.size(); i++) {
+            auto& cycle = unorderedCycles[i];
+            if (cycle.count(maxC)) {
+                for (auto& conn: cycle) {
+                    auto& o = occurrences[conn];
+                    assert( o > 0 );
+                    o -= 1;
+                    if (o == 0)
+                        occurrences.erase(conn);
+                }
+                unorderedCycles.erase(unorderedCycles.begin() + i);
+            }
+        }
+    }
+
+    _built = true;
 }
 
 void Pipeline::insertPipelineRegs() {

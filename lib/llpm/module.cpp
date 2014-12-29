@@ -11,6 +11,12 @@ using namespace std;
 
 namespace llpm {
 
+void Module::internalDrivers(std::vector<OutputPort*>& drivers) const {
+    for (auto input: inputs()) {
+        drivers.push_back(this->getDriver(input));
+    }
+}
+
 ContainerModule::~ContainerModule() {
     if (_pipeline)
         delete _pipeline;

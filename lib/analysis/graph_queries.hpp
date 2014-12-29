@@ -2,6 +2,7 @@
 #define __ANALYSIS_GRAPH_QUERIES_HPP__
 
 #include <llpm/connection.hpp>
+#include <llpm/module.hpp>
 
 namespace llpm {
 namespace queries {
@@ -30,6 +31,9 @@ bool TokenOrderAnalysis(Port* source,
 
 // Does this interface potentially deliver responses in the wrong order?
 bool CouldReorderTokens(Interface*);
+
+void FindAllCycles(Module*,
+                   std::vector< std::vector<Connection> >&);
 
 };
 };

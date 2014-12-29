@@ -122,6 +122,8 @@ public:
     bool contains(Connection c) const;
     unsigned countPipelineDepth() const;
 
+    std::vector< std::pair<SrcPort*, DstPort*> > extractCycle() const;
+
     bool operator==(const Path& p) const {
         return _path == p._path;
     }

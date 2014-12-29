@@ -42,6 +42,36 @@ bool Path<SrcPort, DstPort>::hasCycle() const {
 
 template<typename SrcPort,
          typename DstPort>
+std::vector< std::pair<SrcPort*, DstPort*> >
+Path<SrcPort, DstPort>::extractCycle() const {
+    std::set< std::pair<SrcPort*, DstPort*> > seen;
+    std::pair<SrcPort*, DstPort*> crux;
+    for (const auto& pp: _path) {
+        if (seen.count(pp) != 0) {
+            crux = pp;
+            break;
+        }
+        seen.insert(pp);
+    }
+
+    bool hitCrux = false;
+    std::vector< std::pair<SrcPort*, DstPort*> > cycle;
+    for (const auto& pp: _path) {
+        if (!hitCrux) {
+            if (pp == crux)
+                hitCrux = true;
+        } else {
+            cycle.push_back(pp);
+            if (pp == crux)
+                break;
+        }
+    }
+
+    return cycle; 
+}
+
+template<typename SrcPort,
+         typename DstPort>
 void Path<SrcPort, DstPort>::print() const {
     for (const auto& pp: _path) {
         printf("%p owner: %p %s -- %p owner %p %s\n",
