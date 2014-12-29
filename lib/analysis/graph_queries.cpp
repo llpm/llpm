@@ -6,6 +6,8 @@
 #include <analysis/graph.hpp>
 #include <analysis/graph_impl.hpp>
 
+#include <boost/range/adaptor/reversed.hpp>
+
 using namespace std;
 
 namespace llpm {
@@ -90,7 +92,7 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
     // Write some Thorough unit tests!
     void addSource(const IOPath& path) {
         bool requires = false;
-        for (const auto& edge: path.raw()) {
+        for (const auto& edge: boost::adaptors::reverse(path.raw())) {
             if (edge.first == source || edge.second == source) {
                 requiresSource[edge.first] = true;
                 requires = true;
@@ -98,6 +100,8 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
                 OutputPort* op = edge.second;
                 auto dr = op->depRule();
                 auto deps = op->deps();
+                // Assumption: requiresSource[x] defaults to 'false' when key
+                // x is not an entry
                 if (dr.inputType() == DependenceRule::AND) {
                     for (auto dep: deps) {
                         requires |= requiresSource[dep];
