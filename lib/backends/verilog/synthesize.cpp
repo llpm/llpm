@@ -782,7 +782,7 @@ struct ModulePrinter : public AttributePrinter {
 
 struct PipelineRegPrinter : public AttributePrinter {
     std::string name(Block* m) {
-        return "PipelineReg_SingleStore";
+        return "PipelineReg_DoubleWidth";
     }
     void operator()(VerilogSynthesizer::Context& ctxt, PipelineRegister* r) {
         print(ctxt, "Width", bitwidth(r->din()->type()), true);
