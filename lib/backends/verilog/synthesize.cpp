@@ -417,7 +417,7 @@ public:
         unsigned ib = bitwidth(f->din()->type());
         unsigned ob = bitwidth(f->dout()->type());
         assert(ob > ib);
-        string msb = str(boost::format("%1%[%2]")
+        string msb = str(boost::format("%1%[%2%]")
                             % ctxt.name(f->din())
                             % (ib - 1));
         ctxt << "    assign " << ctxt.name(f->dout()) << " = { "
@@ -798,6 +798,18 @@ struct RTLRegAttr : public AttributePrinter {
     }
 };
 
+struct BlockRAMAttr: public AttributePrinter {
+    std::string name(Block* b) {
+        BlockRAM* bram = dynamic_cast<BlockRAM*>(b);
+        return str(boost::format("BlockRAM_%1%RW") % bram->ports_size());
+    }
+    void operator()(VerilogSynthesizer::Context& ctxt, BlockRAM* b) {
+        print(ctxt, "Width", bitwidth(b->type()), false);
+        print(ctxt, "Depth", b->depth(), false);
+        print(ctxt, "AddrWidth", clog2(b->depth()), true);
+    }
+};
+
 void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new BinaryOpPrinter<IntAddition>("+"));
     _printers.appendEntry(new BinaryOpPrinter<IntSubtraction>("-"));
@@ -830,6 +842,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new VModulePrinter<PipelineRegister,
                                              PipelineRegPrinter>());
     _printers.appendEntry(new VModulePrinter<RTLReg, RTLRegAttr>());
+    _printers.appendEntry(new VModulePrinter<BlockRAM, BlockRAMAttr>());
     _printers.appendEntry(new VModulePrinter<Module, ModulePrinter>());
 }
 

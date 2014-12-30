@@ -1,6 +1,8 @@
 #include "library.hpp"
 
+#include <libraries/core/std_library.hpp>
 #include <frontends/llvm/instruction.hpp>
+#include <util/llvm_type.hpp>
 
 #include <llvm/IR/Constants.h>
 
@@ -29,15 +31,22 @@ class GetElementPtrRefiner : public BlockRefiner {
 
         assert(ins->getType()->isPointerTy());
         auto pt = llvm::dyn_cast<llvm::PointerType>(ins->getType());
-        auto c = new Constant(llvm::ConstantPointerNull::get(pt));
-        auto w = new Wait(ins->getType());
-        conns.connect(c->dout(), w->din());
-        conns.remap(mi->dout(), w->dout());
-
-        for (auto ip: mi->inputs()) {
-            auto newIP = w->newControl(ip->type());
-            conns.remap(ip, newIP);
+        auto extr = new Extract(mi->din()->type(), {2});
+        conns.remap(mi->din(), extr->din());
+        int widthDiff = bitwidth(pt) - bitwidth(extr->dout()->type());
+        OutputPort* valOut = extr->dout();
+        if (widthDiff > 0) {
+            auto extend = new IntExtend(widthDiff, false, extr->dout()->type());
+            conns.connect(extr->dout(), extend->din());
+            valOut = extend->dout();
+        } else if (widthDiff < 0) {
+            auto trunc = new IntTruncate(widthDiff * -1, extr->dout()->type());
+            conns.connect(extr->dout(), trunc->din());
+            valOut = trunc->dout();
         }
+        auto cast = new Cast(valOut->type(), mi->dout()->type());
+        conns.connect(valOut, cast->din());
+        conns.remap(mi->dout(), cast->dout());
 
         return true;
     }
