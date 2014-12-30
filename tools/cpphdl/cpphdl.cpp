@@ -54,15 +54,20 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<CheckConnectionsPass>();
 
+        FileSet fs(true, dirName, true);
+        GraphvizOutput gv(d);
+        VerilatorWedge vw(&vs);
+ 
+        // printf("Writing graphviz output...\n");
+        // for (Module* mod: d.modules()) {
+            // gv.writeModule(fs.create(mod->name() + ".gv"), mod);
+        // }
+ 
         printf("Elaborating...\n");
         d.elaborate();
         printf("Optimizing...\n");
         d.optimize();
 
-        GraphvizOutput gv(d);
-        VerilatorWedge vw(&vs);
-
-        FileSet fs(true, dirName, true);
         for (Module* mod: d.modules()) {
             printf("Interfaces: \n");
             for (InputPort* ip: mod->inputs()) {
@@ -74,11 +79,11 @@ int main(int argc, const char** argv) {
                        op->name().c_str(), typestr(op->type()).c_str());
             }
 
-            printf("Writing Verilog output...\n");
-            vw.writeModule(fs, mod);
-
             printf("Writing graphviz output...\n");
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
+
+            printf("Writing Verilog output...\n");
+            vw.writeModule(fs, mod);
         }
 
     } catch (Exception& e) {

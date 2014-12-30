@@ -43,6 +43,7 @@ class CPPHDLClass : public ContainerModule {
 
     void addMember(std::string name, LLVMFunction*);
     void connectMem(LLVMFunction*);
+    llvm::GetElementPtrInst* getClassDeref(llvm::Value*) const;
     unsigned resolveMember(llvm::Value*) const;
     void buildVariables();
     Block* buildVariable(unsigned i);

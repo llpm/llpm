@@ -65,6 +65,7 @@ class Cast : public CommunicationIntrinsic, public Function {
     llvm::CastInst* _cast;
 public:
     Cast(llvm::CastInst* cast);
+    Cast(llvm::Type* from, llvm::Type* to);
     virtual ~Cast() { }
 
     DEF_GET(cast);

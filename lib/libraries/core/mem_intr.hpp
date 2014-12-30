@@ -78,9 +78,12 @@ public:
 // Potentially important: the logically separate R/W ports in this class
 // may be combined into a single, multiplexed R/W port.
 class FiniteArray : public Memory {
+    unsigned _depth;
 public:
     FiniteArray(llvm::Type* type, unsigned depth);
     virtual ~FiniteArray() { }
+
+    DEF_GET_NP(depth);
 };
 
 } // namespace llpm

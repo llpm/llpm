@@ -39,6 +39,12 @@ Cast::Cast(llvm::CastInst* cast) :
 {
 }
 
+Cast::Cast(llvm::Type* from, llvm::Type* to) :
+    Function(from, to),
+    _cast(NULL)
+{
+}
+
 Join::Join(const vector<llvm::Type*>& inputs) :
     _dout(this, StructType::get(inputs[0]->getContext(), inputs))
 {

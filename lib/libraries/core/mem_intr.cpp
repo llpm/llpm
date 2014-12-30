@@ -34,7 +34,8 @@ Register::Register(llvm::Type* ty) :
 { }
 
 FiniteArray::FiniteArray(llvm::Type* ty, unsigned depth) :
-    Memory(ty, llvm::Type::getIntNTy(ty->getContext(), clog2(depth)))
+    Memory(ty, llvm::Type::getIntNTy(ty->getContext(), clog2(depth))),
+    _depth(depth)
 { }
 
 } // namespace llpm

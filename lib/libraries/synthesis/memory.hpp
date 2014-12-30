@@ -46,6 +46,44 @@ public:
     }
 };
 
+
+// Block RAM (BRAM) are assumed to have N true RW ports, zero R ports
+// and zero W ports.
+// Port req format:
+//   { isWrite : i1, data : *, idx : i* } -- for reads, data is garbage
+// Port resp format:
+//   { data : * } -- for writes, data is garbage
+class BlockRAM : public Block {
+    llvm::Type* _type;
+    unsigned _depth;
+    std::vector<Interface*> _ports;
+    std::map<const OutputPort*, std::vector<InputPort*> > _deps;
+
+public:
+    BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts);
+
+    DEF_GET_NP(type);
+    DEF_GET_NP(depth);
+    DEF_ARRAY_GET(ports);
+
+    virtual bool hasState() const {
+        return true;
+    }
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        return DependenceRule(DependenceRule::OR,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+        return _deps.find(op)->second;
+    }
+
+    virtual bool pipelineable(const OutputPort* op) const {
+        return false;
+    }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_LIBRARIES_SYNTHESIS_MEMORY_HPP__

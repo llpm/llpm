@@ -2,6 +2,7 @@
 
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/logic_intr.hpp>
+#include <libraries/core/std_library.hpp>
 #include <frontends/cpphdl/library.hpp>
 #include <util/misc.hpp>
 #include <util/llvm_type.hpp>
@@ -60,8 +61,12 @@ Block* CPPHDLClass::buildVariable(unsigned i) {
         llvm::ArrayType* arrTy = llvm::dyn_cast<llvm::ArrayType>(ty);
         FiniteArray* array = new FiniteArray(arrTy->getElementType(),
                                              arrTy->getNumElements());
-        _writePorts[i] = new InterfaceMultiplexer(array->write());
-        _readPorts[i] = new InterfaceMultiplexer(array->read());
+        auto writeIM = new InterfaceMultiplexer(array->write());
+        _writePorts[i] = writeIM;
+        conns()->connect(writeIM->client(), array->write());
+        auto readIM = new InterfaceMultiplexer(array->read());
+        conns()->connect(readIM->client(), array->read());
+        _readPorts[i] = readIM;
         _arrays[i] = array;
         return array;
     } else {
@@ -88,10 +93,11 @@ void CPPHDLClass::connectMem(LLVMFunction* func) {
             assert(modF == _modules.end());
             assert((regF == _regs.end()) != (arrayF == _arrays.end())); 
 
+            auto im = _readPorts[varIdx];
+            assert(im != NULL);
+            auto iface = im->createServer();
+
             if (regF != _regs.end()) {
-                auto im = _readPorts[varIdx];
-                assert(im != NULL);
-                auto iface = im->createServer();
                 auto w = new Wait(iface->reqType());
                 assert(iface->req() == iface->din());
                 auto c = Constant::getVoid(design());
@@ -101,7 +107,15 @@ void CPPHDLClass::connectMem(LLVMFunction* func) {
                                  w->newControl(client->dout()->type()));
                 conns()->connect(iface->dout(), client->din());
             } else if (arrayF != _arrays.end()) {
-                assert(false && "Arrays unsupported right now");
+                auto cast = new Cast(
+                    ptr->getType(),
+                    llvm::Type::getInt64Ty(ptr->getContext()));
+                conns()->connect(client->dout(), cast->din());
+                auto trunc = new IntTruncate(cast->dout()->type(),
+                                             iface->din()->type());
+                conns()->connect(cast->dout(), trunc->din());
+                conns()->connect(trunc->dout(), iface->din());
+                conns()->connect(iface->dout(), client->din());
             }
         } else if (store != NULL) {
             auto ptr = store->getPointerOperand();
@@ -113,16 +127,33 @@ void CPPHDLClass::connectMem(LLVMFunction* func) {
             assert(modF == _modules.end());
             assert((regF == _regs.end()) != (arrayF == _arrays.end())); 
 
+            auto im = _writePorts[varIdx];
+            assert(im != NULL);
+            auto iface = im->createServer();
+ 
             if (regF != _regs.end()) {
-                auto im = _writePorts[varIdx];
-                assert(im != NULL);
-                auto iface = im->createServer();
                 auto extr = new Extract(client->reqType(), {0});
                 conns()->connect(client->dout(), extr->din());
                 conns()->connect(extr->dout(), iface->din());
                 conns()->connect(iface->dout(), client->din());
             } else if (arrayF != _arrays.end()) {
-                assert(false && "Arrays unsupported right now");
+                auto mem = _arrays[varIdx];
+                auto split = new Split(client->dout()->type());
+                conns()->connect(client->dout(), split->din());
+                auto cast = new Cast(
+                    ptr->getType(),
+                    llvm::Type::getInt64Ty(ptr->getContext()));
+                conns()->connect(split->dout(1), cast->din());
+                auto trunc = new IntTruncate(
+                    cast->dout()->type(),
+                    llvm::Type::getIntNTy(ptr->getContext(),
+                                          clog2(mem->depth()))); 
+                conns()->connect(cast->dout(), trunc->din());
+                auto join = new Join(iface->din()->type());
+                conns()->connect(trunc->dout(), join->din(1));
+                conns()->connect(split->dout(0), join->din(0));
+                conns()->connect(join->dout(), iface->din());
+                conns()->connect(iface->dout(), client->din());
             }
         } else {
             throw InvalidArgument("Don't know how to translate instruction: "
@@ -131,7 +162,7 @@ void CPPHDLClass::connectMem(LLVMFunction* func) {
     }
 }
 
-unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
+llvm::GetElementPtrInst* CPPHDLClass::getClassDeref(llvm::Value* ptr) const {
     assert(ptr->getType()->isPointerTy());
     llvm::GetElementPtrInst* gep =
         llvm::dyn_cast_or_null<llvm::GetElementPtrInst>(ptr);
@@ -141,23 +172,30 @@ unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
     llvm::PointerType* ptrType =
         llvm::dyn_cast<llvm::PointerType>(gep->getPointerOperandType());
     if (ptrType->getPointerElementType() == this->_type) {
-        // I can deal with this since we are indexing off of my base type
-        assert(gep->getNumOperands() >= 3);
-        llvm::Value* operand = gep->getOperand(2); 
-        llvm::ConstantInt* ci =
-            llvm::dyn_cast_or_null<llvm::ConstantInt>(operand);
-        if (ci == NULL)
-            throw InvalidArgument(
-                "Cannot dynamically index into module variables!");
-        uint64_t idx = ci->getLimitedValue();
-        if (idx >= _variables.size()) {
-            throw InvalidArgument(
-                "Pointer is out of module bounds!");
-        }
-        return (unsigned)idx;
+        return gep; 
+
     } else {
-        return resolveMember(gep->getPointerOperand());
+        return getClassDeref(gep->getPointerOperand());
     }
+}
+
+unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
+    auto gep = getClassDeref(ptr);
+
+    // I can deal with this since we are indexing off of my base type
+    assert(gep->getNumOperands() >= 3);
+    llvm::Value* operand = gep->getOperand(2); 
+    llvm::ConstantInt* ci =
+        llvm::dyn_cast_or_null<llvm::ConstantInt>(operand);
+    if (ci == NULL)
+        throw InvalidArgument(
+            "Cannot dynamically index into module variables!");
+    uint64_t idx = ci->getLimitedValue();
+    if (idx >= _variables.size()) {
+        throw InvalidArgument(
+            "Pointer is out of module bounds!");
+    }
+    return (unsigned)idx;
 }
 
 } // namespace cpphdl
