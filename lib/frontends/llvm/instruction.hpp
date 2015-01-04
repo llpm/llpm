@@ -179,6 +179,8 @@ public:
     virtual const OutputPort* output() const {
         return &_dout;
     }
+
+    virtual std::string print() const;
 };
 
 class LLVMLoadInstruction : public LLVMImpureInstruction {

@@ -1,6 +1,7 @@
 #include "design.hpp"
 
 #include <llpm/module.hpp>
+#include <util/misc.hpp>
 
 using namespace std;
 
@@ -31,7 +32,9 @@ void Design::elaborate() {
             m->blocks(blocks);
             sc->unrefined(blocks);
             for(Block* b: blocks) {
-                printf("\t%s\n", typeid(*b).name());
+                printf("\t%s: %s\n",
+                       cpp_demangle(typeid(*b).name()).c_str(),
+                       b->print().c_str());
             }
         }
 

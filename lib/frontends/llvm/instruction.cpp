@@ -443,6 +443,10 @@ public:
     }
 };
 
+std::string LLVMMiscInstruction::print() const {
+    return valuestr(_ins);
+}
+
 LLVMLoadInstruction::LLVMLoadInstruction(const LLVMBasicBlock* bb,
                                          llvm::Instruction* ins) :
         LLVMImpureInstruction(bb, ins, &_din),
