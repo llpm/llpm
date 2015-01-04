@@ -217,7 +217,10 @@ llvm::Type* Bitwise::InType(unsigned N, llvm::Type* t) {
         throw InvalidArgument("Bitwise must have at least one input!");
     if (!t->isIntegerTy())
         throw InvalidArgument("All inputs to Bitwise must be ints!");
-    return VectorType::get(t, N);
+    vector<llvm::Type*> sig;
+    for (unsigned i=0; i<N; i++)
+        sig.push_back(t);
+    return StructType::get(t->getContext(), sig);
 }
 
 llvm::Type* Bitwise::OutType(unsigned N, llvm::Type* t) {
