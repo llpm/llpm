@@ -7,13 +7,21 @@ namespace llpm {
 
 std::string cpp_demangle(const char* name);
 
-unsigned inline clog2(uint64_t n) {
-    for (unsigned i=64; i>0; i--) {
-        if (n & (1ull << (i - 1))) {
-            return i - 1;
-        }
+/* How many bits does it take to store an index into N things? */
+unsigned inline idxwidth(uint64_t N) {
+    if (N == 0)
+        return 0;
+
+    // Subtract 1 to make n the largest possible value
+    N -= 1;
+
+    // How many shifts to the right does it take to make n zero?
+    unsigned shifts = 0;
+    while (N != 0) {
+        N >>= 1;
+        shifts++;
     }
-    return 0;
+    return shifts;
 }
 
 };

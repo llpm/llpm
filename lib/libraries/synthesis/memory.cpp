@@ -20,7 +20,7 @@ BlockRAM::BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts) :
     llvm::Type* reqType =
         llvm::StructType::get(
             ctxt, { llvm::Type::getInt1Ty(ctxt),
-                    ty, llvm::Type::getIntNTy(ctxt, clog2(depth)) });
+                    ty, llvm::Type::getIntNTy(ctxt, idxwidth(depth)) });
     llvm::Type* respType = ty;
 
     for (unsigned i=0; i<numPorts; i++) {

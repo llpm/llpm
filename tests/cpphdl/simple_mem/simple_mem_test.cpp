@@ -33,6 +33,8 @@ int main() {
 #endif
     }
 
+    mem->run(5);
+
     printf("Summing...\n");
     mem->sum_req(0);
     mem->sum_resp(&l);

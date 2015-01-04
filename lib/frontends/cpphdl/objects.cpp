@@ -147,7 +147,7 @@ void CPPHDLClass::connectMem(LLVMFunction* func) {
                 auto trunc = new IntTruncate(
                     cast->dout()->type(),
                     llvm::Type::getIntNTy(ptr->getContext(),
-                                          clog2(mem->depth()))); 
+                                          idxwidth(mem->depth()))); 
                 conns()->connect(cast->dout(), trunc->din());
                 auto join = new Join(iface->din()->type());
                 conns()->connect(trunc->dout(), join->din(1));

@@ -11,10 +11,9 @@ OPT=../../../bin/llvm/bin/opt
 NAME=simple_mem
 ROOT=SimpleMem
 
-default: ${NAME}_test ${ROOT}.pdf
+default: ${NAME}_test ${ROOT}.pdf ${ROOT}_simple.pdf
 
-${ROOT}.pdf: obj/${ROOT}.gv
-	dot -Tpdf -o ${ROOT}.pdf obj/${ROOT}.gv
+
 
 obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
 	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
@@ -31,6 +30,8 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	${OPT} ${OPTS} $@.tmp -o $@
 	${DIS} $@
 
+%.pdf: obj/%.gv
+	dot -Tpdf -o $@ $< || true
 
 clean:
 	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll

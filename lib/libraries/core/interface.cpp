@@ -27,7 +27,7 @@ bool InterfaceMultiplexer::refine(ConnectionDB& conns) const {
 
         return true;
     } else {
-        unsigned tag_width = clog2(_servers.size());
+        unsigned tag_width = idxwidth(_servers.size());
         llvm::Type* tag = llvm::Type::getIntNTy(
             _client.dout()->type()->getContext(), tag_width);
         auto tagger = new Tagger(_client.dout()->type(),

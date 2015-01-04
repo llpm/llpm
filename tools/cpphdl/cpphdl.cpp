@@ -80,11 +80,13 @@ int main(int argc, const char** argv) {
                        op->name().c_str(), typestr(op->type()).c_str());
             }
 
-            printf("Writing graphviz output...\n");
-            gv.writeModule(fs.create(mod->name() + ".gv"), mod, false);
 
             printf("Writing Verilog output...\n");
             vw.writeModule(fs, mod);
+
+            printf("Writing graphviz output...\n");
+            gv.writeModule(fs.create(mod->name() + ".gv"), mod, true);
+            gv.writeModule(fs.create(mod->name() + "_simple.gv"), mod, false);
         }
 
     } catch (Exception& e) {

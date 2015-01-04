@@ -22,11 +22,13 @@ uint64_t SimpleMem::read(size_t idx) {
         // return 0;
     return mem[idx];
 }
+#if 0
 uint64_t SimpleMem::readInv(size_t idx) {
     // if (idx >= SIZE)
         // return 0;
     return mem[SIZE - idx];
 }
+#endif
 uint64_t SimpleMem::write(size_t idx, uint64_t val) {
     // if (idx < SIZE) {
         uint64_t old = mem[idx];

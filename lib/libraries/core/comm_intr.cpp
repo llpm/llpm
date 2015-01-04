@@ -104,7 +104,7 @@ Extract::Extract(llvm::Type* t, vector<unsigned> path) :
 
 llvm::Type* Multiplexer::GetInput(unsigned N, llvm::Type* type) {
     vector<llvm::Type*> types;
-    types.push_back(llvm::Type::getIntNTy(type->getContext(), clog2(N)));
+    types.push_back(llvm::Type::getIntNTy(type->getContext(), idxwidth(N)));
     for (unsigned i=0; i<N; i++)
         types.push_back(type);
     return llvm::StructType::get(type->getContext(), types);
@@ -117,7 +117,7 @@ Multiplexer::Multiplexer(unsigned N, llvm::Type* type) :
 llvm::Type* Router::GetInput(unsigned N, llvm::Type* type) {
     return llvm::StructType::get(
         type->getContext(),
-        {llvm::Type::getIntNTy(type->getContext(), clog2(N)),
+        {llvm::Type::getIntNTy(type->getContext(), idxwidth(N)),
          type});
 }
 

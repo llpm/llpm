@@ -810,7 +810,7 @@ struct BlockRAMAttr: public AttributePrinter {
     void operator()(VerilogSynthesizer::Context& ctxt, BlockRAM* b) {
         print(ctxt, "Width", bitwidth(b->type()), false);
         print(ctxt, "Depth", b->depth(), false);
-        print(ctxt, "AddrWidth", clog2(b->depth()), true);
+        print(ctxt, "AddrWidth", idxwidth(b->depth()), true);
     }
 };
 
