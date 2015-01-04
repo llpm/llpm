@@ -7,6 +7,7 @@
 
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Instructions.h>
 
 #include <util/llvm_type.hpp>
 
@@ -63,7 +64,7 @@ public:
 
         // Add an extractor for each input and add it to the value
         // map
-        auto inputMap = lbb->inputMap();
+        auto inputMap = lbb->nonPhiInputMap();
         for(auto p: inputMap) {
             llvm::Value* v = p.first;
             unsigned inputNum = p.second;
@@ -104,24 +105,38 @@ public:
 
             // For each input, find the correct output port and
             // connect it
-            unsigned hwNum = 0;
-            for (unsigned i=0; i<ins.getNumOperands(); i++) {
-                if (li->hwIgnoresOperand(i))
-                    continue;
-                llvm::Value* operand = ins.getOperand(i);
-                auto f = valueMap.find(operand);
-                if (f != valueMap.end()) {
-                    OutputPort* port = f->second;
-                    conns.connect(port, inputPorts[hwNum]);
-                } else {
-                    // If it's not local it better be a
-                    // constant!
-                    Constant* c = new Constant(operand);
-                    if (operand->hasName())
-                        c->name(operand->getName());
-                    conns.connect(c->dout(), inputPorts[hwNum]);
+            if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
+                // Once again, PHI nodes are special
+                auto fInputNum = lbb->phiInputMap().find(phi);
+                assert(fInputNum != lbb->phiInputMap().end());
+                auto inputNum = fInputNum->second;
+                Extract* e = new Extract(lbb->input()->type(), {inputNum});
+                if (ins.hasName())
+                    e->name(ins.getName().str() + "_extractor");
+                inputs.push_back(e->din());
+                assert(inputPorts.size() == 1);
+                conns.connect(e->dout(), inputPorts[0]);
+            } else {
+                // Every other node performs normally
+                unsigned hwNum = 0;
+                for (unsigned i=0; i<ins.getNumOperands(); i++) {
+                    if (li->hwIgnoresOperand(i))
+                        continue;
+                    llvm::Value* operand = ins.getOperand(i);
+                    auto f = valueMap.find(operand);
+                    if (f != valueMap.end()) {
+                        OutputPort* port = f->second;
+                        conns.connect(port, inputPorts[hwNum]);
+                    } else {
+                        // If it's not local it better be a
+                        // constant!
+                        Constant* c = new Constant(operand);
+                        if (operand->hasName())
+                            c->name(operand->getName());
+                        conns.connect(c->dout(), inputPorts[hwNum]);
+                    }
+                    hwNum += 1;
                 }
-                hwNum += 1;
             }
         }
 

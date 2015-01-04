@@ -135,7 +135,9 @@ const std::vector<InputPort*>& LLVMImpureBasicBlock::deps(
 void LLVMBasicBlock::addInput(llvm::Value* v) {
     if (_inputMap.find(v) != _inputMap.end())
         return;
-    _inputMap[v] = _numInputs++;
+    const unsigned inputNum = _numInputs++;
+    _inputMap[v].insert(inputNum);
+    _nonPhiInputMap[v] = inputNum;
     unsigned pred_count = 0;
     for(auto iter = llvm::pred_begin(_basicBlock);
         iter != llvm::pred_end(_basicBlock); iter++) {
@@ -166,13 +168,13 @@ void LLVMBasicBlock::buildRequests() {
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             inputTypes.push_back(LLVMInstruction::GetOutput(phi));
+            _phiInputMap[phi] = _numInputs;
             assert(phi->getNumIncomingValues() > 0);
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
                 llvm::Value* v = phi->getIncomingValue(i);
                 llvm::BasicBlock* pred = phi->getIncomingBlock(i);
-                assert(_inputMap.find(v) == _inputMap.end());
-                _inputMap[v] = _numInputs;
                 _valueSources[v].insert(pred);
+                _inputMap[v].insert(_numInputs);
 
                 auto predBlock = _function->blockMap(pred);
                 assert(predBlock);
@@ -243,11 +245,12 @@ void LLVMBasicBlock::buildIO() {
 
     for (auto& pr: _inputMap) {
         auto value = pr.first;
-        auto idx = pr.second;
-        if (inputs[idx] != NULL) {
-            assert(inputs[idx] == GetHWType(value));
-        } else {
-            inputs[idx] = GetHWType(value);
+        for (auto idx: pr.second) {
+            if (inputs[idx] != NULL) {
+                assert(inputs[idx] == GetHWType(value));
+            } else {
+                inputs[idx] = GetHWType(value);
+            }
         }
     }
 
@@ -370,18 +373,19 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Value*>& 
     // printf("\n");
     for (auto pr: inputMap) {
         auto v = pr.first;
-        auto idx = pr.second;
-        // printf("%u: %s\n", idx, v->getName().str().c_str());
+        for (auto idx: pr.second) {
+            // printf("%u: %s\n", idx, v->getName().str().c_str());
 
-        const std::set<llvm::BasicBlock*>& sources =
-            _basicBlock->valueSources(v);
-        assert(sources.size() > 0);
-        llvm::BasicBlock* predBB =
-            (pred == NULL) ?
-                (NULL) :
-                (pred->basicBlock()->basicBlock());
-        if (sources.count(predBB) > 0) {
-            inputData[idx] = v;
+            const std::set<llvm::BasicBlock*>& sources =
+                _basicBlock->valueSources(v);
+            assert(sources.size() > 0);
+            llvm::BasicBlock* predBB =
+                (pred == NULL) ?
+                    (NULL) :
+                    (pred->basicBlock()->basicBlock());
+            if (sources.count(predBB) > 0) {
+                inputData[idx] = v;
+            }
         }
     }
 

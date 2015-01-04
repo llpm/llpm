@@ -7,6 +7,10 @@
 #include <libraries/core/interface.hpp>
 #include <libraries/util/types.hpp>
 
+namespace llvm {
+    class PHINode;
+}
+
 namespace llpm {
 
 // Fwd defs. C++, you so silly!
@@ -83,7 +87,10 @@ protected:
     LLVMFunction* _function;
     llvm::BasicBlock* _basicBlock;
 
-    std::map<llvm::Value*, unsigned> _inputMap;
+    std::map<llvm::PHINode*, unsigned> _phiInputMap;
+    std::map<llvm::Value*, unsigned> _nonPhiInputMap;
+    std::map<llvm::Value*, std::set<unsigned> > _inputMap;
+
     std::map<llvm::Value*, std::set<llvm::BasicBlock*> > _valueSources;
     std::map<llvm::Value*, unsigned> _outputMap;
     std::map<llvm::BasicBlock*, unsigned> _successorMap;
@@ -139,7 +146,7 @@ public:
     }
 
 
-    unsigned mapInput(llvm::Value* ins) const {
+    std::set<unsigned> mapInput(llvm::Value* ins) const {
         auto f = _inputMap.find(ins);
         assert(f != _inputMap.end());
         return f->second;
@@ -149,8 +156,18 @@ public:
         return _inputMap.count(v) > 0;
     }
 
-    const std::map<llvm::Value*, unsigned>& inputMap() const {
+    const std::map<llvm::Value*, std::set<unsigned> >& inputMap() const {
         return _inputMap;
+    }
+
+    const std::map<llvm::PHINode*, unsigned>&
+    phiInputMap() const {
+        return _phiInputMap;
+    }
+
+    const std::map<llvm::Value*, unsigned>&
+    nonPhiInputMap() const {
+        return _nonPhiInputMap;
     }
 
     unsigned mapOutput(llvm::Value* ins) const {
