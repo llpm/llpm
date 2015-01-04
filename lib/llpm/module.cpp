@@ -23,8 +23,18 @@ ContainerModule::~ContainerModule() {
 }
 
 InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
-    if (name == "")
-        name = str(boost::format("input%1%") % inputs().size());
+    if (name == "") {
+        set<string> ipNames;
+        for (auto currIP: inputs())
+            ipNames.insert(currIP->name());
+        unsigned num = 0;
+        while (true) {
+            name = str(boost::format("input%1%") % num);
+            if (ipNames.count(name) == 0)
+                break;
+            num++;
+        }
+    }
     auto dummy = new DummyBlock(ip->type());
     InputPort* extIp = new InputPort(this, ip->type(), name);
     _inputMap.insert(make_pair(extIp, dummy));
@@ -46,8 +56,19 @@ void ContainerModule::removeInputPort(InputPort* ip) {
 }
 
 OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
-    if (name == "")
-        name = str(boost::format("output%1%") % outputs().size());
+    if (name == "") {
+        set<string> opNames;
+        for (auto currOP: outputs())
+            opNames.insert(currOP->name());
+        unsigned num = 0;
+        while (true) {
+            name = str(boost::format("output%1%") % num);
+            if (opNames.count(name) == 0)
+                break;
+            num++;
+        }
+    }
+
     auto dummy = new DummyBlock(op->type());
     OutputPort* extOp = new OutputPort(this, op->type(), name);
     _outputMap.insert(make_pair(extOp, dummy));
@@ -156,12 +177,17 @@ Pipeline* ContainerModule::pipeline() {
 }
 
 void ContainerModule::validityCheck() const {
+    set<string> portNames;
     for (InputPort* ip: _inputs) {
         assert(_inputMap.count(ip) == 1);
+        assert(portNames.count(ip->name()) == 0);
+        portNames.insert(ip->name());
     }
 
     for (OutputPort* op: _outputs) {
         assert(_outputMap.count(op) == 1);
+        assert(portNames.count(op->name()) == 0);
+        portNames.insert(op->name());
     }
 
     set<Block*> blocks;
@@ -175,6 +201,7 @@ void ContainerModule::validityCheck() const {
     for (Module* m: sm) {
         m->validityCheck();
     }
+
 }
 
 bool ContainerModule::hasCycle() const {
