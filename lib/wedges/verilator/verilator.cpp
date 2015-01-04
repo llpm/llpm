@@ -171,7 +171,9 @@ static const std::string HppHeader = R"STRING(
 
 )STRING";
 
-std::string argName(int i) {
+std::string argName(llvm::Type* ty, int i) {
+    if (ty->isVoidTy())
+        return "";
     if (i < 0)
         return "";
     return str(boost::format("arg%1%") % i);
@@ -204,7 +206,7 @@ std::string typeSigPlain(llvm::Type* type, bool pointerize) {
     case llvm::Type::PointerTyID:
             return "uint64_t";
     case llvm::Type::VoidTyID:
-            return "char";
+            return "void";
     case llvm::Type::StructTyID:
         {
             llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
@@ -224,13 +226,15 @@ std::string typeSig(llvm::Type* type, bool pointerize, bool names) {
         llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
         std::string sig = "\n";
         for (auto i: boost::irange<size_t>(0, st->getNumElements())) {
-            auto arg = names ? (" " + argName(i)) : "";
-            sig = sig + "        " + typeSigPlain(st->getContainedType(i), pointerize) + arg +
+            auto ty = st->getContainedType(i);
+            auto arg = names ? (" " + argName(ty, i)) : "";
+            sig = sig + "        " + typeSigPlain(ty, pointerize) + arg +
                   + (i == (st->getNumElements() - 1) ? "  // " : ", // ") + typestr(st->getContainedType(i)) + "\n";
         }
         return sig;
     }
-    return typeSigPlain(type, pointerize) + (names ? (" " + argName(0)) : "");
+    return typeSigPlain(type, pointerize) +
+        (names ? (" " + argName(type, 0)) : "");
 }
 
 unsigned numArgs(llvm::Type* type) {
@@ -252,12 +256,14 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
     os << "    union " << name << " {\n"
        << boost::format("        uint32_t arr[%1%];\n") % numwords
        << "        struct {\n";
-    for (unsigned arg=0; arg<args; arg++) {
-        auto argType = type->getContainedType(arg);
-        if (bitwidth(argType) > 0) {
-            auto sig = typeSig(argType, false, false);
-            os << "            " << sig << " "
-               << argName(arg) << ";\n";
+    if (!type->isVoidTy()) {
+        for (unsigned arg=0; arg<args; arg++) {
+            auto argType = type->getContainedType(arg);
+            if (bitwidth(argType) > 0) {
+                auto sig = typeSig(argType, false, false);
+                os << "            " << sig << " "
+                   << argName(argType, arg) << ";\n";
+            }
         }
     }
     os << "        };\n"
@@ -567,11 +573,13 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
         auto type = ip->type();
         auto args = numArgs(type);
-        for (unsigned arg=0; arg<args; arg++) {
-            auto argType = type->getContainedType(arg);
-            if (bitwidth(argType) > 0)
-                os << "    arg." << argName(arg) << " = "
-                   << argName(arg) << ";\n";
+        if (!type->isVoidTy()) {
+            for (unsigned arg=0; arg<args; arg++) {
+                auto argType = type->getContainedType(arg);
+                if (bitwidth(argType) > 0)
+                    os << "    arg." << argName(argType, arg) << " = "
+                       << argName(argType, arg) << ";\n";
+            }
         }
 
         os << boost::format(
@@ -635,11 +643,14 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
         auto type = op->type();
         auto args = numArgs(type);
-        for (unsigned arg=0; arg<args; arg++) {
-            auto argType = type->getContainedType(arg);
-            if (bitwidth(argType) > 0)
-                os << "    *" << argName(arg) << " = "
-                   << "arg." << argName(arg) << ";\n";
+
+        if (!type->isVoidTy()) {
+            for (unsigned arg=0; arg<args; arg++) {
+                auto argType = type->getContainedType(arg);
+                if (bitwidth(argType) > 0)
+                    os << "    *" << argName(argType, arg) << " = "
+                       << "arg." << argName(argType, arg) << ";\n";
+            }
         }
 
         os << "}\n";

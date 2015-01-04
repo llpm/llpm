@@ -71,6 +71,14 @@ int main(int argc, const char** argv) {
 
         for (Module* mod: d.modules()) {
             printf("Interfaces: \n");
+            for (Interface* i: mod->interfaces()) {
+                printf("  <-> %s  %s -> %s\n",
+                       i->name().c_str(),
+                       typestr(i->req()->type()).c_str(),
+                       typestr(i->resp()->type()).c_str());
+            }
+
+            printf("Ports: \n");
             for (InputPort* ip: mod->inputs()) {
                 printf("  -> %s : %s\n",
                        ip->name().c_str(), typestr(ip->type()).c_str());

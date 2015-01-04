@@ -453,17 +453,18 @@ public:
         return dynamic_cast<Constant*>(b) != NULL;
     }
 
-    static std::string toString(llvm::Constant* c) {
-        switch (c->getType()->getTypeID()) {
+    static std::string toString(Constant* c) {
+        llvm::Constant* lc = c->value();
+        switch (c->dout()->type()->getTypeID()) {
             case llvm::Type::IntegerTyID:
                 return str(boost::format("%1%'d%2%\n") 
-                            % bitwidth(c->getType())
-                            % llvm::dyn_cast<llvm::ConstantInt>(c)->
+                            % bitwidth(c->dout()->type())
+                            % llvm::dyn_cast<llvm::ConstantInt>(lc)->
                                     getValue().toString(10, true));
             case llvm::Type::PointerTyID:
-                assert(c->isNullValue());
+                assert(lc == NULL || lc->isNullValue());
                 return str(boost::format("%1%'h%2%\n") 
-                            % bitwidth(c->getType())
+                            % bitwidth(c->dout()->type())
                             % 0);
         default:
             throw InvalidArgument("Constant type not yet supported");
@@ -474,7 +475,7 @@ public:
         Constant* f = dynamic_cast<Constant*>(c);
         if (bitwidth(f->dout()->type()) > 0)
             ctxt << "    assign " << ctxt.name(f->dout()) << " = "
-                 << toString(f->value()) << ";";
+                 << toString(f) << ";";
     }
 };
 

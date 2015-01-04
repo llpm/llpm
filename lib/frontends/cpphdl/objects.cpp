@@ -25,7 +25,36 @@ CPPHDLClass::CPPHDLClass(Design& design,
 }
 
 void CPPHDLClass::addMember(std::string name, LLVMFunction* func) {
-    addServerInterface(func->call()->din(), func->call()->dout(), name);
+    auto funcReq = func->call()->din();
+    auto join = new Join(funcReq->type());
+    assert(join->din_size() > 0);
+    auto nullRef = new Constant(join->din(0)->type());
+    connect(nullRef->dout(), join->din(0));
+
+    InputPort* req;
+    if (join->din_size() > 1) {
+        connect(join->dout(), funcReq);
+        vector<llvm::Type*> argTypes;
+        for (unsigned i=1; i<join->din_size(); i++) {
+            argTypes.push_back(join->din(i)->type());
+        } 
+
+        auto split = new Split(argTypes);
+        for (unsigned i=0; i<split->dout_size(); i++) {
+            connect(split->dout(i), join->din(i+1));
+        }
+
+        req = split->din();
+    } else {
+        // Function has no args
+        auto wait = new Wait(join->dout()->type());
+        connect(join->dout(), wait->din());
+        connect(wait->dout(), funcReq);
+        req = wait->newControl(
+            llvm::Type::getVoidTy(funcReq->type()->getContext()));
+    }
+
+    addServerInterface(req, func->call()->dout(), name);
     connectMem(func);
     _methods[name] = func;
 }

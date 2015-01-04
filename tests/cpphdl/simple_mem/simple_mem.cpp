@@ -13,7 +13,7 @@ class SimpleMem {
 public:
     uint64_t read(size_t idx);
     uint64_t readInv(size_t idx);
-    uint64_t write(size_t idx, uint64_t val);
+    void write(size_t idx, uint64_t val);
     uint64_t sum();
 };
 
@@ -27,13 +27,8 @@ uint64_t SimpleMem::readInv(size_t idx) {
         // return 0;
     return mem[SIZE - idx - 1];
 }
-uint64_t SimpleMem::write(size_t idx, uint64_t val) {
-    // if (idx < SIZE) {
-        uint64_t old = mem[idx];
-        mem[idx] = val;
-        return old;
-    // }
-    // return 0;
+void SimpleMem::write(size_t idx, uint64_t val) {
+    mem[idx] = val;
 }
 uint64_t SimpleMem::sum() {
     uint64_t s = 0;

@@ -15,7 +15,7 @@ int main() {
 
     printf("Writing...\n");
     for (unsigned i=0; i<SIZE; i++) {
-        mem->write_req(0, i, i*2);
+        mem->write_req(i, i*2);
         mem->write_resp(&l);
     }
 
@@ -23,10 +23,10 @@ int main() {
     printf("Reading...\n");
     for (unsigned i=0; i<SIZE; i++) {
         sum += i*2;
-        mem->read_req(0, i);
+        mem->read_req(i);
         mem->read_resp(&l);
         printf("Read[%u]: %lu\n", i, l);
-        mem->readInv_req(0, i);
+        mem->readInv_req(i);
         mem->readInv_resp(&l);
         printf("ReadInv[%u]: %lu\n", i, l);
     }
@@ -37,7 +37,7 @@ int main() {
 
     start = mem->cycles();
     printf("Summing...\n");
-    mem->sum_req(0);
+    mem->sum_req();
     mem->sum_resp(&l);
     printf("Sum: %lu\n", l);
     printf("Correct response: %lu\n", sum);
