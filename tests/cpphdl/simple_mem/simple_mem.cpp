@@ -16,7 +16,6 @@ public:
     uint64_t sum();
 };
 
-#if 0
 uint64_t SimpleMem::read(size_t idx) {
     // if (idx >= SIZE)
         // return 0;
@@ -30,7 +29,6 @@ uint64_t SimpleMem::write(size_t idx, uint64_t val) {
     // }
     // return 0;
 }
-#endif
 uint64_t SimpleMem::sum() {
     uint64_t s = 0;
     for (uint64_t i=0; i<SIZE; i++) {

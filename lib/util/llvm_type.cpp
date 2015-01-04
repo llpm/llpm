@@ -3,7 +3,12 @@
 
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Value.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Function.h>
 #include <llvm/Support/raw_ostream.h>
+
+#include <boost/format.hpp>
 
 namespace llpm {
 
@@ -46,6 +51,34 @@ std::string valuestr(llvm::Value* t) {
     llvm::raw_string_ostream os(s);
     t->print(os);
     return s;
+}
+
+std::string name(llvm::Instruction* ins) {
+    if (ins->hasName())
+        return ins->getName().str();
+    unsigned icount = 0;
+    for (const auto& i: ins->getParent()->getInstList()) {
+        if (ins == &i)
+            break;
+        icount++;
+    }
+    return str(boost::format("%1%_i%2%")
+                % name(ins->getParent())
+                % icount);
+}
+
+std::string name(llvm::BasicBlock* bb) {
+    if (bb->hasName())
+        return bb->getName().str();
+
+    unsigned bbcount = 0;
+    for (const auto& b: bb->getParent()->getBasicBlockList()) {
+        if (bb== &b)
+            break;
+        bbcount++;
+    }
+    return str(boost::format("bb%1%")
+                % bbcount);
 }
 
 }

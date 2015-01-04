@@ -81,7 +81,7 @@ int main(int argc, const char** argv) {
             }
 
             printf("Writing graphviz output...\n");
-            gv.writeModule(fs.create(mod->name() + ".gv"), mod);
+            gv.writeModule(fs.create(mod->name() + ".gv"), mod, false);
 
             printf("Writing Verilog output...\n");
             vw.writeModule(fs, mod);

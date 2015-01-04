@@ -1,6 +1,7 @@
 #include "objects.hpp"
 
 #include <frontends/llvm/instruction.hpp>
+#include <util/llvm_type.hpp>
 
 #include <boost/format.hpp>
 
@@ -297,7 +298,7 @@ void LLVMImpureBasicBlock::buildIO() {
                                        LLVMInstruction::GetOutput(&ins),
                                        LLVMInstruction::GetInput(&ins),
                                        false,
-                                       ins.getName().str() + "_mem");
+                                       llpm::name(&ins) + "_mem");
             _mem[&ins] = iface;
             _function->regBBMemPort(&ins, iface);
         }

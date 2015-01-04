@@ -7,6 +7,8 @@
 namespace llvm {
     class Type;
     class Value;
+    class Instruction;
+    class BasicBlock;
 };
 
 namespace llpm {
@@ -20,6 +22,9 @@ namespace llpm {
 
     std::string typestr(llvm::Type* t);
     std::string valuestr(llvm::Value* t);
+
+    std::string name(llvm::Instruction*);
+    std::string name(llvm::BasicBlock*);
 }
 
 #endif // __LLPM_UTIL_LLVM_TYPE_HPP__
