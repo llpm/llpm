@@ -49,6 +49,19 @@ static void checkValue(llvm::Value* operand) {
     throw InvalidArgument("I don't know how to deal with value type!");
 }
 
+llvm::Type* LLVMFunction::sanitizeArgumentType(llvm::Argument* arg) {
+    if (arg->getType()->isPointerTy() && arg->hasByValAttr()) {
+        return arg->getType()->getPointerElementType();
+    }
+    return arg->getType();
+}
+
+llvm::Type* LLVMFunction::sanitizeType(llvm::Value* val) {
+    if (llvm::Argument* arg = llvm::dyn_cast_or_null<llvm::Argument>(val)) {
+        return sanitizeArgumentType(arg);
+    }
+    return val->getType();
+}
 
 std::string getBasicBlockName(llvm::BasicBlock* bb) {
     if (bb->hasName()) {
@@ -234,7 +247,7 @@ llvm::Type* LLVMBasicBlock::GetHWType(llvm::Value* v) {
     if (llvm::Instruction* i = llvm::dyn_cast<llvm::Instruction>(v)) {
         return LLVMInstruction::GetOutput(i);
     }
-    return v->getType();
+    return LLVMFunction::sanitizeType(v);
 }
 
 void LLVMBasicBlock::buildIO() {
@@ -293,7 +306,8 @@ void LLVMImpureBasicBlock::buildIO() {
 
     llvm::BasicBlock* bb = basicBlock();
     for(llvm::Instruction& ins: bb->getInstList()) {
-        if (ins.mayReadOrWriteMemory()) {
+        if (ins.mayReadOrWriteMemory() &&
+            !LLVMLoadInstruction::isByvalLoad(&ins)) {
             auto iface = new Interface(this,
                                        LLVMInstruction::GetOutput(&ins),
                                        LLVMInstruction::GetInput(&ins),
@@ -422,14 +436,13 @@ const std::vector<InputPort*>& LLVMControl::deps(const OutputPort* op) const {
 }
 
 
-
 llvm::Type* LLVMEntry::FunctionType(llvm::Function* func) {
     vector<llvm::Type*> argTypes;
     auto params = func->getFunctionType();
     if (params->isVarArg())
         throw InvalidArgument("Functions with var args cannot be translated to LLPM");
-    for (unsigned i=0; i<params->getNumParams(); i++) {
-        argTypes.push_back(params->getParamType(i));
+    for (auto& arg: func->getArgumentList()) {
+        argTypes.push_back(LLVMFunction::sanitizeArgumentType(&arg));
     }
 
     return llvm::StructType::get(func->getContext(), argTypes);
@@ -481,7 +494,8 @@ void LLVMFunction::build(llvm::Function* func) {
     for(auto& bb: func->getBasicBlockList()) {
         bool touchesMemory = false;
         for(auto& ins: bb.getInstList()) {
-            if (ins.mayReadOrWriteMemory())
+            if (ins.mayReadOrWriteMemory() &&
+                !LLVMLoadInstruction::isByvalLoad(&ins))
                 touchesMemory = true;
         }
 

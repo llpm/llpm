@@ -1,6 +1,6 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-O3 -mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
+OPTS=-O2 -mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
@@ -9,7 +9,7 @@ DIS=../../../bin/llvm/bin/llvm-dis
 OPT=../../../bin/llvm/bin/opt
 
 NAME=sha256
-ROOT=sha256
+ROOT=SHA256
 
 default: ${NAME}_test ${NAME}.pdf
 

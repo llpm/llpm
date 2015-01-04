@@ -54,6 +54,10 @@ class LLVMFunction: public ContainerModule {
 public:
     virtual ~LLVMFunction();
 
+
+    static llvm::Type* sanitizeType(llvm::Value* val);
+    static llvm::Type* sanitizeArgumentType(llvm::Argument* arg);
+
     DEF_GET_NP(call);
 
     const std::map<llvm::Value*, Interface*>& mem() const {

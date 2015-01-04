@@ -191,6 +191,9 @@ public:
     LLVMLoadInstruction(const LLVMBasicBlock* bb,
                          llvm::Instruction* ins);
 
+    static bool isByval(llvm::Value* val);
+    static bool isByvalLoad(llvm::Instruction* ins);
+
     DEF_GET(readReq);
     DEF_GET(readResp);
 
@@ -233,10 +236,8 @@ public:
         return &_dout;
     }
 
-    static LLVMLoadInstruction* Create(
-        const LLVMBasicBlock* bb, llvm::Instruction* ins) {
-        return new LLVMLoadInstruction(bb, ins);
-    }
+    static LLVMInstruction* Create(
+        const LLVMBasicBlock* bb, llvm::Instruction* ins);
 };
 
 class LLVMStoreInstruction : public LLVMImpureInstruction {

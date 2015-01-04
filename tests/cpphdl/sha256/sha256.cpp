@@ -3,27 +3,26 @@
 
 #define SIZE 64
 
-class sha256 {
+class SHA256 {
 public:
-    struct Digest {
-        uint8_t d[32];
-    };
+    typedef uint8_t Digest __attribute__((__vector_size__(32)));
+    typedef uint8_t Data __attribute__((__vector_size__(64)));
 
 private:
     uint32_t total[2];
     uint32_t state[8];
     uint8_t buffer[64];
 
-    sha256 () {
+    SHA256() {
     }
 
 public:
     void start();
-    void update(uint8_t input[64]);
+    void update(Data input);
     Digest digest();
 };
 
-void sha256::start() {
+void SHA256::start() {
     total[0] = 0;
     total[1] = 0;
 
@@ -53,7 +52,7 @@ void sha256::start() {
     (b)[(i) + 3] = (uint8_t) ( (n)       );       \
 }
 
-void sha256::update(uint8_t data[64]) {
+void SHA256::update(Data data) {
     uint32_t temp1, temp2, W[64];
     uint32_t A, B, C, D, E, F, G, H;
 
@@ -183,15 +182,17 @@ void sha256::update(uint8_t data[64]) {
     state[7] += H;
 }
 
-static uint8_t sha256_padding[64] =
-{
+#if 0
+static SHA256::Data sha256_padding =
+{ 
  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
+#endif
 
-sha256::Digest sha256::digest() {
+SHA256::Digest SHA256::digest() {
     uint32_t last, padn;
     uint32_t high, low;
     uint8_t msglen[8];
@@ -206,19 +207,19 @@ sha256::Digest sha256::digest() {
     last = total[0] & 0x3F;
     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
-    update( sha256_padding );
+    // update( sha256_padding );
     // FIXME: add msglen with padding
     // update( msglen, 8 );
 
     Digest digest;
-    PUT_UINT32( state[0], digest.d,  0 );
-    PUT_UINT32( state[1], digest.d,  4 );
-    PUT_UINT32( state[2], digest.d,  8 );
-    PUT_UINT32( state[3], digest.d, 12 );
-    PUT_UINT32( state[4], digest.d, 16 );
-    PUT_UINT32( state[5], digest.d, 20 );
-    PUT_UINT32( state[6], digest.d, 24 );
-    PUT_UINT32( state[7], digest.d, 28 );
+    PUT_UINT32( state[0], digest,  0 );
+    PUT_UINT32( state[1], digest,  4 );
+    PUT_UINT32( state[2], digest,  8 );
+    PUT_UINT32( state[3], digest, 12 );
+    PUT_UINT32( state[4], digest, 16 );
+    PUT_UINT32( state[5], digest, 20 );
+    PUT_UINT32( state[6], digest, 24 );
+    PUT_UINT32( state[7], digest, 28 );
     return digest;
 }
 

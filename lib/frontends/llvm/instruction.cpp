@@ -7,6 +7,7 @@
 #include <boost/format.hpp>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Argument.h>
 
 #include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
@@ -89,7 +90,8 @@ llvm::Type* LLVMInstruction::GetInput(llvm::Instruction* ins) {
     if (GetNumHWOperands(ins) == 1) {
         for (unsigned i=0; i<ins->getNumOperands(); i++) {
             if (!HWIgnoresOperand(ins, i))
-                return ins->getOperand(i)->getType();
+                return LLVMFunction::sanitizeType(
+                            ins->getOperand(i));
         }
     }
 
@@ -457,6 +459,27 @@ bool LLVMLoadInstruction::refine(ConnectionDB& conns) const {
     conns.remap(output(), outputID->dout());
     conns.remap(readResp(), outputID->din());
     return true;
+}
+
+LLVMInstruction* LLVMLoadInstruction::Create(
+        const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+    if (isByvalLoad(ins)) 
+        return WrapperInstruction<Identity>::Create(bb, ins);
+    return new LLVMLoadInstruction(bb, ins);
+}
+
+bool LLVMLoadInstruction::isByval(llvm::Value* val) {
+    if (llvm::Argument* arg = llvm::dyn_cast_or_null<llvm::Argument>(val)) {
+        return arg->hasByValAttr();
+    }
+    return false;
+}
+
+bool LLVMLoadInstruction::isByvalLoad(llvm::Instruction* ins) {
+    if (llvm::LoadInst* li = llvm::dyn_cast_or_null<llvm::LoadInst>(ins)) {
+        return isByval(li->getOperand(0));
+    }
+    return false;
 }
 
 LLVMStoreInstruction::LLVMStoreInstruction(const LLVMBasicBlock* bb,
