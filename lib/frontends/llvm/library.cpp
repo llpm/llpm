@@ -31,8 +31,8 @@ public:
         map<llvm::Instruction*, LLVMInstruction*> blockMap;
         map<llvm::Value*, OutputPort*> valueMap;
 
-        cout << "Refining BB " << bb->getName().str() << endl;
-        cout << valuestr(bb) << endl;
+        // cout << "Refining BB " << bb->getName().str() << endl;
+        // cout << valuestr(bb) << endl;
 
         // Construct each block
         for(llvm::Instruction& ins: bb->getInstList()) {

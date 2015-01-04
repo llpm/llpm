@@ -105,6 +105,7 @@ private:
     BaseLibraryStopCondition _stops;
 
     void addDefaultPrinters();
+    void addStops();
 
     void writeModuleOnly(std::ostream& os, Module* mod);
 

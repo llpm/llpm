@@ -519,7 +519,7 @@ void LLVMFunction::build(llvm::Function* func) {
     }
 
     assert(_returnPorts.size() > 0);
-#if 1
+#if 0
     func->getReturnType()->dump(); printf("\n");
     _returnPorts[0]->type()->dump(); printf("\n");
 #endif

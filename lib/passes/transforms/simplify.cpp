@@ -16,7 +16,7 @@ void SimplifyPass::runInternal(Module* m) {
 
     set<Block*> origBlocks;
     conns->findAllBlocks(origBlocks);
-    printf("Simplifying %s with %lu blocks\n", m->name().c_str(), origBlocks.size());
+    unsigned origNum = origBlocks.size();
 
     set<Block*> blocks = origBlocks;
 
@@ -195,7 +195,9 @@ void SimplifyPass::runInternal(Module* m) {
 
     blocks.clear();
     conns->findAllBlocks(blocks);
-    printf("    Simplified %s to %lu blocks\n", m->name().c_str(), blocks.size());
+    if (blocks.size() < origNum) 
+        printf("    Simplified %s to from %u to %lu blocks\n",
+               m->name().c_str(), origNum, blocks.size());
     
     // Apply this pass iteratively until convergence
     if (origBlocks != blocks) {

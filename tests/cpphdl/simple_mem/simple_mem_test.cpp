@@ -2,6 +2,8 @@
 
 #include <cstdio>
 
+#define SIZE 8
+
 int main() {
     char c;
     uint64_t l;
@@ -12,20 +14,30 @@ int main() {
     uint64_t start = mem->cycles();
 
     printf("Writing...\n");
-    mem->write_req(0, 3, 6);
-    mem->write_resp(&l);
+    for (unsigned i=0; i<SIZE; i++) {
+        mem->write_req(0, i, i*2);
+        mem->write_resp(&l);
+    }
 
-    mem->write_req(0, 4, 8);
-    mem->write_resp(&l);
-
+    uint64_t sum = 0;
     printf("Reading...\n");
-    mem->read_req(0, 3);
-    mem->read_resp(&l);
-    printf("Read[3]: %lu\n", l);
+    for (unsigned i=0; i<SIZE; i++) {
+        sum += i*2;
+        mem->read_req(0, i);
+        mem->read_resp(&l);
+        printf("Read[%u]: %lu\n", i, l);
+#if 0
+        mem->readInv_req(0, i);
+        mem->readInv_resp(&l);
+        printf("ReadInv[%u]: %lu\n", i, l);
+#endif
+    }
 
-    mem->read_req(0, 4);
-    mem->read_resp(&l);
-    printf("Read[4]: %lu\n", l);
+    printf("Summing...\n");
+    mem->sum_req(0);
+    mem->sum_resp(&l);
+    printf("Sum: %lu\n", l);
+    printf("Correct response: %lu\n", sum);
 
     mem->run(2);
     delete mem;

@@ -24,7 +24,12 @@ VerilogSynthesizer::VerilogSynthesizer(Design& d) :
     _design(d)
 {
     StdLibStops(_stops);
+    addStops();
     addDefaultPrinters();
+}
+
+void VerilogSynthesizer::addStops() {
+    _stops.addClass<BlockRAM>();
 }
 
 void VerilogSynthesizer::write(std::ostream& os) {
@@ -57,7 +62,6 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
 void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
     Context ctxt(os, mod);
 
-    printf("Pipelining...\n");
     Pipeline* p = mod->pipeline();
     p->build();
 

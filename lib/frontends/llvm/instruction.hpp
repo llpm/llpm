@@ -25,7 +25,7 @@ protected:
         _bb(bb)
     {
         this->createName();
-        printf("Ins: %s\n", this->name().c_str());
+        // printf("Ins: %s\n", this->name().c_str());
     }
 
     void createName();
