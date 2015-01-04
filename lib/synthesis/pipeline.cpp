@@ -87,8 +87,8 @@ void Pipeline::buildMinimum() {
 
 void Pipeline::insertPipelineRegs() {
     ConnectionDB* conns = _module->conns();
-    set<Connection> raw = conns->raw();
-    for (Connection c: raw) {
+    vector<Connection> connections(conns->begin(), conns->end());
+    for (const auto& c: connections) {
         unsigned stages = this->stages(c);
         if (stages > 0) {
             OutputPort* op = c.source();

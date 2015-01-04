@@ -20,56 +20,51 @@ void ConnectionDB::registerBlock(Block* block) {
     _changeCounter++;
 }
 
-// TODO -- This is slow. Rewrite w/ an index
-void ConnectionDB::findSinks(const OutputPort* op, std::vector<InputPort*>& out) const
+void ConnectionDB::findSinks(const OutputPort* op,
+                             std::vector<InputPort*>& out) const
 {
-    for(auto&& c: _connections) {
-        const OutputPort* source = c.source();
-        if (source == op)
-            out.push_back(c.sink());
-    }
-}
-
-// TODO -- This is slow. Rewrite w/ an index
-OutputPort* ConnectionDB::findSource(const InputPort* ip) const
-{
-    for(auto&& c: _connections) {
-        const InputPort* sink = c.sink();
-        if (sink == ip)
-            return c.source();
-    }
-
-    return NULL;
-}
-
-// TODO -- This is slow. Rewrite w/ an index
-bool ConnectionDB::find(const InputPort* ip, Connection& cOut) const {
-    for(auto&& c: _connections) {
-        const InputPort* sink = c.sink();
-        if (sink == ip) {
-            cOut = c;
-            return true;
+    const auto& f = _sinkIdx.find((OutputPort*)op);
+    if (f != _sinkIdx.end()) {
+        for (auto ip: f->second) {
+            out.push_back(ip);
         }
     }
-
-    return false;
 }
 
-// TODO -- This is slow. Rewrite w/ an index
-void ConnectionDB::find(const OutputPort* op, std::vector<Connection>& out) const {
-    for(auto&& c: _connections) {
-        const OutputPort* source = c.source();
-        if (source == op)
-            out.push_back(c);
+OutputPort* ConnectionDB::findSource(const InputPort* ip) const
+{
+    auto f = _sourceIdx.find((InputPort*)ip);
+    if (f == _sourceIdx.end())
+        return NULL;
+    return f->second;
+}
+
+bool ConnectionDB::find(const InputPort* ip, Connection& cOut) const {
+    auto f = _sourceIdx.find((InputPort*)ip);
+    if (f == _sourceIdx.end())
+        return false;
+    cOut = *f;
+    return true;
+}
+
+void ConnectionDB::find(const OutputPort* op,
+                        std::vector<Connection>& out) const {
+    const auto& f = _sinkIdx.find((OutputPort*)op);
+    if (f != _sinkIdx.end()) {
+        for (auto ip: f->second) {
+            out.push_back(Connection(f->first, ip));
+        }
     }
 }
 
-// TODO -- This is slow. Rewrite w/ an index
 void ConnectionDB::find(Block* b, std::vector<Connection>& out) const {
-    for(auto&& c: _connections) {
-        if (c.source()->owner() == b ||
-            c.sink()->owner() == b)
-            out.push_back(c);
+    for (auto op: b->outputs()) {
+        find(op, out);
+    }
+    for (auto ip: b->inputs()) {
+        auto op = findSource(ip);
+        if (op && op->owner() != b)
+            out.push_back(Connection(op, ip));
     }
 }
 
@@ -110,8 +105,8 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     }
 #endif
 
-    Connection c(o, i);
-    _connections.insert(c);
+    _sourceIdx.emplace(i, o);
+    _sinkIdx[o].insert(i);
     _changeCounter++;
     registerBlock(o->owner());
     registerBlock(i->owner());
@@ -139,9 +134,22 @@ void ConnectionDB::connect(Interface* a, Interface* b) {
 void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
     assert(o != NULL);
     assert(i != NULL);
-    auto f = _connections.find(Connection(o, i));
-    if (f != _connections.end())
-        _connections.erase(f);
+    auto sourceF = _sourceIdx.find(i);
+    if (sourceF != _sourceIdx.end() &&
+        sourceF->second == o)
+        _sourceIdx.erase(sourceF);
+
+    auto sinkF = _sinkIdx.find(o);
+    if (sinkF != _sinkIdx.end()) {
+        auto& s = sinkF->second;
+        auto f = s.find(i);
+        if (f != s.end()) {
+            s.erase(f);
+        }
+        if (s.size() == 0)
+            _sinkIdx.erase(sinkF);
+    }
+
     _changeCounter++;
     deregisterBlock(o->owner());
     deregisterBlock(i->owner());
@@ -199,8 +207,8 @@ void ConnectionDB::removeBlock(Block* b) {
 }
 
 void ConnectionDB::update(const ConnectionDB& newdb) {
-    for (const Connection& c: newdb._connections) {
-        connect(c.source(), c.sink());
+    for (const auto& c: newdb._sourceIdx) {
+        connect(c.first, c.second);
     }
     _blacklist.insert(newdb._blacklist.begin(),
                       newdb._blacklist.end());

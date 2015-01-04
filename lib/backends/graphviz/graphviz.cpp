@@ -81,10 +81,10 @@ bool is_hidden(Block* b, Module* topMod) {
 void printConns(std::ostream& os,
                 ObjectNamer& namer,
                 Module* mod,
-                const set<Connection>& rawConns,
+                const ConnectionDB* conns,
                 std::map<std::string, std::string> extra_attr,
                 bool transparent) {
-    for (auto conn: rawConns) {
+    for (const auto& conn: *conns) {
         auto op = conn.source();
         auto ip = conn.sink();
 
@@ -157,7 +157,7 @@ void printBlock(std::ostream& os,
         for (Block* b: crblocks) {
             printBlock(os, namer, mod, b, transparent);
         }
-        printConns(os, namer, mod, cm->conns()->raw(),
+        printConns(os, namer, mod, cm->conns(),
                    {{"style", "dashed"}}, transparent);
         os << "    }\n";
 
@@ -190,8 +190,7 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
         printBlock(os, namer, mod, block, transparent);
     }
 
-    const set<Connection>& rawConns = conns->raw();
-    printConns(os, namer, mod, rawConns,
+    printConns(os, namer, mod, conns,
                {{"style", "bold"}}, transparent);
 
     os << "}\n";

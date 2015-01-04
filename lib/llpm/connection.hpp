@@ -14,39 +14,36 @@ namespace llpm {
 // Fwd. defs. Silly rabbit, modern parsing is for kids!
 class Interface;
 
-class Connection {
-    OutputPort* _source;
-    InputPort* _sink;
-
+typedef std::pair<InputPort*, OutputPort*> ConnectionPair;
+class Connection : public ConnectionPair {
 public:
     Connection(OutputPort* source, InputPort* sink) :
-        _source(source),
-        _sink(sink)
-    { }
+        ConnectionPair(sink, source) { }
 
     Connection() :
-        _source(NULL),
-        _sink(NULL)
-    { }
+        ConnectionPair(NULL, NULL) { }
+
+    Connection(const ConnectionPair& cp) :
+        ConnectionPair(cp) { }
+
+    Connection(const std::pair<OutputPort*, InputPort*>& p) :
+        ConnectionPair(p.second, p.first) { }
 
     bool valid() const {
-        return _source != NULL && _sink != NULL;
+        return source() != NULL && sink() != NULL;
     }
 
-    DEF_GET_NP(source);
-    // DEF_SET_NONULL(source);
-    DEF_GET_NP(sink);
-    // DEF_SET_NONULL(sink);
-
-    bool operator==(const Connection& c) const {
-        return (c._sink == this->_sink) 
-            && (c._source == this->_source);
+    OutputPort* source() const {
+        return second;
+    }
+    InputPort* sink() const {
+        return first;
     }
 
-    int operator<(const Connection& c) const {
-        if (this->_source != c._source)
-            return this->_source < c._source;
-        return this->_sink < c._sink;
+    inline Connection& operator=(const ConnectionPair& cp) {
+        first = cp.first;
+        second = cp.second;
+        return *this;
     }
 };
 
@@ -56,7 +53,13 @@ class Module;
 class ConnectionDB {
     Module* _module;
     uint64_t _changeCounter;
-    std::set<Connection> _connections;
+
+    // Connection data are stored in this bidirectional map
+    typedef std::unordered_map<OutputPort*, std::set<InputPort*> > SinkIdx;
+    typedef std::unordered_map<InputPort*, OutputPort*> SourceIdx;
+    SinkIdx   _sinkIdx;
+    SourceIdx _sourceIdx;
+
     std::set<Block*> _blacklist;
     std::unordered_map<Block*, uint64_t> _blockUseCounts;
     std::set<Block*> _newBlocks;
@@ -79,9 +82,22 @@ public:
     DEF_GET(module);
     DEF_GET_NP(changeCounter);
 
-    const std::set<Connection>& raw() const {
-        return _connections;
-    }
+    class ConstIterator : public SourceIdx::const_iterator {
+        friend class ConnectionDB;
+        ConstIterator(SourceIdx::const_iterator iter) 
+            : SourceIdx::const_iterator(iter) { }
+    public:
+        Connection operator*() const {
+            return Connection(
+                SourceIdx::const_iterator::operator*());
+        }
+    };
+    ConstIterator begin() const {
+        return ConstIterator(_sourceIdx.begin());
+    };
+    ConstIterator end() const {
+        return ConstIterator(_sourceIdx.end());
+    };
 
     void blacklist(Block* b) {
         _blacklist.insert(b);
@@ -138,7 +154,7 @@ public:
     }
 
     bool exists(Connection c) const {
-        return _connections.count(c) > 0;
+        return c.source() == findSource(c.sink());
     }
 
     bool connected(OutputPort* op, InputPort* ip) const {
@@ -150,7 +166,7 @@ public:
     }
 
     size_t numConnections() const {
-        return _connections.size();
+        return _sourceIdx.size();
     }
 
     void findSinks(const OutputPort* op,

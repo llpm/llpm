@@ -173,7 +173,7 @@ bool ControlRegion::add(Block* b) {
 
     map<InputPort*, OutputPort*> internalizedOutputs;
     map<OutputPort*, set<InputPort*> > internalizedInputs;
-    if (_conns.raw().size() != 0) {
+    if (_conns.numConnections() != 0) {
         // Make sure the block is adjacent to this CR
         bool createsInput = false;
         for (InputPort* ip: b->inputs()) {
