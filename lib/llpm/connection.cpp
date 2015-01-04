@@ -12,8 +12,8 @@ namespace llpm {
 void ConnectionDB::registerBlock(Block* block) {
     if (_blockUseCounts.find(block) == _blockUseCounts.end()) {
         _newBlocks.insert(block);
-        block->module(_module);
     }
+    block->module(_module);
 
     uint64_t& count = _blockUseCounts[block];
     count += 1;

@@ -52,6 +52,7 @@ int main(int argc, const char** argv) {
 
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
+        d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<CheckConnectionsPass>();
 
         FileSet fs(true, dirName, true);

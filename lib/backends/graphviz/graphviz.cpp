@@ -12,8 +12,9 @@ using namespace std;
 
 namespace llpm {
 
-void GraphvizOutput::writeModule(FileSet::File* fn, Module* mod) {
-    this->writeModule(fn->openStream(), mod);
+void GraphvizOutput::writeModule(FileSet::File* fn, Module* mod,
+                                 bool transparent) {
+    this->writeModule(fn->openStream(), mod, transparent);
 }
 
 static std::string attrs(const std::map<std::string, std::string>& a) {
@@ -81,7 +82,8 @@ void printConns(std::ostream& os,
                 ObjectNamer& namer,
                 Module* mod,
                 const set<Connection>& rawConns,
-                std::map<std::string, std::string> extra_attr) {
+                std::map<std::string, std::string> extra_attr,
+                bool transparent) {
     for (auto conn: rawConns) {
         auto op = conn.source();
         auto ip = conn.sink();
@@ -89,14 +91,14 @@ void printConns(std::ostream& os,
         vector<InputPort*> sinks;
 
         auto opContainer = dynamic_cast<ContainerModule*>(op->owner());
-        if (opContainer != NULL) {
+        if (transparent && opContainer != NULL) {
             auto cdb = opContainer->conns();
             auto internalSink = opContainer->getSink(op);
             op = cdb->findSource(internalSink);
         }
 
         auto ipContainer = dynamic_cast<ContainerModule*>(ip->owner());
-        if (ipContainer != NULL) {
+        if (transparent && ipContainer != NULL) {
             auto cdb = ipContainer->conns();
             auto internalSource = ipContainer->getDriver(ip);
             cdb->findSinks(internalSource, sinks);
@@ -139,10 +141,11 @@ void printIO(std::ostream& os,
 void printBlock(std::ostream& os,
                 ObjectNamer& namer,
                 Module* mod,
-                Block* block)
+                Block* block,
+                bool transparent)
 {
     ContainerModule* cm = dynamic_cast<ContainerModule*>(block);
-    if (cm) {
+    if (transparent && cm != NULL) {
         os << boost::format("    subgraph cluster_%1% {\n"
                             "        color=black;\n"
                             "        label=%2%;\n")
@@ -152,10 +155,10 @@ void printBlock(std::ostream& os,
         vector<Block*> crblocks;
         cm->blocks(crblocks);
         for (Block* b: crblocks) {
-            printBlock(os, namer, mod, b);
+            printBlock(os, namer, mod, b, transparent);
         }
         printConns(os, namer, mod, cm->conns()->raw(),
-                   {{"style", "dashed"}});
+                   {{"style", "dashed"}}, transparent);
         os << "    }\n";
 
     } else {
@@ -165,7 +168,8 @@ void printBlock(std::ostream& os,
     }
 }
 
-void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
+void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
+                                 bool transparent) {
     ObjectNamer& namer = mod->design().namer();
 
     ConnectionDB* conns = mod->conns();
@@ -183,12 +187,12 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod) {
     mod->blocks(blocks);
 
     for (auto block: blocks) {
-        printBlock(os, namer, mod, block);
+        printBlock(os, namer, mod, block, transparent);
     }
 
     const set<Connection>& rawConns = conns->raw();
     printConns(os, namer, mod, rawConns,
-               {{"style", "bold"}});
+               {{"style", "bold"}}, transparent);
 
     os << "}\n";
 }

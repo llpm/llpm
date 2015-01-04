@@ -75,6 +75,16 @@ void FormControlRegionPass::runInternal(Module* mod) {
     }
     
     printf("Formed %lu control regions\n", regions.size());
+
+    unsigned flattened = 0;
+    for (auto cr: regions) {
+        if (cr->size() <= 1) {
+            // No need for a CR with one block in it!
+            cr->refine(*conns);
+            flattened++;
+        }
+    }
+    printf("Flattened %u CRs with one internal block\n", flattened);
 }
 
 bool ControlRegion::grow() {

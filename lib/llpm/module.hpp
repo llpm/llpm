@@ -103,6 +103,12 @@ public:
         conns()->findAllBlocks(blocks);
     }
 
+    virtual unsigned size() const {
+        std::set<Block*> b;
+        blocks(b);
+        return b.size();
+    }
+
     virtual void submodules(std::vector<Block*>& vec) const {
         std::set<Block*> blocks;
         conns()->findAllBlocks(blocks);

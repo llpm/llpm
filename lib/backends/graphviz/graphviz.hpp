@@ -16,9 +16,9 @@ public:
         _design(design)
     { }
 
-    void writeModule(FileSet::File* fn, Module* mod);
-    void writeModule(std::ostream& os, Module* mod);
-    void write(std::ostream& os);
+    void writeModule(FileSet::File* fn, Module* mod, bool trans=true);
+    void writeModule(std::ostream& os, Module* mod, bool trans=true);
+    void write(std::ostream& os, bool trans=true);
 };
 
 };
