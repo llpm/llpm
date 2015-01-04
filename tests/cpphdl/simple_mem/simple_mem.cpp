@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <cstring>
 
-#define SIZE 8
+#define SIZE 10
 
 class SimpleMem {
     uint64_t mem[SIZE];
@@ -22,13 +22,11 @@ uint64_t SimpleMem::read(size_t idx) {
         // return 0;
     return mem[idx];
 }
-#if 0
 uint64_t SimpleMem::readInv(size_t idx) {
     // if (idx >= SIZE)
         // return 0;
-    return mem[SIZE - idx];
+    return mem[SIZE - idx - 1];
 }
-#endif
 uint64_t SimpleMem::write(size_t idx, uint64_t val) {
     // if (idx < SIZE) {
         uint64_t old = mem[idx];

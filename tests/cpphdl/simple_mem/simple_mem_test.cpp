@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#define SIZE 8
+#define SIZE 10
 
 int main() {
     char c;
@@ -26,20 +26,22 @@ int main() {
         mem->read_req(0, i);
         mem->read_resp(&l);
         printf("Read[%u]: %lu\n", i, l);
-#if 0
         mem->readInv_req(0, i);
         mem->readInv_resp(&l);
         printf("ReadInv[%u]: %lu\n", i, l);
-#endif
     }
+
+    printf("R/W Cycles: %lu\n", mem->cycles() - start);
 
     mem->run(5);
 
+    start = mem->cycles();
     printf("Summing...\n");
     mem->sum_req(0);
     mem->sum_resp(&l);
     printf("Sum: %lu\n", l);
     printf("Correct response: %lu\n", sum);
+    printf("Sum Cycles: %lu\n", mem->cycles() - start);
 
     mem->run(2);
     delete mem;
