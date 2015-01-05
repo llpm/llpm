@@ -7,14 +7,20 @@ namespace llpm {
 
 class Fork : public Block {
     InputPort _din;
+    // Is this a virtual fork? Virtual forks only pass through LI
+    // metadata combinatorially. Whomever is synthesizing forks has to
+    // ensure that the fork can validly be combinatorial.
+    bool _virt;
     std::vector<OutputPort*> _dout;
 
 public:
-    Fork(llvm::Type* ty) :
-        _din(this, ty, "din")
+    Fork(llvm::Type* ty, bool virt) :
+        _din(this, ty, "din"),
+        _virt(virt)
     { }
 
     DEF_GET(din);
+    DEF_GET_NP(virt);
     DEF_ARRAY_GET(dout);
 
     OutputPort* createOutput();

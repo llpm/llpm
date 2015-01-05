@@ -2,6 +2,7 @@
 
 #include <llpm/module.hpp>
 #include <libraries/synthesis/fork.hpp>
+#include <llpm/control_region.hpp>
 
 
 using namespace std;
@@ -19,12 +20,27 @@ void SynthesizeForksPass::runInternal(Module* mod) {
             forkingSources.push_back(p.first);
     }
 
+    unsigned realForks = 0;
     for (auto op: forkingSources) {
         set<InputPort*> sinks;
         conns->findSinks(op, sinks);
         assert(sinks.size() > 1);
 
-        auto fork = new Fork(op->type());
+        bool virt = false;
+
+        // Non-pipelineable links cannot have their LI pipelined
+        // either
+        if (!op->pipelineable())
+            virt = true;
+
+        // Blocks contained in control regions don't require actual
+        // forks since they share valid and backpressure signals
+        if (dynamic_cast<ControlRegion*>(op->owner()->module()) != NULL)
+            virt = true;
+
+        auto fork = new Fork(op->type(), virt);
+        if (!virt)
+            realForks++;
         conns->connect(op, fork->din());
         for(auto sink: sinks) {
             conns->disconnect(op, sink);
@@ -32,7 +48,8 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         }
     }
 
-    printf("Created forks for %lu forking sources\n", forkingSources.size());
+    if (realForks > 0)
+        printf("Created forks for %u forking sources\n", realForks);
 }
 
 } // namespace llpm

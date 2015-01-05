@@ -49,3 +49,31 @@ end
 
 endmodule;
 
+// A "virtual" fork which has no actual storage and merely computes
+// the AND of backpressure
+module VirtFork(clk, resetn,
+                din, din_valid, din_bp,
+                dout, dout_valid, dout_bp);
+
+parameter Width = 8;
+parameter NumOutputs = 4;
+
+input clk;
+input resetn;
+
+input [Width-1:0]  din;
+input              din_valid;
+output             din_bp;
+
+output [Width-1:0]      dout;
+output [NumOutputs-1:0] dout_valid;
+input  [NumOutputs-1:0] dout_bp;
+
+wire [NumOutputs-1:0] accepted = (~dout_bp & dout_valid);
+
+assign dout = din;
+assign din_bp = !(&accepted);
+assign dout_valid = {NumOutputs{din_valid}};
+
+endmodule;
+

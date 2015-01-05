@@ -738,7 +738,11 @@ public:
 
     void print(VerilogSynthesizer::Context& ctxt, Block* b) const {
         Fork* f = dynamic_cast<Fork*>(b);
-        std::string style = "Fork";
+        std::string style;
+        if (f->virt())
+            style = "VirtFork";
+        else 
+            style = "Fork";
     
         ctxt << boost::format(
                 "    wire [%3%:0] %1%_dout;\n"
