@@ -14,6 +14,7 @@
 
 #include <passes/manager.hpp>
 #include <passes/transforms/synthesize_mem.hpp>
+#include <passes/transforms/synthesize_forks.hpp>
 #include <passes/transforms/simplify.hpp>
 #include <passes/transforms/refine.hpp>
 #include <passes/analysis/checks.hpp>
@@ -51,6 +52,7 @@ int main(int argc, const char** argv) {
 
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
+        d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();
 
         printf("Elaborating...\n");

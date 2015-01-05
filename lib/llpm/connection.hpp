@@ -55,8 +55,8 @@ class ConnectionDB {
     uint64_t _changeCounter;
 
     // Connection data are stored in this bidirectional map
-    typedef std::unordered_map<OutputPort*, std::set<InputPort*> > SinkIdx;
-    typedef std::unordered_map<InputPort*, OutputPort*> SourceIdx;
+    typedef std::map<OutputPort*, std::set<InputPort*> > SinkIdx;
+    typedef std::map<InputPort*, OutputPort*> SourceIdx;
     SinkIdx   _sinkIdx;
     SourceIdx _sourceIdx;
 
@@ -81,6 +81,14 @@ public:
 
     DEF_GET(module);
     DEF_GET_NP(changeCounter);
+
+    const auto& sinksRaw() const {
+        return _sinkIdx;
+    }
+
+    const auto& sourcesRaw() const {
+        return _sourceIdx;
+    }
 
     class ConstIterator : public SourceIdx::const_iterator {
         friend class ConnectionDB;
@@ -171,6 +179,8 @@ public:
 
     void findSinks(const OutputPort* op,
                    std::vector<InputPort*>& out) const;
+    void findSinks(const OutputPort* op,
+                   std::set<InputPort*>& out) const;
 
     OutputPort* findSource(const InputPort* ip) const;
     void find(Block* b, std::vector<Connection>&) const;

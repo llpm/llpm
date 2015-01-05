@@ -11,6 +11,7 @@
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/std_library.hpp>
 #include <libraries/synthesis/memory.hpp>
+#include <libraries/synthesis/fork.hpp>
 
 #include <llvm/IR/Constants.h>
 
@@ -37,6 +38,18 @@ void VerilogSynthesizer::write(std::ostream& os) {
     for (auto& m: modules) {
         writeModule(os, m);
     }
+}
+
+InputPort* VerilogSynthesizer::findSink(const ConnectionDB* conns,
+                                        const OutputPort* op) {
+    vector<InputPort*> ports;
+    conns->findSinks(op, ports);
+    if (ports.size() == 0)
+        return NULL;
+    if (ports.size() == 1)
+        return ports.front();
+    throw InvalidCall("Synthesis does not support fan out greater than 1! "
+                      "Run a pass to create forking blocks first");
 }
 
 static const std::string header = R"STRING(
@@ -135,18 +148,17 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
         OutputPort* dummyOP = mod->getDriver(ip);
 
         ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip, true));
-        ctxt << boost::format("    assign %1%_bp = \n")
-                    % ctxt.name(ip, true);
 
-        vector<InputPort*> sinks;
-        conns->findSinks(dummyOP, sinks);
-        for (auto ip: sinks) {
-            ctxt << boost::format("        %1%_bp |\n")
-                            % ctxt.name(ip);
+        InputPort* sink = findSink(conns, dummyOP);
+        if (sink) {
+            ctxt << boost::format("    assign %1%_bp = %2%_bp;\n")
+                        % ctxt.name(ip, true)
+                        % ctxt.name(sink);
+        } else {
+            ctxt << boost::format("    assign %1%_bp = 1'b0;\n")
+                        % ctxt.name(ip, true);
         }
-        ctxt << "        1'b0;\n";
     }
-    ctxt << "\n";
 
     for (auto&& op: mod->outputs()) {
         InputPort* dummyIP = mod->getSink(op);
@@ -180,7 +192,8 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
             auto inpFound = conns->find(ip, c);
             std::string opName;
             if (!inpFound) {
-                fprintf(stderr, "Warning: no driver found for input %s!\n", ctxt.name(ip).c_str());
+                fprintf(stderr, "Warning: no driver found for input %s!\n",
+                        ctxt.name(ip).c_str());
                 fprintf(stderr, "         input %u of %lu of block %s type %s\n",
                                 b->inputNum(ip)+1, b->inputs().size(),
                                 ctxt.name(b).c_str(), cpp_demangle(typeid(*b).name()).c_str());
@@ -205,26 +218,24 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
         }
 
         for (OutputPort* op: b->outputs()) {
-
             if (bitwidth(op->type()) == 0) {
                 ctxt << boost::format("    reg %1%_valid;\n"
-                                      "    reg %1%_bp = \n")
+                                      "    reg %1%_bp = ")
                             % ctxt.name(op);
             } else {
                 ctxt << boost::format("    reg [%1%-1:0] %2%;\n"
                                       "    reg %2%_valid;\n"
-                                      "    reg %2%_bp = \n")
+                                      "    reg %2%_bp = ")
                             % bitwidth(op->type())
                             % ctxt.name(op);
             }
 
-            vector<Connection> cVec;
-            conns->find(op, cVec);
-            for (Connection c: cVec) {
-                ctxt << boost::format("            %1%_bp |\n")
-                            % ctxt.name(c.sink());
+            InputPort* sink = findSink(conns, op);
+            if (sink) {
+                ctxt << ctxt.name(sink) << "_bp;\n";
+            } else {
+                ctxt << "1'b0;\n";
             }
-            ctxt << "            1'b0;\n";
         }
 
         print(ctxt, b);
@@ -715,6 +726,58 @@ public:
     }
 };
 
+class ForkPrinter: public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<Fork*>(b) != NULL;
+    }
+
+    virtual bool customLID() const {
+        return true;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* b) const {
+        Fork* f = dynamic_cast<Fork*>(b);
+        std::string style = "Fork";
+    
+        ctxt << boost::format(
+                "    wire [%3%:0] %1%_dout;\n"
+                "    wire [%2%:0] %1%_dout_valids;\n"
+                "    wire [%2%:0] %1%_dout_bp;\n") 
+                    % ctxt.name(f)
+                    % (f->dout_size() - 1)
+                    % (bitwidth(f->din()->type()) - 1);
+        for (unsigned i=0; i<f->dout_size(); i++) {
+            ctxt << boost::format(
+                "    assign %3% = %1%_dout;\n"
+                "    assign %3%_valid = %1%_dout_valids[%2%];\n"
+                "    assign %1%_dout_bp[%2%] = %3%_bp;\n")
+                    % ctxt.name(f)
+                    % i
+                    % ctxt.name(f->dout(i));
+        }
+
+        ctxt << boost::format("    %1% # (\n") % style
+             << boost::format("        .Width(%1%),\n") 
+                             % bitwidth(f->din()->type())
+             << boost::format("        .NumOutputs(%1%)\n")
+                             % f->dout_size()
+             << boost::format("    ) %1% (\n") % ctxt.name(f)
+             <<               "        .clk(clk),\n"
+             <<               "        .resetn(resetn),\n"
+
+             << boost::format("        .din(%2%), \n"
+                              "        .din_valid(%2%_valid), \n"
+                              "        .din_bp(%2%_bp), \n"
+                              "        .dout(%1%_dout), \n"
+                              "        .dout_valid(%1%_dout_valids), \n"
+                              "        .dout_bp(%1%_dout_bp) \n")
+                             % ctxt.name(f)
+                             % ctxt.name(f->din())
+             <<               "    );\n";
+    }
+};
+
 struct AttributePrinter {
     template<typename T>
     void print(VerilogSynthesizer::Context& ctxt,
@@ -838,8 +901,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new SelectPrinter());
     _printers.appendEntry(new SplitPrinter());
     _printers.appendEntry(new ExtractPrinter());
-
-    // _printers.appendEntry(new PipelineRegisterPrinter());
+    _printers.appendEntry(new ForkPrinter());
 
     _printers.appendEntry(new MultiplexerPrinter());
     _printers.appendEntry(new RouterPrinter());

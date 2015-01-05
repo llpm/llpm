@@ -31,6 +31,15 @@ void ConnectionDB::findSinks(const OutputPort* op,
     }
 }
 
+void ConnectionDB::findSinks(const OutputPort* op,
+                             std::set<InputPort*>& out) const
+{
+    const auto& f = _sinkIdx.find((OutputPort*)op);
+    if (f != _sinkIdx.end()) {
+        out = f->second;
+    }
+}
+
 OutputPort* ConnectionDB::findSource(const InputPort* ip) const
 {
     auto f = _sourceIdx.find((InputPort*)ip);

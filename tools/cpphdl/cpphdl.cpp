@@ -12,6 +12,7 @@
 #include <wedges/verilator/verilator.hpp>
 #include <util/llvm_type.hpp>
 #include <passes/transforms/synthesize_mem.hpp>
+#include <passes/transforms/synthesize_forks.hpp>
 
 #include <passes/manager.hpp>
 #include <passes/transforms/simplify.hpp>
@@ -53,6 +54,7 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<SimplifyPass>();
+        d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();
 
         FileSet fs(true, dirName, true);

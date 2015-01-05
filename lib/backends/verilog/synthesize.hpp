@@ -109,6 +109,8 @@ private:
 
     void writeModuleOnly(std::ostream& os, Module* mod);
 
+    static InputPort* findSink(const ConnectionDB*, const OutputPort*);
+
 public:
     VerilogSynthesizer(Design& design);
     virtual ~VerilogSynthesizer() { }
