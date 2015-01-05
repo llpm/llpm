@@ -55,8 +55,8 @@ class ConnectionDB {
     uint64_t _changeCounter;
 
     // Connection data are stored in this bidirectional map
-    typedef std::map<OutputPort*, std::set<InputPort*> > SinkIdx;
-    typedef std::map<InputPort*, OutputPort*> SourceIdx;
+    typedef std::unordered_map<OutputPort*, std::set<InputPort*> > SinkIdx;
+    typedef std::unordered_map<InputPort*, OutputPort*> SourceIdx;
     SinkIdx   _sinkIdx;
     SourceIdx _sourceIdx;
 
