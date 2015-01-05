@@ -6,6 +6,7 @@
 #include <vector>
 #include <cassert>
 #include <boost/function.hpp>
+#include <boost/bind.hpp>
 #include <unordered_set>
 
 #include <llpm/block.hpp>
@@ -86,7 +87,7 @@ public:
 class BaseLibraryStopCondition: public Refinery::StopCondition
 {
     std::unordered_map<std::type_index, bool> _classes;
-    std::map<std::type_index, boost::function<bool (Block* c)> > _tests;
+    std::vector<boost::function<bool (Block* c)> > _tests;
 
     template<typename C>
     static bool Test(Block* c) {
@@ -104,7 +105,7 @@ public:
             return f->second;
 
         for(auto&& test: _tests) {
-            if (test.second(c)) {
+            if (test(c)) {
                 _classes[idx] = true;
                 return true;
             }
@@ -120,7 +121,7 @@ public:
         _classes.clear();
 
         // Add the test
-        _tests[typeid(C)] = Test<C>;
+        _tests.emplace_back(Test<C>);
     }
 };
 

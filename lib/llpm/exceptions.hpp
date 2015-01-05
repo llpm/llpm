@@ -4,6 +4,7 @@
 #include <string>
 #include <exception>
 #include <errno.h>
+#include <string.h>
 
 namespace llpm {
 

@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <cstdlib>
+#include <linux/limits.h>
 
 #include <util/macros.hpp>
 #include <llpm/exceptions.hpp>
@@ -199,9 +200,11 @@ public:
 
 struct Directories {
     static std::string executableFullName() {
-        char dest[PATH_MAX];
-        if (readlink("/proc/self/exe", dest, PATH_MAX) == -1)
+        char dest[PATH_MAX+1];
+        auto rc = readlink("/proc/self/exe", dest, PATH_MAX);
+        if (rc == -1)
             throw SysError("finding executable location");
+        dest[rc] = '\0';
         return dest;
     }
 

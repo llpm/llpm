@@ -8,19 +8,24 @@ if not os.path.isfile("./bin/llvm/bin/llvm-config"):
 
 LibPaths = [".", "llvm/lib"]
 
+CxxLdFlags = """
+-g -pthread
+""".split()
+
 env = Environment(
     CXX="clang++",
     LD="clang++",
     CC="clang",
     CPPPATH=['./lib', './bin/llvm/include/'],
-    CXXFLAGS="""-O2 -mfpmath=sse -msse4 -march=native
-            -Wall -g -std=c++1y -stdlib=libc++
+    CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
+            -Wall -std=c++1y
             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
-            -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split(),
-    LDFLAGS="""-stdlib=libc++""".split(),
-    LIBS="""rt c dl z tinfo gc gccpp LLVM-3.5""".split(),
+            -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split()
+            + CxxLdFlags,
+    LIBS="""tcmalloc LLVM-3.5""".split(),
     LIBPATH=map(lambda x: "bin/" + x, LibPaths),
-    LINKFLAGS=['-pthread', '-stdlib=libc++']
+    LINKFLAGS=[]
+              + CxxLdFlags
               + map(lambda x: "-Wl,-rpath=\$$ORIGIN/%s" % x, LibPaths))
 
 libenv = env.Clone()

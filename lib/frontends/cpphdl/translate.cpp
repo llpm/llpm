@@ -26,7 +26,7 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
     if (classType == NULL) {
         throw InvalidArgument("Could not find class type!");
     }
-    cout << "Class: " << typestr(classType) << endl;
+    cout << "Class " << className << ": " << typestr(classType) << endl;
 
     CPPHDLClass* chClass = new CPPHDLClass(_design, className, classType);
 

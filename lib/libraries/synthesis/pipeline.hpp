@@ -9,7 +9,7 @@ namespace llpm {
 
 class PipelineRegister;
 
-class PipelineStageController : public gc_cleanup {
+class PipelineStageController {
     friend class PipelineRegister;
 
     std::set<PipelineRegister*> _regs;

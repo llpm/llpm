@@ -5,6 +5,6 @@
  * Global LLPM definitions to be included everywhere
  */
 
-#include <gc_cpp.h>
+// #include <gc_cpp.h>
 
 #endif // __LLPM_LLPM_HPP__
