@@ -44,7 +44,7 @@ public:
     }
 
     virtual bool hasState() const {
-        return true;
+        return false;
     }
 
     DEF_GET(din);
