@@ -180,6 +180,7 @@ public:
 // Extract a single element from a message
 class Extract : public CommunicationIntrinsic, public Function {
     std::vector<unsigned> _path;
+    llvm::Type* GetOutput(llvm::Type* t, std::vector<unsigned> path);
 
 public:
     Extract(llvm::Type* t, std::vector<unsigned> path);

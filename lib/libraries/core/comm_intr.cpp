@@ -97,8 +97,20 @@ Split::Split(llvm::Type* input) :
     }
 }
 
+llvm::Type* Extract::GetOutput(llvm::Type* t, std::vector<unsigned> path) {
+    if (t->isVectorTy()) {
+        if (path.size() != 1)
+            throw InvalidArgument("Can only extract 1 element from vector!");
+        unsigned idx = path.front();
+        if (idx > t->getVectorNumElements())
+            throw InvalidArgument("Extract index beyond vector bound!");
+        return t->getVectorElementType();
+    }
+    return llvm::ExtractValueInst::getIndexedType(t, path);
+}
+
 Extract::Extract(llvm::Type* t, vector<unsigned> path) :
-    Function(t,llvm::ExtractValueInst::getIndexedType(t, path)),
+    Function(t, GetOutput(t, path)),
     _path(path)
 { }
 

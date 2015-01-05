@@ -8,6 +8,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Argument.h>
+#include <llvm/IR/Constants.h>
 
 #include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
@@ -195,6 +196,49 @@ bool WrapperInstruction<Multiplexer>::refine(
     conns.connect(split->dout(2), b->din(2));
     conns.remap(output(), m->dout());
     return true;
+}
+
+template<>
+bool WrapperInstruction<IntExtend>::refine(
+    ConnectionDB& conns) const
+{
+    assert(_ins->getNumOperands() == 1);
+    llvm::CastInst* ci = llvm::dyn_cast<llvm::CastInst>(_ins);
+    assert(ci != NULL);
+    unsigned diff = ci->getDestTy()->getScalarSizeInBits()
+                        - ci->getSrcTy()->getScalarSizeInBits();
+    bool sign = ci->getOpcode() == llvm::Instruction::SExt;
+    IntExtend* b = new IntExtend(diff, sign, ci->getSrcTy());
+
+    conns.remap(input(), b->din());
+    conns.remap(output(), b->dout());
+    return true;
+}
+
+template<>
+bool WrapperInstruction<Extract>::refine(
+    ConnectionDB& conns) const
+{
+    llvm::ExtractElementInst* ee =
+        llvm::dyn_cast_or_null<llvm::ExtractElementInst>(_ins);
+    if (ee != NULL) {
+        llvm::Value* indexOp = ee->getIndexOperand();
+        llvm::ConstantInt* ci =
+            llvm::dyn_cast_or_null<llvm::ConstantInt>(indexOp);
+
+        if (ci != NULL) {
+            auto s = new Split(input()->type());
+            auto e = new Extract(ee->getVectorOperand()->getType(),
+                                 {(unsigned)ci->getLimitedValue()});
+            conns.connect(s->dout(0), e->din());
+            conns.remap(input(), s->din());
+            conns.remap(output(), e->dout());
+            return true;
+        }
+
+        //TODO: dynamic index selection
+    }
+    return false;
 }
 
 template<typename C>
@@ -522,6 +566,11 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
 
     // Conversion operators
     {llvm::Instruction::Trunc, WrapperInstruction<IntTruncate>::Create},
+    {llvm::Instruction::ZExt, WrapperInstruction<IntExtend>::Create},
+    {llvm::Instruction::SExt, WrapperInstruction<IntExtend>::Create},
+
+    // Packing Operators
+    {llvm::Instruction::ExtractElement, WrapperInstruction<Extract>::Create},
 
     // Logical operators (integer operands)
     {llvm::Instruction::Shl, IntWrapperInstruction<Shift>::Create}, // Shift left  (logical)
