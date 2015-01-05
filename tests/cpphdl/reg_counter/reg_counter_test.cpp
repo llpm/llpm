@@ -10,12 +10,12 @@ int main() {
     uint64_t start = rc->cycles();
 
     // Set the initial value
-    rc->set_req(0, 0);
+    rc->set_req(0);
     rc->set_resp(&c);
     
     for (unsigned i=0; i<25; i++) {
         // Increment it
-        rc->inc_req(0);
+        rc->inc_req();
         rc->inc_resp(&c);
         printf("Incremented\n");
     }
@@ -23,7 +23,7 @@ int main() {
     for (unsigned i=0; i<10; i++) {
         // Read it
         uint64_t val = 666;
-        rc->read_req(0);
+        rc->read_req();
         rc->read_resp(&val);
 
         printf("Result: %lu\n", val);
