@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
         d.elaborations()->append<RefinePass>();
 
         d.optimizations()->append<SimplifyPass>();
-        d.optimizations()->append<FormControlRegionPass>();
+        // d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();
@@ -90,13 +90,12 @@ int main(int argc, const char** argv) {
                        op->name().c_str(), typestr(op->type()).c_str());
             }
 
-
-            printf("Writing Verilog output...\n");
-            vw.writeModule(fs, mod);
-
             printf("Writing graphviz output...\n");
             gv.writeModule(fs.create(mod->name() + ".gv"), mod, true);
             gv.writeModule(fs.create(mod->name() + "_simple.gv"), mod, false);
+
+            printf("Writing Verilog output...\n");
+            vw.writeModule(fs, mod);
         }
 
     } catch (Exception& e) {

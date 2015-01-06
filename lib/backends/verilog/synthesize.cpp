@@ -406,6 +406,41 @@ public:
     }
 };
 
+class ShiftPrinter : public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<Shift*>(b) != NULL;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        const char* op = NULL;
+        Shift* s = dynamic_cast<Shift*>(c);
+        
+        switch (s->dir()) {
+        case Shift::Left:
+            op = "<<";
+            break;
+        case Shift::Right:
+            op = ">>";
+            break;
+        }
+
+        switch (s->style()) {
+        case Shift::Logical:
+            print_function(ctxt, c, op, false);
+            break;
+        case Shift::Rotating: {
+            assert(false && "Rotating shifts not yet implemented!");
+            break;
+        }
+        case Shift::Arithmetic:
+            assert(s->style() == Shift::Arithmetic);
+            print_function(ctxt, c, ">>>", false);
+            break;
+        }
+    }
+};
+
 class IntTruncatePrinter: public VerilogSynthesizer::Printer {
 public:
     bool handles(Block* b) const {
@@ -464,29 +499,56 @@ public:
         return dynamic_cast<Constant*>(b) != NULL;
     }
 
-    static std::string toString(Constant* c) {
-        llvm::Constant* lc = c->value();
-        switch (c->dout()->type()->getTypeID()) {
+    static std::string toString(llvm::Type* ty, llvm::Constant* lc) {
+        if (ty == NULL)
+            ty = lc->getType();
+
+        if (lc != NULL &&
+            lc->getValueID() == llvm::Value::UndefValueVal) {
+            return str(boost::format("{%1%{1'bx}}") %
+                            bitwidth(ty));
+        };
+
+        switch (ty->getTypeID()) {
             case llvm::Type::IntegerTyID:
-                return str(boost::format("%1%'d%2%\n") 
-                            % bitwidth(c->dout()->type())
+                return str(boost::format("%1%'d%2%") 
+                            % bitwidth(ty)
                             % llvm::dyn_cast<llvm::ConstantInt>(lc)->
                                     getValue().toString(10, true));
             case llvm::Type::PointerTyID:
                 assert(lc == NULL || lc->isNullValue());
-                return str(boost::format("%1%'h%2%\n") 
-                            % bitwidth(c->dout()->type())
+                return str(boost::format("%1%'h%2%") 
+                            % bitwidth(ty)
                             % 0);
+            case llvm::Type::VectorTyID: {
+                llvm::ConstantDataVector* cv =
+                    llvm::dyn_cast<llvm::ConstantDataVector>(lc);
+                assert(cv != NULL);
+                std::string ret = "{";
+                unsigned len = numContainedTypes(ty);
+                for (unsigned i=0; i<len; i++) {
+                    ret += toString(NULL, cv->getElementAsConstant(i)) + 
+                            (i == (len - 1) ? "" : ", ");
+                }
+                ret += "}";
+                return ret;
+                break;
+            }
         default:
             throw InvalidArgument("Constant type not yet supported");
         }
+    }
+
+    static std::string toString(Constant* c) {
+        llvm::Constant* lc = c->value();
+        return toString(c->dout()->type(), lc);
     }
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Constant* f = dynamic_cast<Constant*>(c);
         if (bitwidth(f->dout()->type()) > 0)
             ctxt << "    assign " << ctxt.name(f->dout()) << " = "
-                 << toString(f) << ";";
+                 << toString(f) << ";\n";
     }
 };
 
@@ -891,6 +953,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(new CompareOpPrinter());
     _printers.appendEntry(new BitwiseOpPrinter());
+    _printers.appendEntry(new ShiftPrinter());
 
     _printers.appendEntry(new IntTruncatePrinter());
     _printers.appendEntry(new IntExtendPrinter());

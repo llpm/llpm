@@ -73,8 +73,7 @@ namespace llpm {
     public:
         enum Direction {
             Left,
-            Right,
-            Either
+            Right
         };
         enum Style {
             Logical,

@@ -180,62 +180,79 @@ std::string argName(llvm::Type* ty, int i) {
     return str(boost::format("arg%1%") % i);
 }
 
-std::string typeSigPlain(llvm::Type* type, bool pointerize) {
-    if (pointerize) {
-        return typeSigPlain(type, false) + "* ";
+bool implicitPointer(llvm::Type* ty) {
+    return ty->getTypeID() == llvm::Type::VectorTyID ||
+           ty->getTypeID() == llvm::Type::ArrayTyID;
+}
+
+std::pair<string, string> typeSigPlain(llvm::Type* type, bool pointerize) {
+    if (pointerize && !implicitPointer(type)) {
+        auto p = typeSigPlain(type, false);
+        return make_pair(p.first + "* ", p.second);
     }
 
     switch (type->getTypeID()) {
     case llvm::Type::IntegerTyID:
         if (type->getIntegerBitWidth() <= 8)
-            return "uint8_t";
+            return make_pair("uint8_t", "");
         if (type->getIntegerBitWidth() <= 16)
-            return "uint16_t";       
+            return make_pair("uint16_t", "");
         if (type->getIntegerBitWidth() <= 32)
-            return "uint32_t";
+            return make_pair("uint32_t", "");
         if (type->getIntegerBitWidth() <= 64)
-            return "uint64_t";
+            return make_pair("uint64_t", "");
         throw InvalidArgument("Error: cannot produce C++ header for integer type > 64 bits wide");
     case llvm::Type::HalfTyID:
-            return "half";
+            return make_pair("half", "");
     case llvm::Type::FloatTyID:
-            return "float";
+            return make_pair("float", "");
     case llvm::Type::DoubleTyID:
-            return "double";
+            return make_pair("double", "");
     case llvm::Type::X86_FP80TyID:
-            return "_float128";
+            return make_pair("_float128", "");
     case llvm::Type::PointerTyID:
-            return "uint64_t";
+            return make_pair("uint64_t", "");
     case llvm::Type::VoidTyID:
-            return "void";
+            return make_pair("void", "");
+    case llvm::Type::VectorTyID: {
+            auto p = typeSigPlain(nthType(type, 0), false);
+            return make_pair(
+                p.first,
+                p.second + str(boost::format("[%1%]")
+                                % numContainedTypes(type)));
+    }
     case llvm::Type::StructTyID:
         {
             llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
             if (!st->hasName())
                 throw InvalidArgument("Can only print struct signature if it has a name!");
-            return st->getName();
+            return make_pair(st->getName(), "");
         }
     default:
         throw InvalidArgument("Error: don't know how to print type: " + typestr(type));
     }
 
-    return typestr(type);
+    return make_pair(typestr(type), "");
 }
 
-std::string typeSig(llvm::Type* type, bool pointerize, bool names) {
+std::string typeSig(llvm::Type* type, bool pointerize, int name) {
     if (type->isStructTy()) {
         llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
         std::string sig = "\n";
         for (auto i: boost::irange<size_t>(0, st->getNumElements())) {
             auto ty = st->getContainedType(i);
-            auto arg = names ? (" " + argName(ty, i)) : "";
-            sig = sig + "        " + typeSigPlain(ty, pointerize) + arg +
-                  + (i == (st->getNumElements() - 1) ? "  // " : ", // ") + typestr(st->getContainedType(i)) + "\n";
+            auto arg = name >= 0 ? (" " + argName(ty, i)) : "";
+            auto p = typeSigPlain(ty, pointerize);
+            sig = sig + "        " + p.first + arg + p.second +
+                  + (i == (st->getNumElements() - 1) ?
+                        "  // " : ", // ") +
+                  typestr(st->getContainedType(i)) + "\n";
         }
         return sig;
     }
-    return typeSigPlain(type, pointerize) +
-        (names ? (" " + argName(type, 0)) : "");
+    auto p = typeSigPlain(type, pointerize);
+    return p.first +
+        (name >= 0 ? (" " + argName(type, 0)) : "") + p.second;
 }
 
 unsigned numArgs(llvm::Type* type) {
@@ -261,9 +278,8 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
         for (unsigned arg=0; arg<args; arg++) {
             auto argType = nthType(type, arg);
             if (bitwidth(argType) > 0) {
-                auto sig = typeSig(argType, false, false);
-                os << "            " << sig << " "
-                   << argName(argType, arg) << ";\n";
+                auto sig = typeSig(argType, false, arg);
+                os << "            " << sig << ";\n";
             }
         }
     }
@@ -310,7 +326,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     for (InputPort* ip: mod->inputs()) {
         os << "    // Input port '" << ip->name() << "'\n";
         string tName = ip->name() + "_type";
-        auto sig = typeSig(ip->type(), false, false);
+        auto sig = typeSig(ip->type(), false, -1);
         os << boost::format("    void %1%_pack(%2%);\n")
                     % ip->name()
                     % tName;
@@ -328,7 +344,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
 
     for (OutputPort* op: mod->outputs()) {
         os << "    // Output port '" << op->name() << "'\n";
-        auto sig = typeSig(op->type(), true, false);
+        auto sig = typeSig(op->type(), true, -1);
         string tName = op->name() + "_type";
         os << boost::format("    void %1%_unpack(%2%*);\n")
                     % op->name()
@@ -450,7 +466,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
     os << "void " << mod->name() << "::prepareOutputs() {\n";
     for (OutputPort* op: mod->outputs()) {
-        auto sig = typeSig(op->type(), false, false);
+        auto sig = typeSig(op->type(), false, -1);
         os << boost::format("    if (%1%_incoming.size() >= 10)\n"
                             "        simulator->%1%_bp = 1;\n"
                             "    else\n"
@@ -463,7 +479,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
     os << "void " << mod->name() << "::readOutputs() {\n";
     for (OutputPort* op: mod->outputs()) {
-        auto sig = typeSig(op->type(), false, false);
+        auto sig = typeSig(op->type(), false, -1);
         os << boost::format("    if (simulator->%1%_valid &&\n"
                             "        !simulator->%1%_bp) {\n"
                             "        %1%_incoming.resize(%1%_incoming.size()+1);\n"
@@ -477,7 +493,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
     os << "void " << mod->name() << "::prepareInputs() {\n";
     for (InputPort* ip: mod->inputs()) {
-        auto sig = typeSig(ip->type(), false, false);
+        auto sig = typeSig(ip->type(), false, -1);
         os << boost::format(
             "    if (!%1%_outgoing.empty()) {\n"
             "        %1%_pack(%1%_outgoing.front());\n"
@@ -492,7 +508,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
     os << "void " << mod->name() << "::writeInputs() {\n";
     for (InputPort* ip: mod->inputs()) {
-        auto sig = typeSig(ip->type(), false, false);
+        auto sig = typeSig(ip->type(), false, -1);
         os << boost::format(
             "    if (simulator->%1%_valid && !simulator->%1%_bp) {\n"
             "        %1%_outgoing.pop_front();\n"
@@ -563,7 +579,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
             % tName
             % mod->name();
 
-        auto sig = typeSig(ip->type(), false, true);
+        auto sig = typeSig(ip->type(), false, 0);
         os << boost::format(
                 "void %3%::%1%(%2%    ) {\n"
                 "    %4% arg;\n")
@@ -577,7 +593,11 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         if (!type->isVoidTy()) {
             for (unsigned arg=0; arg<args; arg++) {
                 auto argType = nthType(type, arg);
-                if (bitwidth(argType) > 0)
+                if (implicitPointer(argType))
+                    os << boost::format(
+                        "    memcpy(arg.%1%, %1%, sizeof(*%1%));\n")
+                            % argName(argType, arg);
+                else if (bitwidth(argType) > 0)
                     os << "    arg." << argName(argType, arg) << " = "
                        << argName(argType, arg) << ";\n";
             }
@@ -632,7 +652,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                 % tName
                 % mod->name();
 
-        auto sig = typeSig(op->type(), true, true);
+        auto sig = typeSig(op->type(), true, 0);
         os << boost::format(
                 "void %3%::%1%(%2%    ) {\n"
                 "    %4% arg;\n"
@@ -648,7 +668,11 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         if (!type->isVoidTy()) {
             for (unsigned arg=0; arg<args; arg++) {
                 auto argType = nthType(type, arg);
-                if (bitwidth(argType) > 0)
+                if (implicitPointer(argType))
+                    os << boost::format(
+                        "    memcpy(%1%, arg.%1%, sizeof(*%1%));\n")
+                            % argName(argType, arg);
+                else if (bitwidth(argType) > 0)
                     os << "    *" << argName(argType, arg) << " = "
                        << "arg." << argName(argType, arg) << ";\n";
             }
