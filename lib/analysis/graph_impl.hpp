@@ -86,7 +86,6 @@ template<typename Visitor,
          const SearchAlgo Algo>
 template<typename Container>
 void GraphSearch<Visitor, Algo>::go(const Container& init) {
-    std::set<PathTy> enqueued;
     std::deque<PathTy> queue;
     for (SrcPortTy* src: init) {
         std::vector<DstPortTy*> dsts;
@@ -94,10 +93,7 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
 
         for (DstPortTy* dst: dsts) {
             PathTy p(src, dst);
-            if (enqueued.count(p) == 0) {
-                queue.push_front(p);
-                enqueued.insert(p);
-            }
+            queue.push_front(p);
         }
     }
 
@@ -111,16 +107,14 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
         Terminate t = _visitor.visit(_conns, current);
         if (t == Continue) {
             std::vector<SrcPortTy*> next;
-            _visitor.next(_conns, current, next);
+            t = _visitor.next(_conns, current, next);
+            if (t == Continue) {
+                for (SrcPortTy* src: next) {
+                    std::vector<DstPortTy*> dsts;
+                    _conns->find(src, dsts);
 
-            for (SrcPortTy* src: next) {
-                std::vector<DstPortTy*> dsts;
-                _conns->find(src, dsts);
-
-                for (DstPortTy* dst: dsts) {
-                    PathTy p = current.push(src, dst);
-                    if (enqueued.count(p) == 0) {
-                        enqueued.insert(p);
+                    for (DstPortTy* dst: dsts) {
+                        PathTy p = current.push(src, dst);
                         switch (Algo) {
                         case DFS:
                             queue.push_front(p);
@@ -130,6 +124,8 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
                         }
                     }
                 }
+            } else if (t == TerminateSearch) {
+                terminate = TerminateSearch;
             }
         } else if (t == TerminateSearch) {
             terminate = TerminateSearch;

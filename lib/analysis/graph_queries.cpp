@@ -213,20 +213,28 @@ bool CouldReorderTokens(Interface* iface) {
 typedef Path<OutputPort, InputPort> CyclePath;
 struct CycleFindingVisitor: public Visitor<CyclePath> {
     deque< vector< std::pair<OutputPort*, InputPort*> > > cycles;
+    set< std::pair<OutputPort*, InputPort*> > seen;
+    set< std::pair<OutputPort*, InputPort*> > cycleInvolved;
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
                     const CyclePath& path) {
         if (path.hasCycle()) {
-            cycles.push_back(path.extractCycle());
+            auto cycle = path.extractCycle();
+            cycles.push_back(cycle);
+            cycleInvolved.insert(cycle.begin(),
+                                 cycle.end());
+        }
+        if (seen.count(path.end())) {
             return TerminatePath;
         } else {
+            seen.insert(path.end());
             return Continue;
         }
     }
 };
 
-void FindAllCycles(Module* mod,
+void FindCycles(Module* mod,
                    std::vector< std::vector<Connection> >& cycles) {
     CycleFindingVisitor visitor;
     ConnectionDB* conns = mod->conns();

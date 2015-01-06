@@ -41,7 +41,7 @@ void Pipeline::buildMinimum() {
    
     {
         vector< vector<Connection> > cycles;
-        queries::FindAllCycles(_module, cycles);
+        queries::FindCycles(_module, cycles);
 
         for (auto&& cycle: cycles) {
             unorderedCycles.emplace_back(cycle.begin(), cycle.end());
@@ -61,12 +61,12 @@ void Pipeline::buildMinimum() {
         Connection maxC;
         unsigned   maxV = 0;
 
-        // printf("Pipeline ranking:\n");
-        // auto& namer = _module->design().namer();
+        printf("Pipeline ranking:\n");
+        auto& namer = _module->design().namer();
         for (auto op: occurrences) {
             if (!op.first.source()->pipelineable())
                 continue;
-#if 0
+#if 1
             auto& c = op.first;
             printf("    %3u  %s -> %s\n",
                    op.second,
@@ -78,7 +78,7 @@ void Pipeline::buildMinimum() {
                 maxV = op.second;
             }
         }
-#if 0
+#if 1
         printf("    -> Selected: %s -> %s\n",
                namer.getName(maxC.source(), _module).c_str(),
                namer.getName(maxC.sink(), _module).c_str());
