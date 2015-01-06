@@ -15,17 +15,26 @@ void CheckConnectionsPass::runInternal(Module* m) {
 
     set<Block*> blocks;
     conns->findAllBlocks(blocks);
+    auto& namer = m->design().namer();
+    bool allGood = true;
     for (auto block: blocks) {
         for (auto ip: block->inputs()) {
-            if (conns->findSource(ip) == NULL)
+            if (conns->findSource(ip) == NULL) {
+                allGood = false;
                 fprintf(stderr,
-                        "WARNING: could not find driver for %s.%s: %s.%s\n",
-                        block->name().c_str(),
-                        ip->name().c_str(),
+                        "WARNING: could not find driver for %s: %s %s\n",
+                        namer.getName(ip, m).c_str(),
                         cpp_demangle(typeid(*block).name()).c_str(),
                         typestr(ip->type()).c_str());
+
+                fprintf(stderr, "History:\n");
+                block->history().print();
+            }
         }
     }
+
+    if (allGood)
+        printf("No bad connections found in %s.\n", m->name().c_str());
 }
 
 };

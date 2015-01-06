@@ -1,6 +1,8 @@
 #ifndef __LLPM_PASSES_PASS_HPP__
 #define __LLPM_PASSES_PASS_HPP__
 
+#include <boost/function.hpp>
+
 namespace llpm {
     class Design;
     class Module;
@@ -29,6 +31,19 @@ public:
     bool run(Module* mod);
 };
 
+class LambdaModulePass: public ModulePass {
+    boost::function<void(Module*)> _func;
+
+    virtual void runInternal(Module* m) {
+        _func(m);
+    }
+
+public:
+    LambdaModulePass(Design& d, boost::function<void(Module*)> func):
+        ModulePass(d),
+        _func(func)
+    { }
+};
 };
 
 #endif // __LLPM_PASSES_PASS_HPP__

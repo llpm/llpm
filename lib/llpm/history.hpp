@@ -4,6 +4,7 @@
 #include <list>
 #include <string>
 
+#include <util/macros.hpp>
 #include <llpm/exceptions.hpp>
 
 namespace llpm {
@@ -14,6 +15,7 @@ class Block;
 class BlockHistory {
 public:
     enum Source {
+        Unset,
         Unknown,
         Frontend,
         Refinement,
@@ -38,8 +40,15 @@ private:
 
 public:
     BlockHistory() :
-        _src(Unknown)
+        _src(Unset)
     { }
+
+    DEF_SET(meta);
+    DEF_GET_NP(meta);
+
+    bool hasSrcBlock() const {
+        return !_srcBlocks.empty();
+    }
 
     void setUnknown() {
         _src = Unknown;
@@ -57,7 +66,10 @@ public:
 
     void setOptimization(Block* src) {
         _src = Optimization;
-        _srcBlocks = {src};
+        if (src == NULL)
+            _srcBlocks = {};
+        else
+            _srcBlocks = {src};
     }
 
     const std::list<Block*>& srcBlocks() const {
@@ -73,6 +85,8 @@ public:
     Source src() const {
         return _src;
     }
+
+    void print(unsigned tabs=0) const;
 };
 
 };

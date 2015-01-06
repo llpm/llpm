@@ -31,11 +31,14 @@ unsigned Refinery::refine(std::vector<Block*> crude,
         for(Block*& c: crude) {
             if (sc && sc->stopRefine(c))
                 continue;
-            const vector<Refiner*>& possible_refiners = _refiners(c);
 
+            // List of possible refiners
+            const vector<Refiner*>& possible_refiners = _refiners(c);
             for(auto& r: possible_refiners) {
                 conns.clearNewBlocks();
+                auto changeCounter = conns.changeCounter();
                 if(r->refine(c, conns)) {
+                    // This refiner did the job!
                     refinedBlocks.insert(c);
                     assert(conns.isUsed(c) == false);
                     std::set<Block*> newBlocks;
@@ -43,10 +46,17 @@ unsigned Refinery::refine(std::vector<Block*> crude,
                     for (Block* nb: newBlocks) {
                         assert(nb != c);
                         assert(conns.isUsed(nb));
-                        assert(nb->history().src() == BlockHistory::Unknown);
-                        nb->history().setRefinement(c);
+                        if (nb->history().src() == BlockHistory::Unset)
+                            nb->history().setRefinement(c);
                     }
                     break;
+                } else {
+                    // If the refiner didn't work, make sure it didn't
+                    // touch anything! (Sanity check)
+                    assert(changeCounter == conns.changeCounter());
+                    set<Block*> newBlocks;
+                    conns.readAndClearNewBlocks(newBlocks);
+                    assert(newBlocks.size() == 0); // Should be redundant
                 }
             }
         }

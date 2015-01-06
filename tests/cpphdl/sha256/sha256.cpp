@@ -9,9 +9,8 @@ public:
     typedef uint8_t Data __attribute__((__vector_size__(64)));
 
 private:
-    uint32_t total[2];
-    uint32_t state[8];
-    uint8_t buffer[64];
+    // uint32_t total[2];
+    uint32_t state[8];// __attribute__((__vector_size__(8)));
 
     SHA256() {
     }
@@ -23,8 +22,8 @@ public:
 };
 
 void SHA256::start() {
-    total[0] = 0;
-    total[1] = 0;
+    // total[0] = 0;
+    // total[1] = 0;
 
     state[0] = 0x6A09E667;
     state[1] = 0xBB67AE85;
@@ -197,14 +196,15 @@ SHA256::Digest SHA256::digest() {
     uint32_t high, low;
     uint8_t msglen[8];
 
-    high = ( total[0] >> 29 )
-         | ( total[1] <<  3 );
-    low  = ( total[0] <<  3 );
+    // high = ( total[0] >> 29 )
+         // | ( total[1] <<  3 );
+    // low  = ( total[0] <<  3 );
 
     PUT_UINT32( high, msglen, 0 );
     PUT_UINT32( low,  msglen, 4 );
 
-    last = total[0] & 0x3F;
+    // last = total[0] & 0x3F;
+    last = 0;
     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
     // update( sha256_padding );
