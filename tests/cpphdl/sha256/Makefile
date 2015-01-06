@@ -1,6 +1,6 @@
-CFLAGS=-O0
+CFLAGS=-O2
 CXXFLAGS=${CFLAGS}
-OPTS=-mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
+OPTS=-O2 -mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang

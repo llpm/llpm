@@ -595,8 +595,9 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                 auto argType = nthType(type, arg);
                 if (implicitPointer(argType))
                     os << boost::format(
-                        "    memcpy(arg.%1%, %1%, sizeof(*%1%));\n")
-                            % argName(argType, arg);
+                        "    memcpy(arg.%1%, %1%, %2%);\n")
+                            % argName(argType, arg)
+                            % ((bitwidth(argType) + 7) / 8);
                 else if (bitwidth(argType) > 0)
                     os << "    arg." << argName(argType, arg) << " = "
                        << argName(argType, arg) << ";\n";
@@ -670,8 +671,9 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                 auto argType = nthType(type, arg);
                 if (implicitPointer(argType))
                     os << boost::format(
-                        "    memcpy(%1%, arg.%1%, sizeof(*%1%));\n")
-                            % argName(argType, arg);
+                        "    memcpy(%1%, arg.%1%, %2%);\n")
+                            % argName(argType, arg)
+                            % ((bitwidth(argType) + 7) / 8);
                 else if (bitwidth(argType) > 0)
                     os << "    *" << argName(argType, arg) << " = "
                        << "arg." << argName(argType, arg) << ";\n";

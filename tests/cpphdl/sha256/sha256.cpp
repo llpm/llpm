@@ -1,8 +1,6 @@
 #include <stdint.h>
 #include <cstring>
 
-#define SIZE 64
-
 class SHA256 {
 public:
     typedef uint8_t Digest __attribute__((__vector_size__(32)));
