@@ -25,6 +25,9 @@ namespace llpm {
 
     std::string name(llvm::Instruction*);
     std::string name(llvm::BasicBlock*);
+
+    llvm::Type* nthType(llvm::Type*, unsigned i);
+    unsigned    numContainedTypes(llvm::Type* ty);
 }
 
 #endif // __LLPM_UTIL_LLVM_TYPE_HPP__

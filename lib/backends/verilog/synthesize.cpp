@@ -311,9 +311,9 @@ void print_function(VerilogSynthesizer::Context& ctxt, Block* c,
     assert(dinType->isStructTy());
     auto dinName = ctxt.name(b->din());
     bool first = true;
-    for (unsigned i = 0; i < dinType->getNumContainedTypes(); i++) {
+    for (unsigned i = 0; i < numContainedTypes(dinType); i++) {
         unsigned offset = bitoffset(dinType, i);
-        unsigned width = bitwidth(dinType->getContainedType(i));
+        unsigned width = bitwidth(nthType(dinType, i));
         if (width == 0)
             continue;
         if (first)
@@ -528,7 +528,7 @@ public:
             if (bitwidth(s->dout(i)->type()) == 0)
                 continue;
             unsigned offset = bitoffset(s->din()->type(), i);
-            unsigned width = bitwidth(s->din()->type()->getContainedType(i));
+            unsigned width = bitwidth(nthType(s->din()->type(), i));
             ctxt << "    assign " << ctxt.name(s->dout(i)) << " = "
                  << boost::format("%1%[%2%:%3%];\n") 
                         % dinName
@@ -551,7 +551,7 @@ public:
         llvm::Type* type = e->din()->type();
         for (unsigned i: e->path()) {
             offset += bitoffset(type, i);
-            type = type->getContainedType(i);
+            type = nthType(type, i);
         }
 
         unsigned width = bitwidth(e->dout()->type());
@@ -575,7 +575,7 @@ public:
         auto doutName = ctxt.name(m->dout());
         auto dinType = m->din()->type();
         auto dinName = ctxt.name(m->din());
-        unsigned nWidth = bitwidth(dinType->getContainedType(0));
+        unsigned nWidth = bitwidth(nthType(dinType, 0));
         unsigned nOffset = bitoffset(dinType, 0);
 
         ctxt << "    always\n"
@@ -584,13 +584,13 @@ public:
                     % dinName
                     % (nWidth + nOffset - 1)
                     % nOffset;
-        for (size_t i=1; i<dinType->getNumContainedTypes(); i++) {
+        for (size_t i=1; i<numContainedTypes(dinType); i++) {
             auto offset = bitoffset(dinType, i);
             ctxt << boost::format("            %1% : %2% = %3%[%4%:%5%];\n")
                         % (i - 1)
                         % doutName
                         % dinName
-                        % (offset + bitwidth(dinType->getContainedType(i)) - 1)
+                        % (offset + bitwidth(nthType(dinType, i)) - 1)
                         % offset;
         }
         ctxt << "        endcase\n"
@@ -611,11 +611,11 @@ public:
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Router* r = dynamic_cast<Router*>(c);
         auto dinName = ctxt.name(r->din());
-        auto dinType = r->din()->type()->getContainedType(1);
+        auto dinType = nthType(r->din()->type(), 1);
         auto dinOffset = bitoffset(r->din()->type(), 1);
         auto dinWidth = bitwidth(dinType);
 
-        auto selType = r->din()->type()->getContainedType(0);
+        auto selType = nthType(r->din()->type(), 0);
         auto selWidth = bitwidth(selType);
         auto selOffset = bitoffset(r->din()->type(), 0);
 

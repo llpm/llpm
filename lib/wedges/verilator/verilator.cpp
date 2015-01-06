@@ -259,7 +259,7 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
        << "        struct {\n";
     if (!type->isVoidTy()) {
         for (unsigned arg=0; arg<args; arg++) {
-            auto argType = type->getContainedType(arg);
+            auto argType = nthType(type, arg);
             if (bitwidth(argType) > 0) {
                 auto sig = typeSig(argType, false, false);
                 os << "            " << sig << " "
@@ -576,7 +576,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         auto args = numArgs(type);
         if (!type->isVoidTy()) {
             for (unsigned arg=0; arg<args; arg++) {
-                auto argType = type->getContainedType(arg);
+                auto argType = nthType(type, arg);
                 if (bitwidth(argType) > 0)
                     os << "    arg." << argName(argType, arg) << " = "
                        << argName(argType, arg) << ";\n";
@@ -647,7 +647,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
         if (!type->isVoidTy()) {
             for (unsigned arg=0; arg<args; arg++) {
-                auto argType = type->getContainedType(arg);
+                auto argType = nthType(type, arg);
                 if (bitwidth(argType) > 0)
                     os << "    *" << argName(argType, arg) << " = "
                        << "arg." << argName(argType, arg) << ";\n";

@@ -1,6 +1,8 @@
 #include "comm_intr.hpp"
 
 #include <util/misc.hpp>
+#include <util/llvm_type.hpp>
+
 #include <boost/format.hpp>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -60,10 +62,9 @@ Join::Join(llvm::Type* output) :
     if (ct == NULL)
         throw InvalidArgument("When specifying an output type for Join, it must be a CompositeType");
     
-    unsigned idx = 0;
-    while (ct->indexValid(idx)) {
+    unsigned numTypes = numContainedTypes(ct);
+    for (unsigned idx=0; idx<numTypes; idx++) {
         _din.push_back(new InputPort(this, ct->getTypeAtIndex(idx)));
-        idx += 1;
     }
 }
 
@@ -90,10 +91,9 @@ Split::Split(llvm::Type* input) :
     if (ct == NULL)
         throw InvalidArgument("When specifying an output type for Join, it must be a CompositeType");
     
-    unsigned idx = 0;
-    while (ct->indexValid(idx)) {
+    unsigned numTypes = numContainedTypes(ct);
+    for (unsigned idx=0; idx<numTypes; idx++) {
         _dout.push_back(new OutputPort(this, ct->getTypeAtIndex(idx)));
-        idx += 1;
     }
 }
 

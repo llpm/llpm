@@ -241,6 +241,38 @@ bool WrapperInstruction<Extract>::refine(
     return false;
 }
 
+template<>
+bool WrapperInstruction<ReplaceElement>::refine(
+    ConnectionDB& conns) const
+{
+    llvm::InsertElementInst* ie =
+        llvm::dyn_cast_or_null<llvm::InsertElementInst>(_ins);
+    if (ie != NULL) {
+        llvm::Value* indexOp = ie->getOperand(2);
+        llvm::ConstantInt* ci =
+            llvm::dyn_cast_or_null<llvm::ConstantInt>(indexOp);
+
+        if (ci != NULL) {
+            auto s = new Split(input()->type());
+            conns.remap(input(), s->din());
+            auto j = new Join({s->dout(0)->type(), s->dout(1)->type()});
+            conns.connect(s->dout(0), j->din(0));
+            conns.connect(s->dout(1), j->din(1));
+            auto re = new ReplaceElement(ie->getOperand(0)->getType(),
+                                         ci->getLimitedValue());
+            conns.connect(j->dout(), re->din());
+            conns.remap(output(), re->dout());
+            return true;
+        } else {
+            auto re = new ReplaceElement(ie->getOperand(0)->getType());
+            conns.remap(input(), re->din());
+            conns.remap(output(), re->dout());
+            return true;
+        }
+    }
+    return false;
+}
+
 template<typename C>
 bool WrapperInstruction<C>::refine(
     ConnectionDB& conns) const
@@ -568,6 +600,8 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::Trunc, WrapperInstruction<IntTruncate>::Create},
     {llvm::Instruction::ZExt, WrapperInstruction<IntExtend>::Create},
     {llvm::Instruction::SExt, WrapperInstruction<IntExtend>::Create},
+    {llvm::Instruction::InsertElement,
+        WrapperInstruction<ReplaceElement>::Create},
 
     // Packing Operators
     {llvm::Instruction::ExtractElement, WrapperInstruction<Extract>::Create},

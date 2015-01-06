@@ -17,13 +17,16 @@ unsigned bitwidth(llvm::Type* t) {
     if (size > 0 || t->isVoidTy())
         return size;
 
+    if (t->isPointerTy())
+        return 64;
+
     size = 0;
     llvm::CompositeType* ct = llvm::dyn_cast<llvm::CompositeType>(t);
     if (ct == NULL)
         throw InvalidArgument("bitwidth can only be calculated for scalar and composite types!");
 
-    for (unsigned i=0; i<ct->getNumContainedTypes(); i++) {
-        size += bitwidth(ct->getContainedType(i));
+    for (unsigned i=0; i<numContainedTypes(ct); i++) {
+        size += bitwidth(nthType(ct, i));;
     }
 
     return size;
@@ -31,10 +34,10 @@ unsigned bitwidth(llvm::Type* t) {
 
 unsigned bitoffset(llvm::Type* ct, unsigned n) {
     unsigned acc = 0;
-    if (n >= ct->getNumContainedTypes())
+    if (n >= numContainedTypes(ct))
         throw InvalidArgument("n must index into composite type and not beyond");
     for (unsigned i=0; i<n; i++) {
-        acc += bitwidth(ct->getContainedType(i));
+        acc += bitwidth(nthType(ct, i));
     }
     return acc;
 }
@@ -79,6 +82,36 @@ std::string name(llvm::BasicBlock* bb) {
     }
     return str(boost::format("bb%1%")
                 % bbcount);
+}
+
+llvm::Type* nthType(llvm::Type* ty, unsigned i) {
+    switch(ty->getTypeID()) {
+    case llvm::Type::StructTyID:
+        return ty->getStructElementType(i);
+    case llvm::Type::VectorTyID:
+        if (i > ty->getVectorNumElements())
+            throw InvalidArgument("i is out of bounds for this type!");
+        return ty->getVectorElementType();
+    case llvm::Type::ArrayTyID:
+        if (i > ty->getVectorNumElements())
+            throw InvalidArgument("i is out of bounds for this type!");
+        return ty->getArrayElementType();
+    default:
+        throw InvalidArgument("Type does not appear to be a CompositeType!");
+    }
+}
+
+unsigned numContainedTypes(llvm::Type* ty) {
+    switch(ty->getTypeID()) {
+    case llvm::Type::StructTyID:
+        return ty->getStructNumElements();
+    case llvm::Type::VectorTyID:
+        return ty->getVectorNumElements();
+    case llvm::Type::ArrayTyID:
+        return ty->getVectorNumElements();
+    default:
+        return 0;
+    }
 }
 
 }

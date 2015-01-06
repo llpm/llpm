@@ -2,6 +2,7 @@
 
 #include <llpm/block.hpp>
 #include <llpm/module.hpp>
+#include <util/misc.hpp>
 
 using namespace std;
 
@@ -31,7 +32,9 @@ void BlockHistory::print(unsigned tabs) const {
                             source, _meta.c_str());
     for (Block* b: _srcBlocks) {
         auto name = b->module()->design().namer().getName(b, b->module());
-        printTabs(tabs); printf("%s", name.c_str());
+        printTabs(tabs); printf("%s (%s)",
+                                name.c_str(),
+                                cpp_demangle(typeid(*b).name()).c_str());
         b->history().print(tabs+1);
     }
 }

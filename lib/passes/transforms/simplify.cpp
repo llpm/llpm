@@ -1,6 +1,7 @@
 #include "simplify.hpp"
 
 #include <util/transform.hpp>
+#include <util/llvm_type.hpp>
 
 #include <deque>
 
@@ -44,7 +45,7 @@ void SimplifyPass::runInternal(Module* m) {
         if (mb) {
             auto dinT = mb->din()->type();
             assert(dinT->isStructTy());
-            if (dinT->getStructNumElements() == 2) {
+            if (numContainedTypes(dinT) == 2) {
                 // Just a selector and data field
                 Extract* e = new Extract(dinT, {1});
                 t.replace(mb, e);
