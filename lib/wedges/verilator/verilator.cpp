@@ -178,9 +178,11 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
 
     // Link in the existing shit
     llvm::Linker L(merged, false);
-    if (L.linkInModule(mod->swModule(), &errMsg)) {
-        printf("Error linking: %s\n", errMsg.c_str());
-        assert(false);
+    if (mod->swModule() != NULL) {
+        if (L.linkInModule(mod->swModule(), &errMsg)) {
+            printf("Error linking: %s\n", errMsg.c_str());
+            assert(false);
+        }
     }
     mod->swModule(merged);
 
@@ -339,12 +341,13 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
 
 std::string structName(Port* p, string prefix="") {
     llvm::Type* ty = p->type();
-    if (ty->isSingleValueType()) {
+    if (ty->isSingleValueType() && !implicitPointer(ty)) {
         auto pr = typeSigPlain(ty, false);
         return pr.first + pr.second;
     } else if (ty->isStructTy() &&
                ty->getStructNumElements() == 1 &&
-               ty->getStructElementType(0)->isSingleValueType()) {
+               ty->getStructElementType(0)->isSingleValueType() &&
+               !implicitPointer(ty->getStructElementType(0))) {
         auto pr = typeSigPlain(ty->getStructElementType(0), false);
         return pr.first + pr.second;
     } else {

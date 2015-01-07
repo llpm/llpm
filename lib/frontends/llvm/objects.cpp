@@ -552,8 +552,8 @@ void LLVMFunction::build(llvm::Function* func) {
 
     // Connect input/output
     _call = addServerInterface(_entry->din(), _exit->dout(), "call");
-    _call->din()->name("call");
-    _call->dout()->name("ret");
+    _call->din()->name("req");
+    _call->dout()->name("resp");
 }
 
 void LLVMFunction::connectReturn(OutputPort* retPort) {

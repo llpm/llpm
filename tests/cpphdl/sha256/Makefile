@@ -22,7 +22,7 @@ ${ROOT}.hpp: obj/${ROOT}.hpp
 
 ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	${CXX} -c -emit-llvm ${CXXFLAGS} ${NAME}_test.cpp -o ${NAME}_test.cpp.bc
-	${CXX} -o ${NAME}_test ${NAME}_test.cpp.bc obj/${ROOT}_verilator.bc
+	${CXX} -o ${NAME}_test ${NAME}_test.cpp.bc obj/${ROOT}_sw.bc
 
 %.bc: %.cpp
 	${CLANGXX} -c -emit-llvm ${CFLAGS} $< -o $@.tmp

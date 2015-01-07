@@ -14,10 +14,8 @@ int main(void) {
     s->trace("debug.vcd");
     s->reset();
     uint64_t start = s->cycles();
-    s->call(4, 25);
-    long l;
-    s->ret((uint64_t*)&l);
-    printf("Result: %ld\n", l);
+    uint64_t l = s->call(4, 25);
+    printf("Result: %lu\n", l);
     printf("S/W Result: %ld\n", simple_sw(4, 25));
     printf("Cycle count: %lu\n", s->cycles() - start);
     s->run(5);

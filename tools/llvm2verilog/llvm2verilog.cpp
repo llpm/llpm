@@ -66,9 +66,6 @@ int main(int argc, const char** argv) {
         FileSet fs(true, dirName, true);
 
         for (Module* mod: d.modules()) {
-            if (mod->hasCycle()) {
-                printf("Module still has cycle!\n");
-            }
             vw.writeModule(fs, mod);
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
         }

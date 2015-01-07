@@ -16,7 +16,7 @@ simple.hpp: obj/simple.hpp
 
 simple_test: simple_test.cpp simple.hpp
 	${CXX} -c -emit-llvm ${CXXFLAGS} simple_test.cpp -o simple_test.cpp.bc
-	${CXX} -o simple_test simple_test.cpp.bc obj/simple_verilator.bc
+	${CXX} -o simple_test simple_test.cpp.bc obj/simple_sw.bc
 
 %.bc: %.c
 	clang -c -emit-llvm ${CFLAGS} $< -o $@.tmp

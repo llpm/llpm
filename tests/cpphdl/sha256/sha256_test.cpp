@@ -23,7 +23,6 @@ public:
 };
 
 int main() {
-    char c;
     uint64_t l;
 
     SHA256* sha = new SHA256();
@@ -32,8 +31,7 @@ int main() {
     sha->reset();
 
     printf("Initializing...\n");
-    sha->start_req();
-    sha->start_resp(&c);
+    sha->start();
     sw->start();
 
     printf("Sending data block...\n");
@@ -45,7 +43,6 @@ int main() {
             data[i] = i+(c<<4);
         }
         sha->update_req(data);
-        sha->update_resp(&c);
         sw->update(data);
     }
     printf("  cycles: %lu\n", sha->cycles() - start);
