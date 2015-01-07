@@ -4,6 +4,11 @@
 #include <sys/types.h>
 
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/Bitcode/ReaderWriter.h>
+#include <llvm/Support/raw_os_ostream.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Linker/Linker.h>
 
 #include <boost/format.hpp>
 #include <boost/range/irange.hpp>
@@ -147,16 +152,49 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         objFiles.push_back(objFile);
     }
 
-    FileSet::File* wedgeBC = fileset.create(mod->name() + "_verilator.bc");
-    string fileList = "";
-    for (auto f: objFiles)
-        fileList += f->name() + " ";
-    run(str(
-        boost::format("%1%/llvm/bin/llvm-link -o %2% %3%")
-            % Directories::executablePath()
-            % wedgeBC->name()
-            % fileList));
-    
+    // Load all the output objs and merge them into swModule
+    llvm::Module* merged = NULL;
+    string errMsg;
+    for (auto f: objFiles) {
+        llvm::SMDiagnostic Err;
+        llvm::Module* m = llvm::ParseIRFile(
+            f->name(), Err, mod->design().context());
+        if (m == NULL) {
+            Err.print("", llvm::errs());
+            assert(false);
+        }
+
+        if (merged == NULL) {
+            merged = m;
+        } else {
+            llvm::Linker L(merged, false);
+            auto rc = L.linkInModule(m, &errMsg);
+            if (rc) {
+                printf("Error linking: %s\n", errMsg.c_str());
+                assert(false);
+            }
+        }
+    }
+
+    // Link in the existing shit
+    llvm::Linker L(merged, false);
+    if (L.linkInModule(mod->swModule(), &errMsg)) {
+        printf("Error linking: %s\n", errMsg.c_str());
+        assert(false);
+    }
+    mod->swModule(merged);
+
+    // Some of the functions are implemented directly in IR
+    writeBodies(mod);
+
+    // Output the code associated with this module
+    llvm::Module* swModule = mod->swModule();
+    if (swModule != NULL) {
+        auto bcFile = fileset.create(mod->name() + "_sw.bc");
+        llvm::raw_os_ostream llvmStream(bcFile->openStream());
+        llvm::WriteBitcodeToFile(swModule, llvmStream);
+    }
+
     // Delete unnecessary files
     fileset.erase(cppFiles);
     fileset.erase(verilatedHppFiles);
@@ -360,7 +398,6 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
                     % sig;
         os << "\n";
     }
-
 
     os << "    // Simulation run control\n"
        << "    void reset();\n"
@@ -687,5 +724,8 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
     f->close();
 }
 
-};
+void VerilatorWedge::writeBodies(Module* mod) {
+}
+
+} // namespace llpm
 

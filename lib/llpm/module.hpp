@@ -23,8 +23,16 @@ protected:
 
     llvm::ValueToValueMapTy VMap;
     std::unique_ptr<llvm::Module> _swModule;
+
+    // A type which represents this module in the S/W version of this
+    // module
+    llvm::StructType* _swType;
+    // A type which represents this module's S/W interface. Typically
+    // opaque
+    llvm::StructType* _ifaceType;
+
     llvm::Function* cloneFunc(llvm::Function* F, std::string name);
-    llvm::Function* createCallStub(Interface*, llvm::Type* thisPtr);
+    llvm::Function* createCallStub(Interface*);
     llvm::Function* createPortStub(Port*);
 
     std::map<std::string, llvm::Function*> _interfaceStubs;
@@ -42,7 +50,12 @@ public:
     llvm::Module* swModule() {
         return _swModule.get();
     }
+    void swModule(llvm::Module* mod) {
+        _swModule.reset(mod);
+    }
     void createSWModule(llvm::Module*);
+    DEF_GET_NP(swType);
+    DEF_GET_NP(ifaceType);
 
     virtual bool hasState() const = 0;
     virtual bool isPure() const {

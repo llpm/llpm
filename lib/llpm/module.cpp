@@ -242,6 +242,10 @@ void Module::createSWModule(llvm::Module* M) {
         New->setTargetTriple(M->getTargetTriple());
         New->setModuleInlineAsm(M->getModuleInlineAsm());
 
+        // Create interface type for myself
+        _ifaceType = llvm::StructType::create(
+            _design.context(), "class." + name());
+
         // Loop over all of the global variables, making corresponding
         // globals in the new module.  Here we add them to the VMap
         // and to the new Module.  We don't worry about attributes or
@@ -345,10 +349,9 @@ llvm::Function* Module::cloneFunc(
     return F;
 }
 
-llvm::Function* Module::createCallStub(Interface* iface,
-                                       llvm::Type* thisPtr) {
+llvm::Function* Module::createCallStub(Interface* iface) {
     vector<llvm::Type*> args;
-    args.push_back(thisPtr);
+    args.push_back(llvm::PointerType::getUnqual(_ifaceType));
     llvm::Type* argType = iface->req()->type();
     if (argType->getTypeID() == llvm::Type::StructTyID) {
         for (unsigned i=0; i<argType->getStructNumElements(); i++) {

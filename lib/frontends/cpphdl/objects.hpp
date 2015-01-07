@@ -49,7 +49,8 @@ class CPPHDLClass : public ContainerModule {
 public:
     CPPHDLClass(Design& design,
                 std::string name,
-                llvm::StructType* ty);
+                llvm::StructType* ty,
+                llvm::Module* mod);
 
     llvm::Function* swVersion(std::string name) {
         auto f = _swVersion.find(name);
@@ -61,7 +62,7 @@ public:
         return _tests;
     }
 
-    void addMember(std::string name, LLVMFunction*);
+    void addMember(std::string name, llvm::Function*, LLVMFunction*);
     void connectMem(LLVMFunction*);
     llvm::GetElementPtrInst* getClassDeref(llvm::Value*) const;
     unsigned resolveMember(llvm::Value*) const;

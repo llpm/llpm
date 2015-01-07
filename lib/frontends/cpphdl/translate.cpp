@@ -28,11 +28,11 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
     }
     cout << "Class " << className << ": " << typestr(classType) << endl;
 
-    CPPHDLClass* chClass = new CPPHDLClass(_design, className, classType);
-    chClass->createSWModule(lm);
+    CPPHDLClass* chClass = new CPPHDLClass(
+        _design, className, classType, lm);
 
     string fnPrefix = className + "::";
-    string testStr = fnPrefix + "test";
+    string testStr = "test";
     for (auto&& func: lm->getFunctionList()) {
         auto demangledName = cpp_demangle(func.getName().str().c_str());
         if (demangledName.find(fnPrefix) == 0) {
@@ -49,9 +49,9 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
                 chClass->adoptTest(&func);
             } else {
                 printf("Found class member: %s\n", demangledName.c_str());
-                chClass->adoptSWVersion(fnName, &func);
                 chClass->addMember(
                     fnName,
+                    &func,
                     _llvmTranslator.translate(&func)
                     );
             }

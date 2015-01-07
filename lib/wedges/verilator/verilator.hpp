@@ -13,6 +13,7 @@ class VerilatorWedge {
 
     void writeHeader(FileSet::File*, Module*);
     void writeImplementation(FileSet::File*, Module*);
+    void writeBodies(Module*);
 
 public:
     VerilatorWedge(Design& design) :

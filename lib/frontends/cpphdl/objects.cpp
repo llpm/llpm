@@ -20,13 +20,19 @@ namespace cpphdl {
 
 CPPHDLClass::CPPHDLClass(Design& design,
                          std::string name,
-                         llvm::StructType* ty) :
+                         llvm::StructType* ty,
+                         llvm::Module* mod) :
     ContainerModule(design, name),
     _type(ty) {
+
+    createSWModule(mod);
+    _swType = swModule()->getTypeByName(ty->getName());
+    _swType->setName(ty->getName().str() + "_sw");
     buildVariables();
 }
 
-void CPPHDLClass::addMember(std::string name, LLVMFunction* func) {
+void CPPHDLClass::addMember(std::string name, llvm::Function* llvmFunc, 
+                            LLVMFunction* func) {
     auto funcReq = func->call()->din();
     auto join = new Join(funcReq->type());
     assert(join->din_size() > 0);
@@ -56,10 +62,10 @@ void CPPHDLClass::addMember(std::string name, LLVMFunction* func) {
             llvm::Type::getVoidTy(funcReq->type()->getContext()));
     }
 
-    addServerInterface(req, func->call()->dout(), name);
+    auto iface = addServerInterface(req, func->call()->dout(), name);
     connectMem(func);
     _methods[name] = func;
-    createCallStub(func->call(), llvm::PointerType::getUnqual(_type));
+    createCallStub(iface);
 }
 
 
