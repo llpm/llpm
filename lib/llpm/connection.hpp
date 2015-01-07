@@ -20,6 +20,9 @@ public:
     Connection(OutputPort* source, InputPort* sink) :
         ConnectionPair(sink, source) { }
 
+    Connection(InputPort* sink, OutputPort* source) :
+        ConnectionPair(sink, source) { }
+
     Connection() :
         ConnectionPair(NULL, NULL) { }
 

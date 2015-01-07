@@ -212,20 +212,20 @@ bool CouldReorderTokens(Interface* iface) {
 
 typedef Path<OutputPort, InputPort> CyclePath;
 struct CycleFindingVisitor: public Visitor<CyclePath> {
-    deque< vector< std::pair<OutputPort*, InputPort*> > > cycles;
+    vector< std::pair<OutputPort*, InputPort*> > cycle;
     set< std::pair<OutputPort*, InputPort*> > seen;
-    set< std::pair<OutputPort*, InputPort*> > cycleInvolved;
+    set<Connection> ignores;
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
                     const CyclePath& path) {
-        if (path.hasCycle()) {
-            auto cycle = path.extractCycle();
-            cycles.push_back(cycle);
-            cycleInvolved.insert(cycle.begin(),
-                                 cycle.end());
-        }
-        if (seen.count(path.end())) {
+        if (ignores.count(path.end()) > 0) {
+            // Don't visit this connection
+            return TerminatePath;
+        } else if (path.hasCycle()) {
+            this->cycle = path.extractCycle();
+            return TerminateSearch;
+        } else if (seen.count(path.end())) {
             return TerminatePath;
         } else {
             seen.insert(path.end());
@@ -234,9 +234,10 @@ struct CycleFindingVisitor: public Visitor<CyclePath> {
     }
 };
 
-void FindCycles(Module* mod,
-                   std::vector< std::vector<Connection> >& cycles) {
+bool FindCycle(Module* mod, const std::set<Connection>& ignore,
+               std::vector< Connection >& cycle) {
     CycleFindingVisitor visitor;
+    visitor.ignores = ignore;
     ConnectionDB* conns = mod->conns();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
@@ -245,18 +246,12 @@ void FindCycles(Module* mod,
     mod->internalDrivers(init);
     search.go(init);
 
-    unsigned offset = cycles.size();
-    cycles.resize(offset + visitor.cycles.size());
-    for (unsigned i=0; i<visitor.cycles.size(); i++) {
-        const auto& cycleOrig = visitor.cycles[i];
-        auto& cycleDest = cycles[offset + i];
-
-        cycleDest.resize(cycleOrig.size());
-        for (unsigned j=0; j<cycleOrig.size(); j++) {
-            auto& p = cycleOrig[j];
-            cycleDest[j] = Connection(p.first, p.second);
-        }
+    cycle.resize(visitor.cycle.size());
+    for (unsigned j=0; j<visitor.cycle.size(); j++) {
+        cycle[j] = visitor.cycle[j];
     }
+
+    return cycle.size() > 0;
 }
 
 } // namespace queries

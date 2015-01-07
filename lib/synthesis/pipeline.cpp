@@ -36,77 +36,15 @@ void Pipeline::buildMinimum() {
     // breaking them starting with the most common edges in cycles --
     // breaking those edges simultaneously breaks the most cycles!
     //
-    vector< set<Connection> > unorderedCycles;
-    map<Connection, unsigned> occurrences;
-   
-    {
-        vector< vector<Connection> > cycles;
-        queries::FindCycles(_module, cycles);
-
-        for (auto&& cycle: cycles) {
-            unorderedCycles.emplace_back(cycle.begin(), cycle.end());
-        }
-
-        for (auto&& cycle: unorderedCycles) {
-            for (auto&& conn: cycle) {
-                occurrences[conn] += 1;
-            }
-        }
+    set<Connection> broken;
+    vector<Connection> cycle;
+    while (queries::FindCycle(_module, broken, cycle)) {
+        Connection toBreak = cycle.back();
+        assert(broken.count(toBreak) == 0);
+        broken.insert(toBreak);
+        assert(_stages[toBreak] == 0);
+        _stages[toBreak] = 1;
     }
-
-    while (!unorderedCycles.empty()) {
-        printf("Cycles left: %lu\n", unorderedCycles.size());
-
-        // Find the most common edge (connection)
-        Connection maxC;
-        unsigned   maxV = 0;
-
-        printf("Pipeline ranking:\n");
-        auto& namer = _module->design().namer();
-        for (auto op: occurrences) {
-            if (!op.first.source()->pipelineable())
-                continue;
-#if 1
-            auto& c = op.first;
-            printf("    %3u  %s -> %s\n",
-                   op.second,
-                   namer.getName(c.source(), _module).c_str(),
-                   namer.getName(c.sink(), _module).c_str());
-#endif
-            if (op.second > maxV) {
-                maxC = op.first;
-                maxV = op.second;
-            }
-        }
-#if 1
-        printf("    -> Selected: %s -> %s\n",
-               namer.getName(maxC.source(), _module).c_str(),
-               namer.getName(maxC.sink(), _module).c_str());
-#endif
-
-        // maxC is the connection with the most occurrences. Pipeline it.
-        assert(_stages[maxC] == 0);
-        _stages[maxC] = 1;
-
-        // Remove all cycles which contained maxC -- they are broken
-        for (unsigned i=0; i<unorderedCycles.size(); ) {
-            auto& cycle = unorderedCycles[i];
-            if (cycle.count(maxC) > 0) {
-                for (auto& conn: cycle) {
-                    auto& o = occurrences[conn];
-                    assert( o > 0 );
-                    o -= 1;
-                    if (o == 0)
-                        occurrences.erase(conn);
-                }
-                unorderedCycles.erase(unorderedCycles.begin() + i);
-            } else {
-                // Advance i only if we haven't deleted one
-                i++;
-            }
-        }
-    }
-
     _built = true;
 }
 

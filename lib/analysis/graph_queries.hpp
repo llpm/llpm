@@ -32,10 +32,10 @@ bool TokenOrderAnalysis(Port* source,
 // Does this interface potentially deliver responses in the wrong order?
 bool CouldReorderTokens(Interface*);
 
-// Finds cycles in module. Not guaranteed to find all cycles, but all
-// connections involved in cycles will be returned.
-void FindCycles(Module*,
-                std::vector< std::vector<Connection> >&);
+// Finds a cycle in module while ignoring some connections
+bool FindCycle(Module*,
+               const std::set< Connection >& ignore,
+               std::vector< Connection >& cycle);
 
 };
 };
