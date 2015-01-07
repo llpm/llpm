@@ -358,7 +358,8 @@ llvm::Function* Module::createCallStub(Interface* iface) {
             args.push_back(argType->getStructElementType(i));
         }
     } else {
-        args.push_back(argType);
+        if (!argType->isVoidTy())
+            args.push_back(argType);
     }
 
     llvm::Type* retType = iface->resp()->type();

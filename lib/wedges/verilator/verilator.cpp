@@ -301,6 +301,18 @@ unsigned numArgs(llvm::Type* type) {
     return 1;
 }
 
+llvm::Type* argType(unsigned i, llvm::Type* type) {
+    if (type->isStructTy()) {
+        llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
+        return st->getStructElementType(i);
+    } else {
+        if (i > 0)
+            throw InvalidArgument(
+                "Can only request argType > 0 for struct types");
+        return type;
+    }
+}
+
 void writeStruct(ostream& os, llvm::Type* type, string name) {
     // TODO: I don't think this'll work for oddball structs due to
     // alignment issues. Should be replaced with something which relies
@@ -323,6 +335,21 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
     }
     os << "        };\n"
        << "    };\n";
+}
+
+std::string structName(Port* p, string prefix="") {
+    llvm::Type* ty = p->type();
+    if (ty->isSingleValueType()) {
+        auto pr = typeSigPlain(ty, false);
+        return pr.first + pr.second;
+    } else if (ty->isStructTy() &&
+               ty->getStructNumElements() == 1 &&
+               ty->getStructElementType(0)->isSingleValueType()) {
+        auto pr = typeSigPlain(ty->getStructElementType(0), false);
+        return pr.first + pr.second;
+    } else {
+        return prefix + p->name() + "_type";
+    }
 }
 
 void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
@@ -398,6 +425,20 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
                     % sig;
         os << "\n";
     }
+
+    os << "    // Interfaces\n";
+    for (Interface* iface: mod->interfaces()) {
+        // Only server interfaces can be translated to calls
+        if (iface->server()) {
+            auto argSig = typeSig(iface->req()->type(), false, -1);
+            auto retSig = structName(iface->dout());
+            os << boost::format("    %3% %1%(%2%    );\n")
+                        % iface->name()
+                        % argSig
+                        % retSig;
+        }
+    }
+    os << "\n";
 
     os << "    // Simulation run control\n"
        << "    void reset();\n"
@@ -720,11 +761,43 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         os << "}\n";
     }
 
+    for (Interface* iface: mod->interfaces()) {
+        if (!iface->server())
+            continue;
+        string retType = structName(iface->resp(), mod->name() + "::");
+        string args = typeSig(iface->req()->type(), false, 0);
+        string argNameList = "";
+        unsigned numargs = numArgs(iface->req()->type());
+        for (unsigned i=0; i<numargs; i++) {
+            if (argType(i, iface->req()->type())->isVoidTy())
+                continue;
+            argNameList += str(boost::format("arg%1%") % i);
+            if (i != (numargs-1))
+                argNameList += ", ";
+        }
+        os << boost::format(
+            "%3% %1%::%2%(%4%) {\n"
+            "    %3% ret;\n"
+            "    %5%(%6%);\n"
+            "    %7%(&ret);\n"
+            "    return ret;\n"
+            "}\n" )
+            % mod->name()
+            % iface->name()
+            % retType
+            % args
+            % iface->req()->name()
+            % argNameList
+            % iface->resp()->name();
+    }
+
     os << "\n";
     f->close();
 }
 
 void VerilatorWedge::writeBodies(Module* mod) {
+    // Write bodies for the interface functions.
+    
 }
 
 } // namespace llpm
