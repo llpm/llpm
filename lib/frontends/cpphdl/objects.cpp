@@ -10,6 +10,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/ValueMap.h>
+
 
 using namespace std;
 
@@ -57,7 +59,9 @@ void CPPHDLClass::addMember(std::string name, LLVMFunction* func) {
     addServerInterface(req, func->call()->dout(), name);
     connectMem(func);
     _methods[name] = func;
+    createCallStub(func->call(), llvm::PointerType::getUnqual(_type));
 }
+
 
 void CPPHDLClass::buildVariables() {
     for (unsigned i=0; i<_type->getNumElements(); i++) {
@@ -225,6 +229,14 @@ unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
             "Pointer is out of module bounds!");
     }
     return (unsigned)idx;
+}
+
+void CPPHDLClass::adoptSWVersion(std::string name, llvm::Function* func) {
+    _swVersion[name] = cloneFunc(func, name + "_sw");
+}
+
+void CPPHDLClass::adoptTest(llvm::Function* func) {
+    _tests.insert(cloneFunc(func, func->getName()));
 }
 
 } // namespace cpphdl

@@ -35,16 +35,18 @@ int main(int argc, const char** argv) {
             return 1;
         }
 
-        CPPHDLTranslator trans(d);
-        trans.readBitcode(argv[1]);
-
         string dirName = argv[2];
 
-        set<Module*> modules;
-        for (int i=3; i<argc; i++) {
-            auto m = trans.translate(argv[i]);
-            modules.insert(m);
-            d.addModule(m);
+        {
+            CPPHDLTranslator trans(d);
+            trans.readBitcode(argv[1]);
+
+            set<Module*> modules;
+            for (int i=3; i<argc; i++) {
+                auto m = trans.translate(argv[i]);
+                modules.insert(m);
+                d.addModule(m);
+            }
         }
 
         d.elaborations()->append<SynthesizeMemoryPass>();

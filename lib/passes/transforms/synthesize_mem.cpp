@@ -44,6 +44,8 @@ void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns, Register* orig) {
 
     for (auto p: reqs) {
         OutputPort* requestor = conns->findSource(p.first);
+        if (requestor == NULL)
+            continue;
         Wait* w = new Wait(rr->read()->type());
         conns->disconnect(p.first, requestor);
         conns->connect(rr->read(), w->din());

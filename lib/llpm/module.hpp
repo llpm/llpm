@@ -8,6 +8,8 @@
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/interface.hpp>
 
+#include <llvm/IR/Module.h>
+#include <llvm/Transforms/Utils/ValueMapper.h>
 #include <boost/foreach.hpp>
 
 namespace llpm {
@@ -19,6 +21,15 @@ class Module : public Block {
 protected:
     Design& _design;
 
+    llvm::ValueToValueMapTy VMap;
+    std::unique_ptr<llvm::Module> _swModule;
+    llvm::Function* cloneFunc(llvm::Function* F, std::string name);
+    llvm::Function* createCallStub(Interface*, llvm::Type* thisPtr);
+    llvm::Function* createPortStub(Port*);
+
+    std::map<std::string, llvm::Function*> _interfaceStubs;
+    std::map<Port*, llvm::Function*> _portStubs;
+
 public:
     Module(Design& design, std::string name) :
         _design(design)
@@ -28,6 +39,10 @@ public:
     virtual ~Module() { }
 
     DEF_GET_NP(design);
+    llvm::Module* swModule() {
+        return _swModule.get();
+    }
+    void createSWModule(llvm::Module*);
 
     virtual bool hasState() const = 0;
     virtual bool isPure() const {

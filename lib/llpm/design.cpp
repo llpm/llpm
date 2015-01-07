@@ -3,6 +3,12 @@
 #include <llpm/module.hpp>
 #include <util/misc.hpp>
 
+#include <llvm/Pass.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/raw_ostream.h>
+
 using namespace std;
 
 namespace llpm {
@@ -95,6 +101,26 @@ void Design::optimize() {
             }
         });
     p.run();
+}
+
+
+llvm::Module* Design::readBitcode(std::string fnName) {
+    llvm::PassRegistry *Registry = llvm::PassRegistry::getPassRegistry();
+    initializeCore(*Registry);
+    initializeAnalysis(*Registry);
+    // initializeBasicCallGraphPass(*Registry);
+    initializeScalarOpts(*Registry);
+
+    llvm::SMDiagnostic Err;
+    llvm::Module *mod = 
+        llvm::ParseIRFile(fnName, Err, context());
+    _llvmModules.emplace_back(mod);
+    
+    if (mod == NULL) {
+            Err.print("LLVMTranslator::readBitcode", llvm::errs());
+            throw Exception("Could not parse module\n");
+    }
+    return mod;
 }
 
 } // namespace llpm

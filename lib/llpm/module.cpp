@@ -7,6 +7,12 @@
 
 #include <deque>
 
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/ValueMap.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+
 using namespace std;
 
 namespace llpm {
@@ -222,6 +228,143 @@ const std::vector<InputPort*>& ContainerModule::deps(
     const OutputPort*) const {
     //TODO: Do a graph search to determine this precisely
     return inputs();
+}
+
+void Module::createSWModule(llvm::Module* M) {
+    // Copy the module and everything in it, _except_ for function
+    // bodies. Unfortunately, LLVM's CloneModule copies the function
+    // bodies, so we'll copy their code and remove that copy part.
+    if (this->_swModule == NULL) {
+        this->_swModule.reset(
+            new llvm::Module(name() + "_sw", M->getContext()));
+        llvm::Module* New = this->_swModule.get();
+        New->setDataLayout(M->getDataLayout());
+        New->setTargetTriple(M->getTargetTriple());
+        New->setModuleInlineAsm(M->getModuleInlineAsm());
+
+        // Loop over all of the global variables, making corresponding
+        // globals in the new module.  Here we add them to the VMap
+        // and to the new Module.  We don't worry about attributes or
+        // initializers, they will come later.
+        //
+        for (auto I = M->global_begin(), E = M->global_end(); I != E; ++I) {
+            llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+                *New, 
+                I->getType()->getElementType(),
+                I->isConstant(), I->getLinkage(),
+                (llvm::Constant*) nullptr, I->getName(),
+                (llvm::GlobalVariable*) nullptr,
+                I->getThreadLocalMode(),
+                I->getType()->getAddressSpace());
+            GV->copyAttributesFrom(I);
+            VMap[I] = GV;
+        }
+
+        // Loop over the functions in the module, making external
+        // functions as before
+        for (auto I = M->begin(), E = M->end(); I != E; ++I) {
+            llvm::Function *NF =
+                llvm::Function::Create(
+                    llvm::cast<llvm::FunctionType>(
+                        I->getType()->getElementType()),
+                    I->getLinkage(), I->getName(), New);
+            NF->copyAttributesFrom(I);
+            VMap[I] = NF;
+        }
+
+        // Loop over the aliases in the module
+        for (auto I = M->alias_begin(), E = M->alias_end(); I != E; ++I) {
+            auto *PTy = llvm::cast<llvm::PointerType>(I->getType());
+            auto *GA =
+                llvm::GlobalAlias::create(
+                    PTy->getElementType(), PTy->getAddressSpace(),
+                    I->getLinkage(), I->getName(), New);
+            GA->copyAttributesFrom(I);
+            VMap[I] = GA;
+        }
+
+        // Now that all of the things that global variable initializer
+        // can refer to have been created, loop through and copy the
+        // global variable referrers over...  We also set the
+        // attributes on the global now.
+        //
+        for (auto I = M->global_begin(), E = M->global_end(); I != E; ++I) {
+            llvm::GlobalVariable *GV =
+                llvm::cast<llvm::GlobalVariable>(VMap[I]);
+            if (I->hasInitializer())
+                GV->setInitializer(llvm::MapValue(I->getInitializer(), VMap));
+        }
+
+        // And aliases
+        for (auto I = M->alias_begin(), E = M->alias_end(); I != E; ++I) {
+            llvm::GlobalAlias *GA = llvm::cast<llvm::GlobalAlias>(VMap[I]);
+            if (const llvm::Constant *C = I->getAliasee())
+                GA->setAliasee(llvm::cast<llvm::GlobalObject>(
+                                    llvm::MapValue(C, VMap)));
+        }
+
+        // And named metadata....
+        for (auto I = M->named_metadata_begin(), E = M->named_metadata_end();
+                  I != E; ++I) {
+            const llvm::NamedMDNode &NMD = *I;
+            llvm::NamedMDNode *NewNMD =
+                New->getOrInsertNamedMetadata(NMD.getName());
+            for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
+                NewNMD->addOperand(MapValue(NMD.getOperand(i), VMap));
+        }
+    }
+}
+
+llvm::Function* Module::cloneFunc(
+    llvm::Function* I, std::string name) {
+    llvm::Function* existing = swModule()->getFunction(name);
+    if (existing != NULL && 
+        existing->getFunctionType() == I->getFunctionType()) {
+        existing->deleteBody();
+    } else {
+        llvm::Function* NF = llvm::Function::Create(
+                llvm::cast<llvm::FunctionType>(
+                    I->getType()->getElementType()),
+                I->getLinkage(), name, swModule());
+        NF->copyAttributesFrom(I);
+        VMap[I] = NF;
+    }
+
+    llvm::Function *F = llvm::cast<llvm::Function>(VMap[I]);
+    if (!I->isDeclaration()) {
+        llvm::Function::arg_iterator DestI = F->arg_begin();
+        for (llvm::Function::const_arg_iterator J = I->arg_begin();
+                J != I->arg_end(); ++J) {
+            DestI->setName(J->getName());
+            VMap[J] = DestI++;
+        }
+        llvm::SmallVector<llvm::ReturnInst*, 8> Returns;
+        llvm::CloneFunctionInto(F, I, VMap,
+                                /*ModuleLevelChanges=*/true, Returns);
+    }
+    return F;
+}
+
+llvm::Function* Module::createCallStub(Interface* iface,
+                                       llvm::Type* thisPtr) {
+    vector<llvm::Type*> args;
+    args.push_back(thisPtr);
+    llvm::Type* argType = iface->req()->type();
+    if (argType->getTypeID() == llvm::Type::StructTyID) {
+        for (unsigned i=0; i<argType->getStructNumElements(); i++) {
+            args.push_back(argType->getStructElementType(i));
+        }
+    } else {
+        args.push_back(argType);
+    }
+
+    llvm::Type* retType = iface->resp()->type();
+
+    llvm::FunctionType* ft = llvm::FunctionType::get(retType, args, false);
+    llvm::Function* func = llvm::Function::Create(
+        ft, llvm::GlobalValue::ExternalLinkage, iface->name(), swModule());
+    _interfaceStubs[iface->name()] = func;
+    return func;
 }
 
 } // namespace llpm

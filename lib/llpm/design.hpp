@@ -3,12 +3,12 @@
 
 #include <llpm/llpm.hpp>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <refinery/refinery.hpp>
 #include <synthesis/object_namer.hpp>
 #include <backends/backend.hpp>
 #include <util/macros.hpp>
 #include <passes/manager.hpp>
-
 #include <vector>
 
 namespace llpm {
@@ -25,6 +25,8 @@ class Design {
 
     PassManager _elaborations;
     PassManager _optimizations;
+
+    std::deque<std::unique_ptr<llvm::Module>> _llvmModules;
 
 public:
     static llvm::LLVMContext& Default_LLVMContext;
@@ -71,6 +73,10 @@ public:
         }
         return *_namer;
     };
+
+    // Reads in some bitcode, creating an LLVM module. Retains
+    // ownership of said module since things may depend on it.
+    llvm::Module* readBitcode(std::string fnName);
 };
 
 } // namespace llpm

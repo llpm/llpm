@@ -22,23 +22,8 @@ LLVMTranslator::~LLVMTranslator() {
 }
 
 void LLVMTranslator::readBitcode(std::string fileName) {
-    llvm::PassRegistry *Registry = llvm::PassRegistry::getPassRegistry();
-    initializeCore(*Registry);
-    initializeAnalysis(*Registry);
-    // initializeBasicCallGraphPass(*Registry);
-    initializeScalarOpts(*Registry);
-
-    llvm::SMDiagnostic Err;
-    llvm::Module *mod = NULL;
-
-    _llvmModule.reset(llvm::ParseIRFile(fileName, Err, _design.context()));
-    mod = _llvmModule.get();
-    if (mod == NULL) {
-            Err.print("LLVMTranslator::readBitcode", llvm::errs());
-            throw Exception("Could not parse module\n");
-    }
-
-    _pm = new llvm::legacy::FunctionPassManager(mod);
+    setModule(_design.readBitcode(fileName));
+    _pm = new llvm::legacy::FunctionPassManager(_llvmModule);
     _pm->add(llvm::createInstructionNamerPass());
 }
 
@@ -49,7 +34,7 @@ LLVMFunction* LLVMTranslator::translate(llvm::Function* func) {
 }
 
 LLVMFunction* LLVMTranslator::translate(std::string fnName) {
-    if (this->_llvmModule.get() == NULL)
+    if (this->_llvmModule == NULL)
         throw InvalidCall("Must load a module into LLVMTranslator before translating");
     llvm::Function* func = this->_llvmModule->getFunction(fnName);
     if (func == NULL)

@@ -29,8 +29,10 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
     cout << "Class " << className << ": " << typestr(classType) << endl;
 
     CPPHDLClass* chClass = new CPPHDLClass(_design, className, classType);
+    chClass->createSWModule(lm);
 
     string fnPrefix = className + "::";
+    string testStr = fnPrefix + "test";
     for (auto&& func: lm->getFunctionList()) {
         auto demangledName = cpp_demangle(func.getName().str().c_str());
         if (demangledName.find(fnPrefix) == 0) {
@@ -40,13 +42,19 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
             if (parenLoc != string::npos) {
                 fnName = fnNameArgs.substr(0, parenLoc);
             }
-            printf("Found class member: %s\n", demangledName.c_str());
-            chClass->addMember(
-                fnName,
-                _llvmTranslator.translate(&func)
-                );
-        } else {
-            printf("Rejected function: %s\n", demangledName.c_str());
+            if (demangledName.find(testStr) == 0) {
+                // This member is a test. Don't generate HW, but a
+                // test function instead
+                printf("Found test: %s\n", demangledName.c_str());
+                chClass->adoptTest(&func);
+            } else {
+                printf("Found class member: %s\n", demangledName.c_str());
+                chClass->adoptSWVersion(fnName, &func);
+                chClass->addMember(
+                    fnName,
+                    _llvmTranslator.translate(&func)
+                    );
+            }
         }
     }
 

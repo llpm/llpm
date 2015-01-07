@@ -18,7 +18,7 @@ namespace llpm {
 
 class LLVMTranslator {
     Design& _design;
-    std::auto_ptr < llvm::Module > _llvmModule;
+    llvm::Module* _llvmModule;
     llvm::legacy::FunctionPassManager* _pm;
 
 public:
@@ -28,14 +28,15 @@ public:
     void readBitcode(std::string fileName);
     void setModule(llvm::Module* module) {
         assert(module != NULL);
-        this->_llvmModule.reset(module);
+        this->_llvmModule = module;
     }
     llvm::Module* getModule() {
-        return _llvmModule.get();
+        return _llvmModule;
     }
 
     LLVMFunction* translate(llvm::Function*);
     LLVMFunction* translate(std::string fnName);
+
 };
 
 } // namespace llpm
