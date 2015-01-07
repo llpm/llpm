@@ -252,7 +252,7 @@ std::string typeSig(llvm::Type* type, bool pointerize, int name) {
     }
     auto p = typeSigPlain(type, pointerize);
     return p.first +
-        (name >= 0 ? (" " + argName(type, 0)) : "") + p.second;
+        (name >= 0 ? (" " + argName(type, name)) : "") + p.second;
 }
 
 unsigned numArgs(llvm::Type* type) {
