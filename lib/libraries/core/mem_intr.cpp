@@ -22,7 +22,7 @@ llvm::Type* Memory::GetWriteReq(llvm::Type* dt, llvm::Type* idx) {
     else
         return llvm::StructType::get(
             dt->getContext(),
-            {dt, idx});
+            vector<llvm::Type*>({dt, idx}));
 }
 
 llvm::Type* Memory::GetReadReq(llvm::Type* dt, llvm::Type* idx) {

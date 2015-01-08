@@ -129,8 +129,9 @@ Multiplexer::Multiplexer(unsigned N, llvm::Type* type) :
 llvm::Type* Router::GetInput(unsigned N, llvm::Type* type) {
     return llvm::StructType::get(
         type->getContext(),
-        {llvm::Type::getIntNTy(type->getContext(), idxwidth(N)),
-         type});
+        vector<llvm::Type*>(
+            {llvm::Type::getIntNTy(type->getContext(), idxwidth(N)),
+             type}));
 }
 
 Router::Router(unsigned N, llvm::Type* type) :

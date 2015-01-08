@@ -23,12 +23,14 @@ Tagger::Tagger(llvm::Type* serverReq,
 
 llvm::Type* Tagger::GetServerInput(
     llvm::Type* serverReq, llvm::Type* serverResp, llvm::Type* tag) {
-    return llvm::StructType::get(tag->getContext(), {tag, serverReq});
+    return llvm::StructType::get(tag->getContext(), 
+                                 vector<llvm::Type*>({tag, serverReq}));
 }
 
 llvm::Type* Tagger::GetServerOutput(
     llvm::Type* serverReq, llvm::Type* serverResp, llvm::Type* tag) {
-    return llvm::StructType::get(tag->getContext(), {tag, serverResp});
+    return llvm::StructType::get(tag->getContext(),
+                                 vector<llvm::Type*>({tag, serverResp}));
 }
 
 void SynthesizeTagsPass::runInternal(Module* mod) {

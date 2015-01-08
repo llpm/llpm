@@ -4,6 +4,8 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/DerivedTypes.h>
 
+using namespace std;
+
 namespace llpm {
 
 RTLReg::RTLReg(llvm::Type* dt) :
@@ -19,8 +21,9 @@ BlockRAM::BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts) :
     auto& ctxt = ty->getContext();
     llvm::Type* reqType =
         llvm::StructType::get(
-            ctxt, { llvm::Type::getInt1Ty(ctxt),
-                    ty, llvm::Type::getIntNTy(ctxt, idxwidth(depth)) });
+            ctxt, vector<llvm::Type*>(
+                { llvm::Type::getInt1Ty(ctxt),
+                  ty, llvm::Type::getIntNTy(ctxt, idxwidth(depth)) }));
     llvm::Type* respType = ty;
 
     for (unsigned i=0; i<numPorts; i++) {

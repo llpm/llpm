@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export CC=clang
-export CXX=clang++
+export CC=gcc
+export CXX=g++
 
 mkdir -p bin/llvm
 cd bin/llvm
