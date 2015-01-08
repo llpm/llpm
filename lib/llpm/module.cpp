@@ -333,7 +333,8 @@ llvm::Function* Module::createCallStub(Interface* iface) {
 
     llvm::FunctionType* ft = llvm::FunctionType::get(retType, args, false);
     llvm::Function* func = llvm::Function::Create(
-        ft, llvm::GlobalValue::ExternalLinkage, iface->name(), swModule());
+        ft, llvm::GlobalValue::ExternalLinkage,
+        this->name() + "_" + iface->name(), swModule());
     _interfaceStubs[iface->name()] = func;
     return func;
 }

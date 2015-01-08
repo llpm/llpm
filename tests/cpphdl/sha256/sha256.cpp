@@ -12,10 +12,10 @@ private:
     // uint32_t state[8];
     State state;
 
+public:
     SHA256() {
     }
 
-public:
     void start();
     void update(Data input);
     Digest digest();
@@ -222,4 +222,16 @@ SHA256::Digest SHA256::digest() {
     PUT_UINT32( state[7], digest, 28 );
     return digest;
 }
+
+#if 1
+bool test1() {
+    SHA256 sha;
+    sha.start();
+
+    SHA256::Data data;
+    sha.update(data);
+
+    return true;
+}
+#endif
 

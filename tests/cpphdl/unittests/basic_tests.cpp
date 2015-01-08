@@ -37,8 +37,16 @@ static T myrand() {
 
 bool test1() {
     BasicTests tests;
+    tests.addSS(numeric_limits<int64_t>::min(),
+                numeric_limits<int64_t>::min());
+    tests.addSS(numeric_limits<int64_t>::min(),
+                numeric_limits<int64_t>::max());
+    tests.addSS(numeric_limits<int64_t>::max(),
+                numeric_limits<int64_t>::min());
     for (unsigned i=0; i<1000; i++) {
         tests.addUU(myrand<uint64_t>(), myrand<uint64_t>());
+        tests.addUS(myrand<uint64_t>(), myrand<int64_t>());
+        tests.addSS(myrand<int64_t>(), myrand<int64_t>());
     }
 
     printf("All tests passed!\n");

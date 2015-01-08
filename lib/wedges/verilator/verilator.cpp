@@ -861,7 +861,10 @@ void VerilatorWedge::writeBodies(Module* mod) {
             args.push_back(&*arg);
         }
         auto call = llvm::CallInst::Create(ifaceFunc, args, "", bb);
-        llvm::ReturnInst::Create(ctxt, call, bb);
+        if (call->getType()->isVoidTy())
+            llvm::ReturnInst::Create(ctxt, bb);
+        else
+            llvm::ReturnInst::Create(ctxt, call, bb);
     }
 
     // Add tests which automatically run both S/W and H/W then compare
@@ -921,6 +924,7 @@ void VerilatorWedge::addAssertsToTest(Module* mod, llvm::Function* test) {
 llvm::Value* buildEqualityTest(llvm::Value* a, llvm::Value* b,
                                llvm::Instruction* insertAfter) {
     llvm::Instruction* insertBefore = insertAfter->getNextNode();
+    assert(insertBefore != NULL);
     llvm::Type* eqType = a->getType();
     assert(eqType == b->getType());
     switch(eqType->getTypeID()) {
@@ -929,11 +933,11 @@ llvm::Value* buildEqualityTest(llvm::Value* a, llvm::Value* b,
     case llvm::Type::IntegerTyID:
         return llvm::ICmpInst::Create(
             llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-            a, b, "", insertBefore);
+            a, b, "eq_compare", insertBefore);
     case llvm::Type::FloatTyID:
         return llvm::ICmpInst::Create(
             llvm::Instruction::FCmp, llvm::CmpInst::ICMP_EQ,
-            a, b, "", insertBefore);
+            a, b, "eq_compare", insertBefore);
     default:
         assert(false && "Not built yet!");
     }
@@ -957,6 +961,8 @@ void VerilatorWedge::addAssertToTest(Module* mod,
             operands.push_back(operand);
         }
     }
+
+    ci->setName("swCall");
 
     auto hwFunc = mod->interfaceStub(ifaceName);
     assert(hwFunc != NULL);
