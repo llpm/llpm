@@ -5,6 +5,7 @@
 
 class SimpleMem {
     uint64_t mem[SIZE];
+    char identifyme;
 
     SimpleMem() {
         memset(mem, 0, sizeof(mem));

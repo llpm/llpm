@@ -42,19 +42,18 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
             if (parenLoc != string::npos) {
                 fnName = fnNameArgs.substr(0, parenLoc);
             }
-            if (demangledName.find(testStr) == 0) {
-                // This member is a test. Don't generate HW, but a
-                // test function instead
-                printf("Found test: %s\n", demangledName.c_str());
-                chClass->adoptTest(&func);
-            } else {
-                printf("Found class member: %s\n", demangledName.c_str());
-                chClass->addMember(
-                    fnName,
-                    &func,
-                    _llvmTranslator.translate(&func)
-                    );
-            }
+
+            printf("Found class member: %s\n", demangledName.c_str());
+            chClass->addMember(
+                fnName,
+                &func,
+                _llvmTranslator.translate(&func)
+                );
+        } else if (demangledName.find(testStr) == 0) {
+            // This member is a test. Don't generate HW, but a
+            // test function instead
+            printf("Found test: %s\n", demangledName.c_str());
+            chClass->adoptTest(&func);
         }
     }
 

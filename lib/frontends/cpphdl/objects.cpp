@@ -66,6 +66,7 @@ void CPPHDLClass::addMember(std::string name, llvm::Function* llvmFunc,
     connectMem(func);
     _methods[name] = func;
     createCallStub(iface);
+    adoptSWVersion(name, llvmFunc);
 }
 
 

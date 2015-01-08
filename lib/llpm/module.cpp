@@ -235,104 +235,56 @@ void Module::createSWModule(llvm::Module* M) {
     // bodies. Unfortunately, LLVM's CloneModule copies the function
     // bodies, so we'll copy their code and remove that copy part.
     if (this->_swModule == NULL) {
-        this->_swModule.reset(
-            new llvm::Module(name() + "_sw", M->getContext()));
-        llvm::Module* New = this->_swModule.get();
-        New->setDataLayout(M->getDataLayout());
-        New->setTargetTriple(M->getTargetTriple());
-        New->setModuleInlineAsm(M->getModuleInlineAsm());
-
         // Create interface type for myself
         _ifaceType = llvm::StructType::create(
             _design.context(), "class." + name());
-
-        // Loop over all of the global variables, making corresponding
-        // globals in the new module.  Here we add them to the VMap
-        // and to the new Module.  We don't worry about attributes or
-        // initializers, they will come later.
-        //
-        for (auto I = M->global_begin(), E = M->global_end(); I != E; ++I) {
-            llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-                *New, 
-                I->getType()->getElementType(),
-                I->isConstant(), I->getLinkage(),
-                (llvm::Constant*) nullptr, I->getName(),
-                (llvm::GlobalVariable*) nullptr,
-                I->getThreadLocalMode(),
-                I->getType()->getAddressSpace());
-            GV->copyAttributesFrom(I);
-            VMap[I] = GV;
-        }
-
-        // Loop over the functions in the module, making external
-        // functions as before
-        for (auto I = M->begin(), E = M->end(); I != E; ++I) {
-            llvm::Function *NF =
-                llvm::Function::Create(
-                    llvm::cast<llvm::FunctionType>(
-                        I->getType()->getElementType()),
-                    I->getLinkage(), I->getName(), New);
-            NF->copyAttributesFrom(I);
-            VMap[I] = NF;
-        }
-
-        // Loop over the aliases in the module
-        for (auto I = M->alias_begin(), E = M->alias_end(); I != E; ++I) {
-            auto *PTy = llvm::cast<llvm::PointerType>(I->getType());
-            auto *GA =
-                llvm::GlobalAlias::create(
-                    PTy->getElementType(), PTy->getAddressSpace(),
-                    I->getLinkage(), I->getName(), New);
-            GA->copyAttributesFrom(I);
-            VMap[I] = GA;
-        }
-
-        // Now that all of the things that global variable initializer
-        // can refer to have been created, loop through and copy the
-        // global variable referrers over...  We also set the
-        // attributes on the global now.
-        //
-        for (auto I = M->global_begin(), E = M->global_end(); I != E; ++I) {
-            llvm::GlobalVariable *GV =
-                llvm::cast<llvm::GlobalVariable>(VMap[I]);
-            if (I->hasInitializer())
-                GV->setInitializer(llvm::MapValue(I->getInitializer(), VMap));
-        }
-
-        // And aliases
-        for (auto I = M->alias_begin(), E = M->alias_end(); I != E; ++I) {
-            llvm::GlobalAlias *GA = llvm::cast<llvm::GlobalAlias>(VMap[I]);
-            if (const llvm::Constant *C = I->getAliasee())
-                GA->setAliasee(llvm::cast<llvm::GlobalObject>(
-                                    llvm::MapValue(C, VMap)));
-        }
-
-        // And named metadata....
-        for (auto I = M->named_metadata_begin(), E = M->named_metadata_end();
-                  I != E; ++I) {
-            const llvm::NamedMDNode &NMD = *I;
-            llvm::NamedMDNode *NewNMD =
-                New->getOrInsertNamedMetadata(NMD.getName());
-            for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-                NewNMD->addOperand(MapValue(NMD.getOperand(i), VMap));
-        }
+        
+        this->_swModule.reset(
+            CloneModule(M, VMap));
     }
+}
+
+void Module::swModule(llvm::Module* mod) {
+    set<llvm::Function*> newTests;
+    for (llvm::Function* test: _tests) {
+        auto newTest = mod->getFunction(test->getName());
+        if (newTest == NULL)
+            throw InvalidArgument(
+                "Can only replace module with another when all referenced "
+                "functions exist in both!");
+        newTests.insert(newTest);
+    }
+    _tests.swap(newTests);
+
+
+    std::map<std::string, llvm::Function*> newSWVersion;
+    for (auto p: _swVersion) {
+        auto newFunc = mod->getFunction(p.second->getName());
+        if (newFunc == NULL)
+            throw InvalidArgument(
+                "Can only replace module with another when all referenced "
+                "functions exist in both!");
+        newSWVersion[p.first] = newFunc;
+    }
+    _swVersion.swap(newSWVersion);
+
+    _swModule.reset(mod);
 }
 
 llvm::Function* Module::cloneFunc(
     llvm::Function* I, std::string name) {
-    llvm::Function* existing = swModule()->getFunction(name);
-    if (existing != NULL && 
-        existing->getFunctionType() == I->getFunctionType()) {
-        existing->deleteBody();
-    } else {
-        llvm::Function* NF = llvm::Function::Create(
-                llvm::cast<llvm::FunctionType>(
-                    I->getType()->getElementType()),
-                I->getLinkage(), name, swModule());
-        NF->copyAttributesFrom(I);
-        VMap[I] = NF;
-    }
+    llvm::Function* existing = swModule()->getFunction(I->getName());
+    if (existing != NULL) {
+        existing->setName(name);
+        return existing;
+    } 
+
+    llvm::Function* NF = llvm::Function::Create(
+            llvm::cast<llvm::FunctionType>(
+                I->getType()->getElementType()),
+            I->getLinkage(), name, swModule());
+    NF->copyAttributesFrom(I);
+    VMap[I] = NF;
 
     llvm::Function *F = llvm::cast<llvm::Function>(VMap[I]);
     if (!I->isDeclaration()) {
@@ -346,6 +298,7 @@ llvm::Function* Module::cloneFunc(
         llvm::CloneFunctionInto(F, I, VMap,
                                 /*ModuleLevelChanges=*/true, Returns);
     }
+    F->setName(name);
     return F;
 }
 

@@ -39,9 +39,6 @@ class CPPHDLClass : public ContainerModule {
     // All member methods
     std::map<std::string, LLVMFunction*> _methods;
 
-    // Unit testing functions
-    std::set<llvm::Function*> _tests;
-    std::map<std::string, llvm::Function*> _swVersion;
 
     void adoptSWVersion(std::string, llvm::Function*);
     void adoptTest(llvm::Function*);
@@ -51,16 +48,6 @@ public:
                 std::string name,
                 llvm::StructType* ty,
                 llvm::Module* mod);
-
-    llvm::Function* swVersion(std::string name) {
-        auto f = _swVersion.find(name);
-        if (f != _swVersion.end())
-            return f->second;
-        return NULL;
-    }
-    std::set<llvm::Function*> tests() {
-        return _tests;
-    }
 
     void addMember(std::string name, llvm::Function*, LLVMFunction*);
     void connectMem(LLVMFunction*);

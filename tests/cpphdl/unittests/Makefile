@@ -8,12 +8,10 @@ CXX=$(CLANGXX)
 DIS=../../../bin/llvm/bin/llvm-dis
 OPT=../../../bin/llvm/bin/opt
 
-NAME=simple_mem
-ROOT=SimpleMem
+NAME=basic_tests
+ROOT=BasicTests
 
-default: ${NAME}_test ${ROOT}.pdf ${ROOT}_simple.pdf
-
-
+default: ${NAME}_run ${ROOT}.pdf ${ROOT}_simple.pdf
 
 obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
 	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
@@ -21,12 +19,12 @@ obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
 ${ROOT}.hpp: obj/${ROOT}.hpp
 	cp obj/${ROOT}.hpp .
 
-${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
-	${CXX} -c -emit-llvm ${CXXFLAGS} ${NAME}_test.cpp -o ${NAME}_test.cpp.bc
-	${CXX} -o ${NAME}_test ${NAME}_test.cpp.bc obj/${ROOT}_sw.bc
+${NAME}_run: ${NAME}_run.cpp ${ROOT}.hpp
+	${CXX} -c -emit-llvm ${CXXFLAGS} ${NAME}_run.cpp -o ${NAME}_run.cpp.bc
+	${CXX} -o ${NAME}_run ${NAME}_run.cpp.bc obj/${ROOT}_sw.bc
 
 %.bc: %.cpp
-	${CLANGXX} -O2 -c -emit-llvm ${CFLAGS} $< -o $@.tmp
+	${CLANGXX} -c -emit-llvm ${CFLAGS} $< -o $@.tmp
 	${OPT} ${OPTS} $@.tmp -o $@
 	${DIS} $@
 
@@ -34,4 +32,4 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	dot -Tpdf -o $@ $< || true
 
 clean:
-	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll
+	rm -rf ${NAME}_run ${NAME}.hpp *.bc obj *.ll

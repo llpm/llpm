@@ -9,10 +9,14 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 
 #include <boost/format.hpp>
 #include <boost/range/irange.hpp>
 
+#include <util/misc.hpp>
 #include <util/llvm_type.hpp>
 
 using namespace std;
@@ -443,6 +447,16 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
     }
     os << "\n";
 
+    os << "    // Tests\n";
+    for (llvm::Function* test: mod->tests()) {
+        auto p = typeSigPlain(test->getReturnType(), false);
+        string rt = p.first + p.second;
+        os << "    "
+           << rt << " "
+           << cpp_demangle(test->getName().str().c_str()) << ";\n";
+    }
+    os << "\n";
+
     os << "    // Simulation run control\n"
        << "    void reset();\n"
        << "    void run(unsigned cycles = 1);\n"
@@ -794,13 +808,64 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
             % iface->resp()->name();
     }
 
+    os << "// Write testing stubs to be later replaced\n";
+    for (llvm::Function* test: mod->tests()) {
+        auto p = typeSigPlain(test->getReturnType(), false);
+        string rt = p.first + p.second;
+        os << "    "
+           << rt << " " << mod->name() << "::"
+           << cpp_demangle(test->getName().str().c_str()) 
+           << "\n{ }\n";
+    }
+
     os << "\n";
     f->close();
 }
 
 void VerilatorWedge::writeBodies(Module* mod) {
     // Write bodies for the interface functions.
-    
+   
+    // Find function declarations for Module::test*
+    llvm::Module* swmod = mod->swModule();
+    string prefix = mod->name() + "::";
+    map<string, llvm::Function*> memberMap;
+    for (llvm::Function& func: swmod->getFunctionList()) {
+        string name = cpp_demangle(func.getName().str().c_str());
+        if (name.find(prefix) == 0) {
+            // It's a member
+            string shortName = name.substr(prefix.size());
+            // cout << shortName << endl;
+            memberMap[shortName] = &func;
+        }
+    }
+
+    for (llvm::Function* test: mod->tests()) {
+        llvm::Function* memberFunc =
+            memberMap[cpp_demangle(test->getName().str().c_str())];
+        if (memberFunc == NULL) {
+            printf("Warn: could not find member stub for %s\n",
+                   test->getName().str().c_str());
+            continue;
+        }
+
+        memberFunc->deleteBody();
+
+        llvm::ValueToValueMapTy vmap;
+        llvm::Function::arg_iterator mfIter = memberFunc->arg_begin();
+        llvm::Function::arg_iterator tfIter = test->arg_begin();
+        mfIter++;
+        while (mfIter != memberFunc->arg_end() &&
+               tfIter != test->arg_end()) {
+            vmap[&*mfIter] = &*tfIter;
+            mfIter++;
+            tfIter++;
+        }
+        assert(mfIter == memberFunc->arg_end() && tfIter == test->arg_end());
+
+        llvm::SmallVector<llvm::ReturnInst*, 8> returns;
+        llvm::CloneFunctionInto(
+            memberFunc, test, vmap, true, returns);
+    }
 }
 
 } // namespace llpm

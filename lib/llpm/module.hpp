@@ -38,6 +38,10 @@ protected:
     std::map<std::string, llvm::Function*> _interfaceStubs;
     std::map<Port*, llvm::Function*> _portStubs;
 
+    // Unit testing functions
+    std::set<llvm::Function*> _tests;
+    std::map<std::string, llvm::Function*> _swVersion;
+
 public:
     Module(Design& design, std::string name) :
         _design(design)
@@ -50,12 +54,20 @@ public:
     llvm::Module* swModule() {
         return _swModule.get();
     }
-    void swModule(llvm::Module* mod) {
-        _swModule.reset(mod);
-    }
+    virtual void swModule(llvm::Module* mod);
     void createSWModule(llvm::Module*);
     DEF_GET_NP(swType);
     DEF_GET_NP(ifaceType);
+
+    llvm::Function* swVersion(std::string name) {
+        auto f = _swVersion.find(name);
+        if (f != _swVersion.end())
+            return f->second;
+        return NULL;
+    }
+    std::set<llvm::Function*> tests() {
+        return _tests;
+    }
 
     virtual bool hasState() const = 0;
     virtual bool isPure() const {
