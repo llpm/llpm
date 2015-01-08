@@ -2,9 +2,9 @@
 
 #include <synthesis/pipeline.hpp>
 #include <analysis/graph_queries.hpp>
+#include <util/llvm_type.hpp>
 
 #include <boost/format.hpp>
-
 #include <deque>
 
 #include <llvm/IR/Module.h>
@@ -244,6 +244,22 @@ void Module::createSWModule(llvm::Module* M) {
     }
 }
 
+template<typename T>
+static void mapFunctions(
+    llvm::Module* mod,
+    std::map<T, llvm::Function*>& oldFuncs) {
+    std::map<T, llvm::Function*> newFuncs;
+    for (auto p: oldFuncs) {
+        auto newFunc = mod->getFunction(p.second->getName());
+        if (newFunc == NULL)
+            throw InvalidArgument(
+                "Can only replace module with another when all referenced "
+                "functions exist in both!");
+        newFuncs[p.first] = newFunc;
+    }
+    oldFuncs.swap(newFuncs);
+}
+
 void Module::swModule(llvm::Module* mod) {
     set<llvm::Function*> newTests;
     for (llvm::Function* test: _tests) {
@@ -256,17 +272,13 @@ void Module::swModule(llvm::Module* mod) {
     }
     _tests.swap(newTests);
 
+    mapFunctions(mod, _swVersion);
+    mapFunctions(mod, _interfaceStubs);
+    mapFunctions(mod, _portStubs);
 
-    std::map<std::string, llvm::Function*> newSWVersion;
-    for (auto p: _swVersion) {
-        auto newFunc = mod->getFunction(p.second->getName());
-        if (newFunc == NULL)
-            throw InvalidArgument(
-                "Can only replace module with another when all referenced "
-                "functions exist in both!");
-        newSWVersion[p.first] = newFunc;
-    }
-    _swVersion.swap(newSWVersion);
+    _ifaceType = mod->getTypeByName("class." + name());
+    _swType    = mod->getTypeByName("class." + name() + "_sw");
+
 
     _swModule.reset(mod);
 }
@@ -316,6 +328,8 @@ llvm::Function* Module::createCallStub(Interface* iface) {
     }
 
     llvm::Type* retType = iface->resp()->type();
+    if (retType->isStructTy() && retType->getStructNumElements() == 1)
+        retType = retType->getStructElementType(0);
 
     llvm::FunctionType* ft = llvm::FunctionType::get(retType, args, false);
     llvm::Function* func = llvm::Function::Create(

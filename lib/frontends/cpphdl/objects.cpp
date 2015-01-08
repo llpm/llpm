@@ -239,7 +239,7 @@ unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
 }
 
 void CPPHDLClass::adoptSWVersion(std::string name, llvm::Function* func) {
-    _swVersion[name] = cloneFunc(func, name + "_sw");
+    _swVersion[name] = cloneFunc(func, func->getName().str() + "_sw");
 }
 
 void CPPHDLClass::adoptTest(llvm::Function* func) {

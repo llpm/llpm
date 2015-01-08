@@ -6,6 +6,9 @@
 namespace llpm {
 
 std::string cpp_demangle(const char* name);
+inline std::string cpp_demangle(const std::string& name) {
+    return cpp_demangle(name.c_str());
+}
 
 /* How many bits does it take to store an index into N things? */
 unsigned inline idxwidth(uint64_t N) {

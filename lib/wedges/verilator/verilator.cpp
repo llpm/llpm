@@ -12,6 +12,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 #include <boost/format.hpp>
 #include <boost/range/irange.hpp>
@@ -452,7 +453,7 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
         auto p = typeSigPlain(test->getReturnType(), false);
         string rt = p.first + p.second;
         os << "    "
-           << rt << " "
+           << "bool "
            << cpp_demangle(test->getName().str().c_str()) << ";\n";
     }
     os << "\n";
@@ -813,9 +814,9 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         auto p = typeSigPlain(test->getReturnType(), false);
         string rt = p.first + p.second;
         os << "    "
-           << rt << " " << mod->name() << "::"
+           << "bool " << mod->name() << "::"
            << cpp_demangle(test->getName().str().c_str()) 
-           << "\n{ }\n";
+           << "\n{ return false; }\n";
     }
 
     os << "\n";
@@ -829,6 +830,7 @@ void VerilatorWedge::writeBodies(Module* mod) {
     llvm::Module* swmod = mod->swModule();
     string prefix = mod->name() + "::";
     map<string, llvm::Function*> memberMap;
+    map<string, llvm::Function*> interfaceMap;
     for (llvm::Function& func: swmod->getFunctionList()) {
         string name = cpp_demangle(func.getName().str().c_str());
         if (name.find(prefix) == 0) {
@@ -836,9 +838,34 @@ void VerilatorWedge::writeBodies(Module* mod) {
             string shortName = name.substr(prefix.size());
             // cout << shortName << endl;
             memberMap[shortName] = &func;
+
+            string ifaceName =
+                shortName.substr(0, shortName.find_first_of("(*:"));
+            interfaceMap[ifaceName] = &func;
+            // cout << ifaceName << endl;
         }
     }
 
+    // For each interface stub (a C function), have it call the C++
+    // version.
+    auto stubs = mod->interfaceStubs();
+    for (auto p: stubs) {
+        llvm::Function* testThunk = p.second;
+        llvm::Function* ifaceFunc = interfaceMap[p.first];
+        assert(ifaceFunc != NULL);
+        auto& ctxt = mod->design().context();
+        auto bb = llvm::BasicBlock::Create(ctxt, "thunk", testThunk);
+        vector<llvm::Value*> args;
+        for (auto arg = testThunk->arg_begin();
+                arg != testThunk->arg_end(); arg++) {
+            args.push_back(&*arg);
+        }
+        auto call = llvm::CallInst::Create(ifaceFunc, args, "", bb);
+        llvm::ReturnInst::Create(ctxt, call, bb);
+    }
+
+    // Add tests which automatically run both S/W and H/W then compare
+    // the results
     for (llvm::Function* test: mod->tests()) {
         llvm::Function* memberFunc =
             memberMap[cpp_demangle(test->getName().str().c_str())];
@@ -865,7 +892,93 @@ void VerilatorWedge::writeBodies(Module* mod) {
         llvm::SmallVector<llvm::ReturnInst*, 8> returns;
         llvm::CloneFunctionInto(
             memberFunc, test, vmap, true, returns);
+        addAssertsToTest(mod, memberFunc);
     }
+}
+
+void VerilatorWedge::addAssertsToTest(Module* mod, llvm::Function* test) {
+    string prefix = mod->name() + "::";
+    for (auto& bb: test->getBasicBlockList()) {
+        for (auto& ins: bb.getInstList()) {
+            if (ins.getOpcode() == llvm::Instruction::Call) {
+                llvm::CallInst* ci = llvm::dyn_cast<llvm::CallInst>(&ins);
+                string rawFuncName =
+                    ci->getCalledFunction()->getName().str();
+                if (rawFuncName.rfind("_sw") == (rawFuncName.size() - 3)) {
+                    string funcName = cpp_demangle(
+                        rawFuncName.substr(0, rawFuncName.size() - 3));
+                    if (funcName.find(prefix) == 0) {
+                        string ifaceName = funcName.substr(prefix.size());
+                        ifaceName = ifaceName.substr(0, ifaceName.find("("));
+                        addAssertToTest(mod, ifaceName, test, ci);
+                    }
+                }
+            }
+        }
+    }
+}
+
+llvm::Value* buildEqualityTest(llvm::Value* a, llvm::Value* b,
+                               llvm::Instruction* insertAfter) {
+    llvm::Instruction* insertBefore = insertAfter->getNextNode();
+    llvm::Type* eqType = a->getType();
+    assert(eqType == b->getType());
+    switch(eqType->getTypeID()) {
+    case llvm::Type::VoidTyID:
+        return llvm::ConstantInt::getTrue(a->getContext());
+    case llvm::Type::IntegerTyID:
+        return llvm::ICmpInst::Create(
+            llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
+            a, b, "", insertBefore);
+    case llvm::Type::FloatTyID:
+        return llvm::ICmpInst::Create(
+            llvm::Instruction::FCmp, llvm::CmpInst::ICMP_EQ,
+            a, b, "", insertBefore);
+    default:
+        assert(false && "Not built yet!");
+    }
+}
+
+void VerilatorWedge::addAssertToTest(Module* mod,
+                                     string ifaceName,
+                                     llvm::Function* func,
+                                     llvm::CallInst* ci) {
+    llvm::Type* swType = mod->swType();
+    llvm::Argument* thisPtr = &*func->arg_begin();
+    assert(thisPtr->getType() == mod->ifaceType()->getPointerTo(0));
+
+    vector<llvm::Value*> operands;
+    for (unsigned i=0; i<ci->getNumArgOperands(); i++) {
+        auto operand = ci->getArgOperand(i);
+        if (i == 0) {
+            assert(operand->getType() == swType->getPointerTo(0));
+            operands.push_back(thisPtr);
+        } else {
+            operands.push_back(operand);
+        }
+    }
+
+    auto hwFunc = mod->interfaceStub(ifaceName);
+    assert(hwFunc != NULL);
+    auto hwCall = llvm::CallInst::Create(
+        hwFunc, operands, "hwCall");
+    hwCall->insertAfter(ci);
+    llvm::Instruction* tail = hwCall->getNextNode();
+
+    // Build code to test
+    llvm::Value* isEqual = buildEqualityTest(ci, hwCall, hwCall);
+
+    llvm::TerminatorInst* thenTerm;
+    llvm::TerminatorInst* elseTerm;
+    llvm::SplitBlockAndInsertIfThenElse(
+        isEqual, tail, &thenTerm, &elseTerm);
+
+    auto& ctxt = mod->design().context();
+    llvm::ReturnInst::Create(
+        ctxt,
+        llvm::ConstantInt::getFalse(ctxt),
+        elseTerm);
+    elseTerm->removeFromParent();
 }
 
 } // namespace llpm

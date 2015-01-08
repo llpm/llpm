@@ -6,6 +6,10 @@
 #include <util/files.hpp>
 #include <backends/verilog/synthesize.hpp>
 
+namespace llvm {
+    class CallInst;
+};
+
 namespace llpm {
 
 class VerilatorWedge {
@@ -14,6 +18,9 @@ class VerilatorWedge {
     void writeHeader(FileSet::File*, Module*);
     void writeImplementation(FileSet::File*, Module*);
     void writeBodies(Module*);
+    void addAssertsToTest(Module*, llvm::Function*);
+    void addAssertToTest(Module*, std::string ifaceName,
+                         llvm::Function*, llvm::CallInst*);
 
 public:
     VerilatorWedge(Design& design) :

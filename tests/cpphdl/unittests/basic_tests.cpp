@@ -35,12 +35,13 @@ static T myrand() {
     return dist(rng);
 }
 
-void test1() {
+bool test1() {
     BasicTests tests;
     for (unsigned i=0; i<1000; i++) {
         tests.addUU(myrand<uint64_t>(), myrand<uint64_t>());
     }
 
     printf("All tests passed!\n");
+    return true;
 }
 

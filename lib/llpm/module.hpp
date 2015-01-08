@@ -68,6 +68,15 @@ public:
     std::set<llvm::Function*> tests() {
         return _tests;
     }
+    llvm::Function* interfaceStub(std::string name) {
+        auto f = _interfaceStubs.find(name);
+        if (f == _interfaceStubs.end())
+            return NULL;
+        return f->second;
+    }
+    const std::map<std::string, llvm::Function*>& interfaceStubs() {
+        return _interfaceStubs;
+    }
 
     virtual bool hasState() const = 0;
     virtual bool isPure() const {
