@@ -13,9 +13,6 @@ namespace llpm {
 llvm::Type* StructTwiddler::GetOutput(llvm::Type* input,
                                       const std::vector<unsigned>& mapping)
 {
-    if (mapping.size() == 0)
-        throw InvalidArgument("StructTwiddler needs a non-null mapping!");
-
     std::vector<llvm::Type*> outVec;
     for(unsigned i: mapping) {
         if (i >= input->getStructNumElements())
