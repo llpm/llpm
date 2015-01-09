@@ -240,6 +240,8 @@ std::pair<string, string> typeSigPlain(llvm::Type* type, bool pointerize) {
 
     switch (type->getTypeID()) {
     case llvm::Type::IntegerTyID:
+        if (type->getIntegerBitWidth() <= 1)
+            return make_pair("bool", "");
         if (type->getIntegerBitWidth() <= 8)
             return make_pair("uint8_t", "");
         if (type->getIntegerBitWidth() <= 16)
