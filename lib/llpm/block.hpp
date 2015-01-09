@@ -20,7 +20,6 @@ class Function;
 class Module;
 class Interface;
 
-
 /*******
  * Block is the basic unit in LLPM.
  * It can do computation, store state, read inputs, and write
@@ -215,6 +214,19 @@ public:
 
     DEF_GET(din);
     DEF_GET(dout);
+
+    Join* injoin(ConnectionDB& conns) {
+        return _din.join(conns);
+    }
+    InputPort* din(ConnectionDB& conns, unsigned idx) {
+        return _din.join(conns, idx);
+    }
+    Split* outsplit(ConnectionDB& conns) {
+        return _dout.split(conns);
+    }
+    OutputPort* dout(ConnectionDB& conns, unsigned idx) {
+        return _dout.split(conns, idx);
+    }
 
     virtual DependenceRule depRule(const OutputPort* op) const {
         assert(op == &_dout);

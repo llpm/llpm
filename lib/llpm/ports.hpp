@@ -9,6 +9,9 @@ namespace llpm {
 class Block;
 class OutputPort;
 class InputPort;
+class Join;
+class Split;
+class ConnectionDB;
 
 class Port {
 protected:
@@ -50,6 +53,10 @@ public:
 };
 
 class InputPort : public Port {
+    // Functions often need to join the input. Make codegen prog. code
+    // mildly easier by creating it on request.
+    Join* _join;
+
 public:
     InputPort(Block* owner, llvm::Type* type, std::string name = "");
     ~InputPort();
@@ -57,6 +64,9 @@ public:
     // Deleted defaults
     InputPort(const InputPort&) = delete;
     InputPort* operator=(const InputPort&) = delete;
+
+    Join* join(ConnectionDB& conns);
+    InputPort* join(ConnectionDB& conns, unsigned idx);
 };
 
 // Describes internal relationship of outputs to inputs.
@@ -100,6 +110,10 @@ public:
 };
 
 class OutputPort : public Port {
+    // Functions often need to split the input. Make codegen prog. code
+    // mildly easier by creating it on request.
+    Split* _split;
+
 public:
     OutputPort(Block* owner, llvm::Type* type,
                std::string name = "");
@@ -113,6 +127,9 @@ public:
     const std::vector<InputPort*>& deps() const;
 
     bool pipelineable() const;
+
+    Split* split(ConnectionDB& conns);
+    OutputPort* split(ConnectionDB& conns, unsigned idx);
 };
 
 
