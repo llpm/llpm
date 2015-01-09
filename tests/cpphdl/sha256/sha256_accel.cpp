@@ -1,25 +1,4 @@
-#include <stdint.h>
-#include <cstring>
-
-class SHA256 {
-public:
-    typedef uint8_t Digest __attribute__((__vector_size__(32)));
-    typedef uint8_t Data __attribute__((__vector_size__(64)));
-    typedef uint32_t State __attribute__((__vector_size__(32)));
-
-private:
-    // uint32_t total[2];
-    // uint32_t state[8];
-    State state;
-
-public:
-    SHA256() {
-    }
-
-    void start();
-    void update(Data input);
-    Digest digest();
-};
+#include "sha256_accel.hpp"
 
 void SHA256::start() {
     // total[0] = 0;
@@ -106,6 +85,7 @@ void SHA256::update(Data data) {
     G = state[6];
     H = state[7];
 
+#if 0
     P( A, B, C, D, E, F, G, H, W[ 0], 0x428A2F98 );
     P( H, A, B, C, D, E, F, G, W[ 1], 0x71374491 );
     P( G, H, A, B, C, D, E, F, W[ 2], 0xB5C0FBCF );
@@ -170,6 +150,7 @@ void SHA256::update(Data data) {
     P( D, E, F, G, H, A, B, C, R(61), 0xA4506CEB );
     P( C, D, E, F, G, H, A, B, R(62), 0xBEF9A3F7 );
     P( B, C, D, E, F, G, H, A, R(63), 0xC67178F2 );
+#endif
 
     state[0] += A;
     state[1] += B;
@@ -200,12 +181,12 @@ SHA256::Digest SHA256::digest() {
          // | ( total[1] <<  3 );
     // low  = ( total[0] <<  3 );
 
-    PUT_UINT32( high, msglen, 0 );
-    PUT_UINT32( low,  msglen, 4 );
+    // PUT_UINT32( high, msglen, 0 );
+    // PUT_UINT32( low,  msglen, 4 );
 
     // last = total[0] & 0x3F;
-    last = 0;
-    padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+    // last = 0;
+    // padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
     // update( sha256_padding );
     // FIXME: add msglen with padding
@@ -222,16 +203,4 @@ SHA256::Digest SHA256::digest() {
     PUT_UINT32( state[7], digest, 28 );
     return digest;
 }
-
-#if 1
-bool test1() {
-    SHA256 sha;
-    sha.start();
-
-    SHA256::Data data;
-    sha.update(data);
-
-    return true;
-}
-#endif
 

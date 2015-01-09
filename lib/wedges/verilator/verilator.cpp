@@ -139,8 +139,10 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
 
     FileSet::File* hpp = fileset.create(mod->name() + ".hpp");
     writeHeader(hpp, mod);
+    hpp->flush();
     FileSet::File* cpp = fileset.create(mod->name() + ".cpp");
     writeImplementation(cpp, mod);
+    cpp->flush();
     cppFiles.push_back(cpp);
 
     // Run clang++ on wedge, compiling to llvm
@@ -226,7 +228,7 @@ std::string argName(llvm::Type* ty, int i) {
 }
 
 bool implicitPointer(llvm::Type* ty) {
-    return ty->getTypeID() == llvm::Type::VectorTyID ||
+    return //ty->getTypeID() == llvm::Type::VectorTyID ||
            ty->getTypeID() == llvm::Type::ArrayTyID;
 }
 
@@ -262,9 +264,11 @@ std::pair<string, string> typeSigPlain(llvm::Type* type, bool pointerize) {
     case llvm::Type::VectorTyID: {
             auto p = typeSigPlain(nthType(type, 0), false);
             return make_pair(
-                p.first,
-                p.second + str(boost::format("[%1%]")
-                                % numContainedTypes(type)));
+                p.first + str(boost::format(
+                        " __attribute__((__vector_size__(%1%)))")
+                            % numContainedTypes(type)),
+                // p.second + str(boost::format("[%1%]")
+                p.second);
     }
     case llvm::Type::StructTyID:
         {
@@ -846,27 +850,6 @@ void VerilatorWedge::writeBodies(Module* mod) {
         }
     }
 
-    // For each interface stub (a C function), have it call the C++
-    // version.
-    auto stubs = mod->interfaceStubs();
-    for (auto p: stubs) {
-        llvm::Function* testThunk = p.second;
-        llvm::Function* ifaceFunc = interfaceMap[p.first];
-        assert(ifaceFunc != NULL);
-        auto& ctxt = mod->design().context();
-        auto bb = llvm::BasicBlock::Create(ctxt, "thunk", testThunk);
-        vector<llvm::Value*> args;
-        for (auto arg = testThunk->arg_begin();
-                arg != testThunk->arg_end(); arg++) {
-            args.push_back(&*arg);
-        }
-        auto call = llvm::CallInst::Create(ifaceFunc, args, "", bb);
-        if (call->getType()->isVoidTy())
-            llvm::ReturnInst::Create(ctxt, bb);
-        else
-            llvm::ReturnInst::Create(ctxt, call, bb);
-    }
-
     // Add tests which automatically run both S/W and H/W then compare
     // the results
     for (llvm::Function* test: mod->tests()) {
@@ -897,6 +880,44 @@ void VerilatorWedge::writeBodies(Module* mod) {
             memberFunc, test, vmap, true, returns);
         addAssertsToTest(mod, memberFunc);
     }
+
+    // For each interface stub (a C function), have it call the C++
+    // version.
+    auto stubs = mod->interfaceStubs();
+    for (auto p: stubs) {
+        llvm::Function* testThunk = p.second;
+        llvm::Function* ifaceFunc = interfaceMap[p.first];
+        assert(ifaceFunc != NULL);
+        auto& ctxt = mod->design().context();
+        auto bb = llvm::BasicBlock::Create(ctxt, "thunk", testThunk);
+        vector<llvm::Value*> args;
+        auto ifaceArg = ifaceFunc->arg_begin();
+        for (auto arg = testThunk->arg_begin();
+                arg != testThunk->arg_end(); arg++, ifaceArg++) {
+            if (arg->getType() == ifaceArg->getType()) { 
+                // Types match -- simple case
+                args.push_back(&*arg);
+            } else if(ifaceArg->getType()->isPointerTy() && 
+                      ifaceArg->getType()->getPointerElementType() ==
+                        arg->getType() && 
+                      ifaceArg->hasByValAttr()) {
+                // Fucking C frontend converts some argument types to
+                // pointers with the 'byval' attribute.  Asshole! Now
+                // we need to alloc and store the argument first.
+                auto argLoc = new llvm::AllocaInst(arg->getType(),
+                                                   NULL, "", bb);
+                new llvm::StoreInst(arg, argLoc, bb);
+                args.push_back(argLoc);
+            } else {
+                assert(false && "Couldn't deal with argument");
+            }
+        }
+        auto call = llvm::CallInst::Create(ifaceFunc, args, "", bb);
+        if (call->getType()->isVoidTy())
+            llvm::ReturnInst::Create(ctxt, bb);
+        else
+            llvm::ReturnInst::Create(ctxt, call, bb);
+    }
 }
 
 void VerilatorWedge::addAssertsToTest(Module* mod, llvm::Function* test) {
@@ -921,9 +942,30 @@ void VerilatorWedge::addAssertsToTest(Module* mod, llvm::Function* test) {
     }
 }
 
+static llvm::Value* extractN(unsigned n, llvm::Value* v,
+                             llvm::Instruction* insertBefore) {
+    switch(v->getType()->getTypeID()) {
+        case llvm::Type::VectorTyID: {
+            auto ee = llvm::ExtractElementInst::Create(
+                v,
+                llvm::ConstantInt::get(
+                    llvm::Type::getInt32Ty(v->getContext()),
+                    n), "", insertBefore);
+            return ee;
+        }
+        case llvm::Type::StructTyID:
+        case llvm::Type::ArrayTyID: {
+            auto ev = llvm::ExtractValueInst::Create(v, {n},
+                                                     "", insertBefore);
+            return ev;
+        }
+        default:
+            assert(false && "Not built yet!");
+    }
+}
+
 llvm::Value* buildEqualityTest(llvm::Value* a, llvm::Value* b,
-                               llvm::Instruction* insertAfter) {
-    llvm::Instruction* insertBefore = insertAfter->getNextNode();
+                               llvm::Instruction* insertBefore) {
     assert(insertBefore != NULL);
     llvm::Type* eqType = a->getType();
     assert(eqType == b->getType());
@@ -938,6 +980,25 @@ llvm::Value* buildEqualityTest(llvm::Value* a, llvm::Value* b,
         return llvm::ICmpInst::Create(
             llvm::Instruction::FCmp, llvm::CmpInst::ICMP_EQ,
             a, b, "eq_compare", insertBefore);
+    case llvm::Type::VectorTyID:
+    case llvm::Type::ArrayTyID:
+    case llvm::Type::StructTyID: {
+        unsigned numTy = numContainedTypes(eqType);
+        llvm::Value* last = NULL;
+        for (unsigned i = 0; i < numTy; i++) {
+            auto aSub = extractN(i, a, insertBefore);
+            auto bSub = extractN(i, b, insertBefore);
+            auto cmp = buildEqualityTest(aSub, bSub, insertBefore);
+            if (last == NULL) {
+                last = cmp;
+            } else {
+                last = llvm::BinaryOperator::CreateAnd(
+                    last, cmp, "", insertBefore);
+            }
+        }
+        assert(last != NULL);
+        return last;
+    }
     default:
         assert(false && "Not built yet!");
     }
@@ -949,30 +1010,36 @@ void VerilatorWedge::addAssertToTest(Module* mod,
                                      llvm::CallInst* ci) {
     llvm::Type* swType = mod->swType();
     llvm::Argument* thisPtr = &*func->arg_begin();
+    auto hwFunc = mod->interfaceStub(ifaceName);
     assert(thisPtr->getType() == mod->ifaceType()->getPointerTo(0));
 
     vector<llvm::Value*> operands;
-    for (unsigned i=0; i<ci->getNumArgOperands(); i++) {
+    auto hwArg = hwFunc->arg_begin();
+    for (unsigned i=0; i<ci->getNumArgOperands(); i++, hwArg++) {
         auto operand = ci->getArgOperand(i);
         if (i == 0) {
             assert(operand->getType() == swType->getPointerTo(0));
             operands.push_back(thisPtr);
-        } else {
+        } else if (hwArg->getType() == operand->getType()) {
             operands.push_back(operand);
+        } else if(hwArg->getType()->getPointerTo(0) == operand->getType()) {
+            // We may have to de-reference a pointer
+            auto val = new llvm::LoadInst(operand, "", ci);
+            operands.push_back(val);
+        } else {
+            assert(false && "Can't deal with this type!");
         }
     }
 
-    ci->setName("swCall");
-
-    auto hwFunc = mod->interfaceStub(ifaceName);
     assert(hwFunc != NULL);
     auto hwCall = llvm::CallInst::Create(
-        hwFunc, operands, "hwCall");
+        hwFunc, operands);
     hwCall->insertAfter(ci);
     llvm::Instruction* tail = hwCall->getNextNode();
 
     // Build code to test
-    llvm::Value* isEqual = buildEqualityTest(ci, hwCall, hwCall);
+    llvm::Value* isEqual = buildEqualityTest(ci, hwCall,
+                                             hwCall->getNextNode());
 
     llvm::TerminatorInst* thenTerm;
     llvm::TerminatorInst* elseTerm;

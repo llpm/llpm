@@ -73,6 +73,13 @@ public:
             }
         }
 
+        void flush() {
+            if (_stream.is_open())
+                _stream.flush();
+            if (_file != NULL)
+                fflush(_file);
+        }
+
         void erase() {
             _fileset.erase(this);
         }

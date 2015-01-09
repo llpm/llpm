@@ -30,7 +30,7 @@ class Interface;
  * Can sometimes be refined into smaller, more granular functions
  * via "refine" method.
  */
-class Block : public gc_cleanup {
+class Block {
 protected:
     Module* _module;
     std::string _name;

@@ -9,7 +9,7 @@ if not os.path.isfile("./bin/llvm/bin/llvm-config"):
 LibPaths = [".", "llvm/lib"]
 
 CxxLdFlags = """
--g -pthread
+-g -pthread -fno-omit-frame-pointer
 """.split()
 
 env = Environment(
@@ -19,7 +19,7 @@ env = Environment(
             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
             -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split()
             + CxxLdFlags,
-    LIBS="""tcmalloc gc gccpp LLVM-3.5""".split(),
+    LIBS="""LLVM-3.5""".split(),
     LIBPATH=map(lambda x: "bin/" + x, LibPaths),
     LINKFLAGS=[]
               + CxxLdFlags

@@ -6,8 +6,8 @@
 
 class SHA256_SW {
 public:
-    typedef uint8_t Digest[32];// __attribute__((__vector_size__(32)));
-    typedef uint8_t Data[64];// __attribute__((__vector_size__(64)));
+    typedef uint8_t Digest __attribute__((__vector_size__(32)));
+    typedef uint8_t Data __attribute__((__vector_size__(64)));
     typedef uint32_t State __attribute__((__vector_size__(32)));
 
     // uint32_t total[2];
@@ -19,7 +19,7 @@ public:
 
     void start();
     void update(Data input);
-    void digest(Digest digest);
+    Digest digest();
 };
 
 int main() {
@@ -30,6 +30,10 @@ int main() {
     sha->trace("debug.vcd");
     sha->reset();
 
+    if (!sha->test1()) {
+        printf("TEST FAIL!\n");
+    }
+
     printf("Initializing...\n");
     sha->start();
     sw->start();
@@ -38,21 +42,21 @@ int main() {
     srand(4);
     uint64_t start = sha->cycles();
     for (unsigned c=0; c<1; c++) {
-        uint8_t data[64];
+        uint8_t __attribute__((__vector_size__(64))) data;
         for (unsigned i=0; i<64; i++) {
             data[i] = i+(c<<4);
         }
-        sha->update_req(data);
+        sha->update(data);
         sw->update(data);
     }
     printf("  cycles: %lu\n", sha->cycles() - start);
 
     printf("Getting digest...\n");
-    uint8_t digest[32];
-    memset(digest, 0, sizeof(digest));
+    SHA256_SW::Digest digest;
+    memset(&digest, 0, sizeof(digest));
     start = sha->cycles();
     sha->digest_req();
-    sha->digest_resp(digest);
+    sha->digest_resp(&digest);
     printf("  cycles: %lu\n", sha->cycles() - start);
 
     for (unsigned i=0; i<32; i++) {
@@ -60,8 +64,8 @@ int main() {
     }
     printf("\n");
 
-    memset(digest, 0, sizeof(digest));
-    sw->digest(digest);
+    memset(&digest, 0, sizeof(digest));
+    digest = sw->digest();
     printf("S/W result:\n");
     for (unsigned i=0; i<32; i++) {
         printf("%02x", digest[i]);
@@ -245,7 +249,7 @@ static SHA256_SW::Data sha256_padding =
 };
 #endif
 
-void SHA256_SW::digest(Digest digest) {
+SHA256_SW::Digest SHA256_SW::digest() {
     uint32_t last, padn;
     uint32_t high, low;
     uint8_t msglen[8];
@@ -254,17 +258,18 @@ void SHA256_SW::digest(Digest digest) {
          // | ( total[1] <<  3 );
     // low  = ( total[0] <<  3 );
 
-    PUT_UINT32( high, msglen, 0 );
-    PUT_UINT32( low,  msglen, 4 );
+    // PUT_UINT32( high, msglen, 0 );
+    // PUT_UINT32( low,  msglen, 4 );
 
     // last = total[0] & 0x3F;
-    last = 0;
-    padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+    // last = 0;
+    // padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
     // update( sha256_padding );
     // FIXME: add msglen with padding
     // update( msglen, 8 );
 
+    Digest digest;
     PUT_UINT32( state[0], digest,  0 );
     PUT_UINT32( state[1], digest,  4 );
     PUT_UINT32( state[2], digest,  8 );
@@ -273,5 +278,6 @@ void SHA256_SW::digest(Digest digest) {
     PUT_UINT32( state[5], digest, 20 );
     PUT_UINT32( state[6], digest, 24 );
     PUT_UINT32( state[7], digest, 28 );
+    return digest;
 }
 
