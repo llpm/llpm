@@ -13,12 +13,10 @@ public:
     typedef uint8_t Data __attribute__((__vector_size__(64)));
     typedef uint32_t State __attribute__((__vector_size__(32)));
 
-private:
     // uint32_t total[2];
     // uint32_t state[8];
     State state;
 
-public:
     SHA256() {
     }
 

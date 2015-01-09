@@ -15,12 +15,18 @@ bool test1() {
     sha.start();
 
     printf("test1 Testing update\n");
-    SHA256::Data data;
-    for (unsigned i=0; i<64; i++)
-        data[i] = myrand<uint8_t>();
-    sha.update(data);
+    for (unsigned c=0; c<10; c++) {
+        SHA256::Data data;
+        for (unsigned i=0; i<64; i++)
+            data[i] = myrand<uint8_t>();
+        sha.update(data);
+    }
 
     printf("test1 Testing digest\n");
+    printf("State: ");
+    for (unsigned i=0; i<8; i++)
+        printf("%08x", sha.state[i]);
+    printf("\n");
     sha.digest();
 
     printf("Apparently everything worked!\n");

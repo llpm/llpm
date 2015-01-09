@@ -509,30 +509,51 @@ public:
                             bitwidth(ty));
         };
 
-        switch (ty->getTypeID()) {
+        unsigned valueID;
+        if (lc != NULL) {
+            valueID = lc->getValueID();
+        } else {
+            switch(ty->getTypeID()) {
             case llvm::Type::IntegerTyID:
+                valueID = llvm::Value::ConstantIntVal;
+                break;
+            case llvm::Type::PointerTyID:
+                valueID = llvm::Value::ConstantPointerNullVal;
+                break;
+            case llvm::Type::VectorTyID:
+                valueID = llvm::Value::ConstantAggregateZeroVal;
+                break;
+            default:
+                valueID = -1;
+            }
+        }
+
+        switch (valueID) {
+            case llvm::Value::ConstantIntVal:
                 return str(boost::format("%1%'d%2%") 
                             % bitwidth(ty)
                             % llvm::dyn_cast<llvm::ConstantInt>(lc)->
                                     getValue().toString(10, true));
-            case llvm::Type::PointerTyID:
+            case llvm::Value::ConstantPointerNullVal:
                 assert(lc == NULL || lc->isNullValue());
                 return str(boost::format("%1%'h%2%") 
                             % bitwidth(ty)
                             % 0);
-            case llvm::Type::VectorTyID: {
+            case llvm::Value::ConstantAggregateZeroVal: 
+                return str(boost::format("{%1%{1'b0}}")
+                            % bitwidth(ty));
+            case llvm::Value::ConstantDataVectorVal: {
                 llvm::ConstantDataVector* cv =
                     llvm::dyn_cast<llvm::ConstantDataVector>(lc);
                 assert(cv != NULL);
                 std::string ret = "{";
                 unsigned len = numContainedTypes(ty);
-                for (unsigned i=0; i<len; i++) {
-                    ret += toString(NULL, cv->getElementAsConstant(i)) + 
-                            (i == (len - 1) ? "" : ", ");
+                for (unsigned i=len; i>0; i--) {
+                    ret += toString(NULL, cv->getElementAsConstant(i-1)) + 
+                            (i == 1 ? "" : ", ");
                 }
                 ret += "}";
                 return ret;
-                break;
             }
         default:
             throw InvalidArgument("Constant type not yet supported");

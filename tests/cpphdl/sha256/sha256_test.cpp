@@ -239,7 +239,6 @@ void SHA256_SW::update(Data data) {
     state[7] += H;
 }
 
-#if 0
 static SHA256_SW::Data sha256_padding =
 { 
  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -247,7 +246,6 @@ static SHA256_SW::Data sha256_padding =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
-#endif
 
 SHA256_SW::Digest SHA256_SW::digest() {
     uint32_t last, padn;

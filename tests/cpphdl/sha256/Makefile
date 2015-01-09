@@ -18,6 +18,8 @@ default: ${NAME}_test
 sha256.bc: sha256_accel.bc sha256_accel_test.bc
 	${LINK} -o $@ $^
 
+sha256_accel.bc: sha256_accel.cpp sha256_accel.hpp
+
 obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
 	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
 

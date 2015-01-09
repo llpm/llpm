@@ -4,6 +4,7 @@ void SHA256::start() {
     // total[0] = 0;
     // total[1] = 0;
 
+#if 1
     state[0] = 0x6A09E667;
     state[1] = 0xBB67AE85;
     state[2] = 0x3C6EF372;
@@ -12,6 +13,18 @@ void SHA256::start() {
     state[5] = 0x9B05688C;
     state[6] = 0x1F83D9AB;
     state[7] = 0x5BE0CD19;
+#endif
+
+#if 0
+    state[0] = 0xDEADBEEF;
+    state[1] = 0x2;
+    state[2] = 0x3;
+    state[3] = 0x4;
+    state[4] = 0x5;
+    state[5] = 0x6;
+    state[6] = 0x7;
+    state[7] = 0x8;
+#endif
 }
 
 #define GET_UINT32(n,b,i)                       \
@@ -85,7 +98,6 @@ void SHA256::update(Data data) {
     G = state[6];
     H = state[7];
 
-#if 0
     P( A, B, C, D, E, F, G, H, W[ 0], 0x428A2F98 );
     P( H, A, B, C, D, E, F, G, W[ 1], 0x71374491 );
     P( G, H, A, B, C, D, E, F, W[ 2], 0xB5C0FBCF );
@@ -150,7 +162,6 @@ void SHA256::update(Data data) {
     P( D, E, F, G, H, A, B, C, R(61), 0xA4506CEB );
     P( C, D, E, F, G, H, A, B, R(62), 0xBEF9A3F7 );
     P( B, C, D, E, F, G, H, A, R(63), 0xC67178F2 );
-#endif
 
     state[0] += A;
     state[1] += B;
@@ -162,7 +173,6 @@ void SHA256::update(Data data) {
     state[7] += H;
 }
 
-#if 0
 static SHA256::Data sha256_padding =
 { 
  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -170,7 +180,6 @@ static SHA256::Data sha256_padding =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
-#endif
 
 SHA256::Digest SHA256::digest() {
     uint32_t last, padn;
