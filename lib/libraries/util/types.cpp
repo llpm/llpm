@@ -1,10 +1,12 @@
 #include "types.hpp"
 
 #include <libraries/core/comm_intr.hpp>
+#include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
 
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Constants.h>
 
 namespace llpm {
 
@@ -83,27 +85,48 @@ ReplaceElement::ReplaceElement(llvm::Type* ty):
 { }
 
 bool ReplaceElement::refine(ConnectionDB& conns) const {
+    auto argSplit = new Split(din()->type());
+    auto arr = argSplit->dout(0);
+    auto repl = argSplit->dout(1);
+    auto arrSplit = new Split(arr->type());
+    conns.connect(arr, arrSplit->din());
+    auto arrJoin = new Join(arr->type());
+
     if (_idx == -1) {
-        // TODO: Dynamic selection.
-        return false;
-    } else {
-        auto argSplit = new Split(din()->type());
-        auto arr = argSplit->dout(0);
-        auto repl = argSplit->dout(1);
-        auto arrSplit = new Split(arr->type());
-        conns.connect(arr, arrSplit->din());
-        auto arrJoin = new Join(arr->type());
+        // Dynamic selection.
+        auto idx = argSplit->dout(2);
         for (unsigned i=0; i<arrSplit->dout_size(); i++) {
-            if (i == _idx) {
+            auto selThis = new IntCompare(idx->type(), idx->type(),
+                                          IntCompare::EQ, false);
+            auto stJoin = new Join({idx->type(), idx->type()});
+            conns.connect(stJoin->dout(), selThis->din());
+            conns.connect(idx, stJoin->din(0));
+            auto iConst = new Constant(
+                llvm::ConstantInt::get(idx->type(), i));
+            conns.connect(iConst->dout(), stJoin->din(1));
+
+            auto mux = new Multiplexer(2, arrSplit->dout(i)->type());
+            conns.connect(mux->dout(), arrJoin->din(i));
+            auto mJoin = new Join(mux->din()->type());
+            conns.connect(mJoin->dout(), mux->din());
+            conns.connect(selThis->dout(), mJoin->din(0));
+            conns.connect(arrSplit->dout(i), mJoin->din(1));
+            conns.connect(repl, mJoin->din(2));
+        }
+    } else {
+        // Static selection
+        assert(_idx >= 0);
+        for (unsigned i=0; i<arrSplit->dout_size(); i++) {
+            if (i == (unsigned)_idx) {
                 conns.connect(repl, arrJoin->din(i));
             } else {
                 conns.connect(arrSplit->dout(i), arrJoin->din(i));
             }
         }
-        conns.remap(din(), argSplit->din());
-        conns.remap(dout(), arrJoin->dout());
-        return true;
     }
+    conns.remap(din(), argSplit->din());
+    conns.remap(dout(), arrJoin->dout());
+    return true;
 }
 
 } // namespace llpm
