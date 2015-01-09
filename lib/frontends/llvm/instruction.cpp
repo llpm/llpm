@@ -325,6 +325,88 @@ bool WrapperInstruction<Shift>::refine(
     return true;
 }
 
+template<>
+bool WrapperInstruction<IntCompare>::refine(
+    ConnectionDB& conns) const
+{
+    llvm::ICmpInst* icmp = llvm::dyn_cast<llvm::ICmpInst>(_ins);
+    IntCompare::Cmp cmp;
+    bool swapOps;
+    bool isSigned;
+    switch(icmp->getPredicate()) {
+    case llvm::CmpInst::ICMP_EQ:
+        cmp = IntCompare::EQ;
+        swapOps = false;
+        isSigned = false;
+        break;
+    case llvm::CmpInst::ICMP_NE:
+        cmp = IntCompare::NEQ;
+        swapOps = false;
+        isSigned = false;
+        break;
+    case llvm::CmpInst::ICMP_UGT:
+        cmp = IntCompare::GT;
+        swapOps = false;
+        isSigned = false;
+        break;
+    case llvm::CmpInst::ICMP_UGE:
+        cmp = IntCompare::GTE;
+        swapOps = false;
+        isSigned = false;
+        break;
+    case llvm::CmpInst::ICMP_ULT:
+        cmp = IntCompare::GT;
+        swapOps = true;
+        isSigned = false;
+        break;
+    case llvm::CmpInst::ICMP_ULE:
+        cmp = IntCompare::GTE;
+        swapOps = true;
+        isSigned = false;
+        break;
+    case llvm::CmpInst::ICMP_SGT:
+        cmp = IntCompare::GT;
+        swapOps = false;
+        isSigned = true;
+        break;
+    case llvm::CmpInst::ICMP_SGE:
+        cmp = IntCompare::GTE;
+        swapOps = false;
+        isSigned = true;
+        break;
+    case llvm::CmpInst::ICMP_SLT:
+        cmp = IntCompare::GT;
+        swapOps = true;
+        isSigned = true;
+        break;
+    case llvm::CmpInst::ICMP_SLE:
+        cmp = IntCompare::GTE;
+        swapOps = true;
+        isSigned = true;
+        break;
+    default:
+        throw InvalidArgument("Don't know how to convert to IntCompare!");
+    }
+
+    if (!swapOps) {
+        auto cmpBlk = new IntCompare(_ins->getOperand(0)->getType(),
+                                     _ins->getOperand(1)->getType(),
+                                     cmp, isSigned);
+        conns.remap(input(), cmpBlk->din());
+        conns.remap(output(), cmpBlk->dout());
+    } else {
+        auto cmpBlk = new IntCompare(_ins->getOperand(1)->getType(),
+                                     _ins->getOperand(0)->getType(),
+                                     cmp, isSigned);
+        auto s = new Split(input()->type());
+        conns.connect(cmpBlk->din(conns, 0), s->dout(1));
+        conns.connect(cmpBlk->din(conns, 1), s->dout(0));
+        conns.remap(input(), s->din());
+        conns.remap(output(), cmpBlk->dout());
+    }
+    return true;
+}
+
 template<typename C>
 bool WrapperInstruction<C>::refine(
     ConnectionDB& conns) const
@@ -461,65 +543,7 @@ Bitwise* IntWrapperInstruction<Bitwise>::New() const {
     return new Bitwise(2, _ins->getOperand(0)->getType(), op);
 }
 
-template<>
-IntCompare* IntWrapperInstruction<IntCompare>::New() const {
-    llvm::ICmpInst* icmp = llvm::dyn_cast<llvm::ICmpInst>(_ins);
-    IntCompare::Cmp cmp;
-    bool isSigned;
-    switch(icmp->getPredicate()) {
-    case llvm::CmpInst::ICMP_EQ:
-        cmp = IntCompare::EQ;
-        isSigned = false;
-        break;
-    case llvm::CmpInst::ICMP_NE:
-        cmp = IntCompare::NEQ;
-        isSigned = false;
-        break;
-    case llvm::CmpInst::ICMP_UGT:
-        cmp = IntCompare::GT;
-        isSigned = false;
-        break;
-    case llvm::CmpInst::ICMP_UGE:
-        cmp = IntCompare::GTE;
-        isSigned = false;
-        break;
-    case llvm::CmpInst::ICMP_ULT:
-        icmp->swapOperands();
-        cmp = IntCompare::GTE;
-        isSigned = false;
-        break;
-    case llvm::CmpInst::ICMP_ULE:
-        icmp->swapOperands();
-        cmp = IntCompare::GT;
-        isSigned = false;
-        break;
-    case llvm::CmpInst::ICMP_SGT:
-        cmp = IntCompare::GT;
-        isSigned = true;
-        break;
-    case llvm::CmpInst::ICMP_SGE:
-        cmp = IntCompare::GTE;
-        isSigned = true;
-        break;
-    case llvm::CmpInst::ICMP_SLT:
-        icmp->swapOperands();
-        cmp = IntCompare::GTE;
-        isSigned = true;
-        break;
-    case llvm::CmpInst::ICMP_SLE:
-        icmp->swapOperands();
-        cmp = IntCompare::GT;
-        isSigned = true;
-        break;
-    default:
-        throw InvalidArgument("Don't know how to convert to IntCompare!");
-    }
 
-    return new IntCompare(_ins->getOperand(0)->getType(),
-                          _ins->getOperand(1)->getType(),
-                          cmp,
-                          isSigned);
-}
 
 
 class FlowInstruction: public LLVMPureInstruction {
@@ -624,7 +648,7 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::SDiv, TruncatingIntWrapperInstruction<IntDivide>::Create},
     {llvm::Instruction::URem, TruncatingIntWrapperInstruction<IntRemainder>::Create},
     {llvm::Instruction::SRem, TruncatingIntWrapperInstruction<IntRemainder>::Create},
-    {llvm::Instruction::ICmp, IntWrapperInstruction<IntCompare>::Create},
+    {llvm::Instruction::ICmp, WrapperInstruction<IntCompare>::Create},
 
     // Conversion operators
     {llvm::Instruction::Trunc, WrapperInstruction<IntTruncate>::Create},
