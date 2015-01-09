@@ -206,8 +206,32 @@ public:
 
             for(unsigned i=0; i<c->successors_size(); i++) {
                 const auto& map = c->successorMaps(i);
-                StructTwiddler* st = new StructTwiddler(c->bbOutput()->type(), map);
-                conns.connect(rtr->dout(i), st->din());
+                StructTwiddler* st =
+                    new StructTwiddler(c->bbOutput()->type(), map);
+
+                unsigned succIdx;
+                switch (ti->getOpcode()) {
+                case llvm::Instruction::Ret:
+                    assert(ti->getNumSuccessors() <= 1);
+                    succIdx = 0;
+                    break;
+                case llvm::Instruction::Br:
+                    if (ti->getNumSuccessors() == 2) {
+                        succIdx = (i == 0) ? 1 : 0;
+                    } else {
+                        assert(ti->getNumSuccessors() == 1);
+                        succIdx = 0;
+                    }
+                    break;
+                case llvm::Instruction::Switch:
+                    succIdx = i;
+                    break;
+                default:
+                    assert(false && "Haven't built code for this "
+                                    "terminator yet");
+                }
+
+                conns.connect(rtr->dout(succIdx), st->din());
                 conns.remap(c->successors(i), st->dout());
             }
         }
