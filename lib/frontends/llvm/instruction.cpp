@@ -12,6 +12,7 @@
 
 #include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
+#include <util/misc.hpp>
 
 using namespace std;
 
@@ -265,12 +266,63 @@ bool WrapperInstruction<ReplaceElement>::refine(
             return true;
         } else {
             auto re = new ReplaceElement(ie->getOperand(0)->getType());
-            conns.remap(input(), re->din());
+
+            auto s = new Split(input()->type());
+            conns.remap(input(), s->din());
+            auto j = new Join(re->din()->type());
+            conns.connect(j->dout(), re->din());
+            conns.connect(s->dout(0), j->din(0));
+            conns.connect(s->dout(1), j->din(1));
+
+            auto trunc = new IntTruncate(s->dout(2)->type(),
+                                         j->din(2)->type());
+            conns.connect(s->dout(2), trunc->din());
+            conns.connect(trunc->dout(), j->din(2));
+
+            conns.remap(input(), s->din());
             conns.remap(output(), re->dout());
             return true;
         }
     }
     return false;
+}
+
+template<>
+bool WrapperInstruction<Shift>::refine(
+    ConnectionDB& conns) const
+{
+    auto s = new Split(input()->type());
+    unsigned shftWidth = idxwidth(bitwidth(_ins->getOperand(0)->getType()));
+    auto trunc = new IntTruncate(
+        _ins->getOperand(1)->getType(),
+        llvm::Type::getIntNTy(_ins->getContext(), shftWidth));
+    conns.connect(s->dout(1), trunc->din());
+
+    Shift* ret = NULL;
+    switch(_ins->getOpcode()) {
+    case llvm::Instruction::Shl:
+        ret = new Shift(_ins->getOperand(0)->getType(),
+                        Shift::Left,
+                        Shift::Logical);
+        break;
+    case llvm::Instruction::LShr:
+        ret = new Shift(_ins->getOperand(0)->getType(),
+                        Shift::Right,
+                        Shift::Logical);
+        break;
+    case llvm::Instruction::AShr:
+        ret = new Shift(_ins->getOperand(0)->getType(),
+                        Shift::Right,
+                        Shift::Arithmetic);
+        break;
+    default:
+        throw InvalidArgument("Don't know how to convert to shift!");
+    }
+    conns.connect(s->dout(0), ret->din(conns, 0));
+    conns.connect(trunc->dout(), ret->din(conns, 1));
+    conns.remap(output(), ret->dout());
+    conns.remap(input(), s->din());
+    return true;
 }
 
 template<typename C>
@@ -388,28 +440,6 @@ public:
     }
 };
 
-template<>
-Shift* IntWrapperInstruction<Shift>::New() const {
-    switch(_ins->getOpcode()) {
-    case llvm::Instruction::Shl:
-        return new Shift(_ins->getOperand(0)->getType(),
-                         _ins->getOperand(1)->getType(),
-                         Shift::Left,
-                         Shift::Logical);
-    case llvm::Instruction::LShr:
-        return new Shift(_ins->getOperand(0)->getType(),
-                         _ins->getOperand(1)->getType(),
-                         Shift::Right,
-                         Shift::Logical);
-    case llvm::Instruction::AShr:
-        return new Shift(_ins->getOperand(0)->getType(),
-                         _ins->getOperand(1)->getType(),
-                         Shift::Right,
-                         Shift::Arithmetic);
-    default:
-        throw InvalidArgument("Don't know how to convert to shift!");
-    }
-}
 
 template<>
 Bitwise* IntWrapperInstruction<Bitwise>::New() const {
@@ -607,9 +637,9 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::ExtractElement, WrapperInstruction<Extract>::Create},
 
     // Logical operators (integer operands)
-    {llvm::Instruction::Shl, IntWrapperInstruction<Shift>::Create}, // Shift left  (logical)
-    {llvm::Instruction::LShr, IntWrapperInstruction<Shift>::Create}, // Shift right (logical)
-    {llvm::Instruction::AShr, IntWrapperInstruction<Shift>::Create}, // Shift right (arithmetic)
+    {llvm::Instruction::Shl, WrapperInstruction<Shift>::Create}, // Shift left  (logical)
+    {llvm::Instruction::LShr, WrapperInstruction<Shift>::Create}, // Shift right (logical)
+    {llvm::Instruction::AShr, WrapperInstruction<Shift>::Create}, // Shift right (arithmetic)
     {llvm::Instruction::And, IntWrapperInstruction<Bitwise>::Create},
     {llvm::Instruction::Or, IntWrapperInstruction<Bitwise>::Create},
     {llvm::Instruction::Xor, IntWrapperInstruction<Bitwise>::Create},

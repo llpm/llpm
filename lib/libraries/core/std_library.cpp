@@ -1,5 +1,7 @@
 #include "std_library.hpp"
 
+#include <util/llvm_type.hpp>
+#include <util/misc.hpp>
 #include <algorithm>
 #include <llpm/exceptions.hpp>
 #include <boost/foreach.hpp>
@@ -96,18 +98,19 @@ ConstShift::ConstShift(llvm::Type* a, int shift, Style style)  :
 {
 }
 
-llvm::Type* Shift::InType(llvm::Type* a, llvm::Type* shift, Direction dir, Style Style) {
-    return IntAddition::InType({a, shift});
+llvm::Type* Shift::InType(llvm::Type* a, Direction dir, Style Style) {
+    return llvm::StructType::get(a->getContext(), vector<llvm::Type*>(
+        {a, llvm::Type::getIntNTy(a->getContext(), idxwidth(bitwidth(a)))}));
 }
 
-llvm::Type* Shift::OutType(llvm::Type* a, llvm::Type* shift, Direction dir, Style Style) {
-    if (!a->isIntegerTy() || !shift->isIntegerTy())
+llvm::Type* Shift::OutType(llvm::Type* a, Direction dir, Style Style) {
+    if (!a->isIntegerTy())
         throw InvalidArgument("All inputs to IntAddition must be ints!");
     return a;
 }
 
-Shift::Shift(llvm::Type* a, llvm::Type* shift, Direction dir, Style style) :
-    Function(InType(a, shift, dir, style), OutType(a, shift, dir, style)),
+Shift::Shift(llvm::Type* a, Direction dir, Style style) :
+    Function(InType(a, dir, style), OutType(a, dir, style)),
     _dir(dir),
     _style(style)
 {

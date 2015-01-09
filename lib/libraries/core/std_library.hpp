@@ -81,9 +81,9 @@ namespace llpm {
             Arithmetic
         };
 
-        static llvm::Type* InType(llvm::Type* a, llvm::Type* shift,
+        static llvm::Type* InType(llvm::Type* a, 
                                   Direction dir, Style style);
-        static llvm::Type* OutType(llvm::Type* a, llvm::Type* shift,
+        static llvm::Type* OutType(llvm::Type* a,
                                    Direction dir, Style style);
 
     private:
@@ -92,12 +92,11 @@ namespace llpm {
 
     public:
         // a is type of data to be shifted
-        // shift is amount to be shifted left or right
+        // The width of the shift amount operand is log2(a)
         // direction is direction to shift. If 'either', negative
         //   'shift' value is right shift, position is left
         // style defines logical, rotating, or arithmetic shift
-        Shift(llvm::Type* a, llvm::Type* shift, Direction dir,
-              Style style);
+        Shift(llvm::Type* a, Direction dir, Style style);
 
         DEF_GET_NP(dir);
         DEF_GET_NP(style);
