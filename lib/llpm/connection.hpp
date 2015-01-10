@@ -84,6 +84,9 @@ public:
 
     DEF_GET(module);
     DEF_GET_NP(changeCounter);
+    const uint64_t* counterPtr() const {
+        return &_changeCounter;
+    }
 
     const auto& sinksRaw() const {
         return _sinkIdx;

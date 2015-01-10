@@ -210,7 +210,7 @@ void ContainerModule::validityCheck() const {
 
 }
 
-bool ContainerModule::hasCycle() const {
+bool ContainerModule::_hasCycleCompute() const {
     set<OutputPort*> init;
     for (auto p: _inputMap) {
         init.insert(p.second->dout());

@@ -7,6 +7,7 @@
 #include <llpm/connection.hpp>
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/interface.hpp>
+#include <util/cache.hpp>
 
 #include <llvm/IR/Module.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
@@ -209,11 +210,19 @@ protected:
                                   std::string name = "");
     void removeInterface(Interface* iface);
 
+    /***
+     * Cached data
+     */
+    Cache<bool> _hasCycle;
+    bool _hasCycleCompute() const;
+
 public:
     ContainerModule(Design& design, std::string name) :
         MutableModule(design, name),
         _conns(this),
-        _pipeline(NULL)
+        _pipeline(NULL),
+        _hasCycle(_conns.counterPtr(),
+                  boost::bind(&ContainerModule::_hasCycleCompute, this))
     { }
 
     virtual ~ContainerModule();
@@ -298,7 +307,9 @@ public:
         return true;
     }
 
-    virtual bool hasCycle() const;
+    virtual bool hasCycle() const {
+        return this->_hasCycle();
+    }
 
     
     virtual unsigned internalRefine(int depth = -1,
