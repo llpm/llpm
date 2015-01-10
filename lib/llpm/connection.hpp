@@ -123,6 +123,10 @@ public:
         _changeCounter++;
     }
 
+    bool isblacklisted(Block* b) const {
+        return _blacklist.count(b) > 0;
+    }
+
     bool isInternalDriver(OutputPort* op) const {
         return _blacklist.count(op->owner()) > 0;
     }

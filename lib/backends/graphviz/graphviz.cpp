@@ -176,6 +176,7 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
     assert(conns != NULL);
 
     os << "digraph " << mod->name() << " {\n";
+    os << "    size=100;\n";
 
 
     ContainerModule* cmMod = dynamic_cast<ContainerModule*>(mod);

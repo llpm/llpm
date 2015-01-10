@@ -39,4 +39,4 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	dot -Tpdf -o $@ $< || true
 
 clean:
-	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll
+	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll *.tmp

@@ -79,6 +79,16 @@ public:
     DEF_GET_NP(name);
     DEF_SET(name);
 
+    template<typename TEST>
+    bool is() const {
+        return dynamic_cast<const TEST*>(this) != NULL;
+    }
+
+    template<typename TEST>
+    bool isnot() const {
+        return dynamic_cast<const TEST*>(this) == NULL;
+    }
+
     // Upon what conditions does a block accept inputs and execute?
     // This routine only works properly when all the outputs have the same
     // dependence rules. If not, it returns "Custom"
