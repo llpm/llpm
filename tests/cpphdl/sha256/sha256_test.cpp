@@ -1,5 +1,31 @@
 #include "SHA256.hpp"
 
+/* This implementation of SHA256 derived from:
+ * http://www.spale.com/download/scrypt/scrypt1.0/sha256.c
+ *
+ * The original copyright follows and continues to apply to this file
+ * and this file only, not the remainder of software in this project.
+ */
+
+/*
+ *  Copyright (C) 2001-2003  Christophe Devine
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ *  USA
+ */
+
 #include <cstdio>
 #include <stdlib.h>
 #include <string.h>
@@ -10,15 +36,15 @@ public:
     typedef uint8_t Data __attribute__((__vector_size__(64)));
     typedef uint32_t State __attribute__((__vector_size__(32)));
 
-    // uint32_t total[2];
-    // uint32_t state[8];
+    uint64_t total;
+    bool finalized;
     State state;
 
     SHA256_SW() {
     }
 
     void start();
-    void update(Data input);
+    bool update(Data input, unsigned len);
     Digest digest();
 };
 
@@ -41,13 +67,15 @@ int main() {
     printf("Sending data block...\n");
     srand(4);
     uint64_t start = sha->cycles();
-    for (unsigned c=0; c<1; c++) {
+    for (unsigned c=0; c<10; c++) {
         uint8_t __attribute__((__vector_size__(64))) data;
         for (unsigned i=0; i<64; i++) {
             data[i] = i+(c<<4);
         }
-        sha->update(data);
-        sw->update(data);
+        auto rc1 = sha->update(data, 64);
+        auto rc2 = sw->update(data, 64);
+        if (rc1 != rc2)
+            printf("Invalid update response!\n");
     }
     printf("  cycles: %lu\n", sha->cycles() - start);
 
@@ -80,8 +108,8 @@ int main() {
 
 
 void SHA256_SW::start() {
-    // total[0] = 0;
-    // total[1] = 0;
+    total = 0;
+    finalized = false;
 
     state[0] = 0x6A09E667;
     state[1] = 0xBB67AE85;
@@ -109,9 +137,22 @@ void SHA256_SW::start() {
     (b)[(i) + 3] = (uint8_t) ( (n)       );       \
 }
 
-void SHA256_SW::update(Data data) {
+bool SHA256_SW::update(Data data, unsigned len) {
+    if (finalized || len > 64)
+        return false;
+
     uint32_t temp1, temp2, W[64];
     uint32_t A, B, C, D, E, F, G, H;
+
+    if (len < 64) {
+        data[len] = 0x80;
+        finalized = true;
+    }
+    for (unsigned i=(len+1); i<64; i++) {
+        data[i] = 0;
+    }
+
+    total += len;
 
     GET_UINT32( W[0],  data,  0 );
     GET_UINT32( W[1],  data,  4 );
@@ -237,6 +278,8 @@ void SHA256_SW::update(Data data) {
     state[5] += F;
     state[6] += G;
     state[7] += H;
+
+    return true;
 }
 
 static SHA256_SW::Data sha256_padding =
@@ -252,20 +295,27 @@ SHA256_SW::Digest SHA256_SW::digest() {
     uint32_t high, low;
     uint8_t msglen[8];
 
-    // high = ( total[0] >> 29 )
-         // | ( total[1] <<  3 );
-    // low  = ( total[0] <<  3 );
+    high = ( (total & 0xFFFFFFFF) >> 29 )
+         | ( (total >> 32) <<  3 );
+    low  = ( (total & 0xFFFFFFFF) <<  3 );
 
-    // PUT_UINT32( high, msglen, 0 );
-    // PUT_UINT32( low,  msglen, 4 );
+    PUT_UINT32( high, msglen, 0 );
+    PUT_UINT32( low,  msglen, 4 );
 
-    // last = total[0] & 0x3F;
-    // last = 0;
-    // padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+    if (!finalized) {
+        finalized = false;
+        update(sha256_padding, 64);
+    }
 
-    // update( sha256_padding );
-    // FIXME: add msglen with padding
-    // update( msglen, 8 );
+    Data len_end = {
+        msglen[0], msglen[1], msglen[2], msglen[3],
+        msglen[4], msglen[5], msglen[6], msglen[7],
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+    update( len_end, 64 );
 
     Digest digest;
     PUT_UINT32( state[0], digest,  0 );
@@ -276,6 +326,7 @@ SHA256_SW::Digest SHA256_SW::digest() {
     PUT_UINT32( state[5], digest, 20 );
     PUT_UINT32( state[6], digest, 24 );
     PUT_UINT32( state[7], digest, 28 );
+
     return digest;
 }
 

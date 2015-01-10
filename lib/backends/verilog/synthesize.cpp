@@ -555,8 +555,21 @@ public:
                 ret += "}";
                 return ret;
             }
-        default:
-            throw InvalidArgument("Constant type not yet supported");
+            case llvm::Value::ConstantVectorVal: {
+                llvm::ConstantVector* cv =
+                    llvm::dyn_cast<llvm::ConstantVector>(lc);
+                assert(cv != NULL);
+                std::string ret = "{";
+                unsigned len = numContainedTypes(ty);
+                for (unsigned i=len; i>0; i--) {
+                    ret += toString(NULL, cv->getAggregateElement(i-1)) + 
+                            (i == 1 ? "" : ", ");
+                }
+                ret += "}";
+                return ret;
+            }
+            default:
+                throw InvalidArgument("Constant type not yet supported");
         }
     }
 

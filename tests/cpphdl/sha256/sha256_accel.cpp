@@ -1,10 +1,35 @@
 #include "sha256_accel.hpp"
 
-void SHA256::start() {
-    // total[0] = 0;
-    // total[1] = 0;
+/* This implementation of SHA256 derived from:
+ * http://www.spale.com/download/scrypt/scrypt1.0/sha256.c
+ *
+ * The original copyright follows and continues to apply to this file
+ * and this file only, not the remainder of software in this project.
+ */
 
-#if 1
+/*
+ *  Copyright (C) 2001-2003  Christophe Devine
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ *  USA
+ */
+
+void SHA256::start() {
+    total = 0;
+    finalized = false;
+
     state[0] = 0x6A09E667;
     state[1] = 0xBB67AE85;
     state[2] = 0x3C6EF372;
@@ -13,18 +38,6 @@ void SHA256::start() {
     state[5] = 0x9B05688C;
     state[6] = 0x1F83D9AB;
     state[7] = 0x5BE0CD19;
-#endif
-
-#if 0
-    state[0] = 0xDEADBEEF;
-    state[1] = 0x2;
-    state[2] = 0x3;
-    state[3] = 0x4;
-    state[4] = 0x5;
-    state[5] = 0x6;
-    state[6] = 0x7;
-    state[7] = 0x8;
-#endif
 }
 
 #define GET_UINT32(n,b,i)                       \
@@ -43,9 +56,22 @@ void SHA256::start() {
     (b)[(i) + 3] = (uint8_t) ( (n)       );       \
 }
 
-void SHA256::update(Data data) {
+bool SHA256::update(Data data, unsigned len)  {
+    if (finalized || len > 64)
+        return false;
+
     uint32_t temp1, temp2, W[64];
     uint32_t A, B, C, D, E, F, G, H;
+
+    if (len < 64) {
+        data[len] = 0x80;
+        finalized = true;
+    }
+    for (unsigned i=(len+1); i<64; i++) {
+        data[i] = 0;
+    }
+
+    total += len;
 
     GET_UINT32( W[0],  data,  0 );
     GET_UINT32( W[1],  data,  4 );
@@ -89,15 +115,17 @@ void SHA256::update(Data data) {
     d += temp1; h = temp1 + temp2;              \
 }
 
-    A = state[0];
-    B = state[1];
-    C = state[2];
-    D = state[3];
-    E = state[4];
-    F = state[5];
-    G = state[6];
-    H = state[7];
+    State s = state;
+    A = s[0];
+    B = s[1];
+    C = s[2];
+    D = s[3];
+    E = s[4];
+    F = s[5];
+    G = s[6];
+    H = s[7];
 
+#if 1
     P( A, B, C, D, E, F, G, H, W[ 0], 0x428A2F98 );
     P( H, A, B, C, D, E, F, G, W[ 1], 0x71374491 );
     P( G, H, A, B, C, D, E, F, W[ 2], 0xB5C0FBCF );
@@ -162,46 +190,57 @@ void SHA256::update(Data data) {
     P( D, E, F, G, H, A, B, C, R(61), 0xA4506CEB );
     P( C, D, E, F, G, H, A, B, R(62), 0xBEF9A3F7 );
     P( B, C, D, E, F, G, H, A, R(63), 0xC67178F2 );
+#endif
 
-    state[0] += A;
-    state[1] += B;
-    state[2] += C;
-    state[3] += D;
-    state[4] += E;
-    state[5] += F;
-    state[6] += G;
-    state[7] += H;
+    State newState = {
+        s[0] + A, s[1] + B, s[2] + D, s[3] + D,
+        s[4] + E, s[5] + F, s[6] + G, s[7] + H
+    };
+    this->state = newState;
+
+    return true;
 }
 
-static SHA256::Data sha256_padding =
-{ 
- 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+
 
 SHA256::Digest SHA256::digest() {
-    uint32_t last, padn;
+    SHA256::Data sha256_padding = { 
+     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+
     uint32_t high, low;
+    uint64_t total = this->total >> 3;
     uint8_t msglen[8];
 
-    // high = ( total[0] >> 29 )
-         // | ( total[1] <<  3 );
-    // low  = ( total[0] <<  3 );
+    high = total & 0xFFFFFFFF;
+    low  = (total >> 32);
 
-    // PUT_UINT32( high, msglen, 0 );
-    // PUT_UINT32( low,  msglen, 4 );
+    PUT_UINT32( high, msglen, 0 );
+    PUT_UINT32( low,  msglen, 4 );
 
-    // last = total[0] & 0x3F;
-    // last = 0;
-    // padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+    if (!finalized) {
+        finalized = false;
+        // update(sha256_padding, 64);
+    }
 
-    // update( sha256_padding );
-    // FIXME: add msglen with padding
-    // update( msglen, 8 );
+    Data len_end = {
+        msglen[0], msglen[1], msglen[2], msglen[3],
+        msglen[4], msglen[5], msglen[6], msglen[7],
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+    // update( len_end, 64 );
 
-    Digest digest;
+    Digest digest = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+
     PUT_UINT32( state[0], digest,  0 );
     PUT_UINT32( state[1], digest,  4 );
     PUT_UINT32( state[2], digest,  8 );

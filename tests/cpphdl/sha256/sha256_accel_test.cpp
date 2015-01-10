@@ -19,7 +19,8 @@ bool test1() {
         SHA256::Data data;
         for (unsigned i=0; i<64; i++)
             data[i] = myrand<uint8_t>();
-        sha.update(data);
+        printf("  sending block %u\n", c);
+        sha.update(data, 64);
     }
 
     printf("test1 Testing digest\n");
