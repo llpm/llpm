@@ -52,7 +52,9 @@ llvm::Type* IntAddition::OutType(std::vector<llvm::Type*> tVec) {
     sort(widths.begin(), widths.end());
     unsigned width = 0;
     for(auto&& tw: widths) {
-        if (tw > width)
+        if (width == 0)
+            width = tw;
+        else if (tw > width)
             width = tw + 1;
         else
             width = width + 1;
