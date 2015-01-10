@@ -54,7 +54,7 @@ int main(int argc, const char** argv) {
         d.elaborations()->append<RefinePass>();
 
         d.optimizations()->append<SimplifyPass>();
-        // d.optimizations()->append<FormControlRegionPass>();
+        d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();

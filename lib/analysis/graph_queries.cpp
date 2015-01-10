@@ -15,6 +15,7 @@ namespace queries {
 
 typedef Path<OutputPort, InputPort> CyclePath;
 struct CycleDetectionVisitor : public Visitor<CyclePath> {
+    set< std::pair<OutputPort*, InputPort*> > seen;
     bool foundCycle;
 
     CycleDetectionVisitor() :
@@ -36,17 +37,26 @@ struct CycleDetectionVisitor : public Visitor<CyclePath> {
             // p2.print();
             foundCycle = true;
             return TerminateSearch;
+        } else if (seen.count(path.end()) > 0) {
+            return TerminatePath;
         } else {
+            seen.insert(path.end());
             return Continue;
         }
     }
 };
 
-bool BlockCycleExists(const ConnectionDB* conns, vector<OutputPort*> init) {
-    CycleDetectionVisitor visitor;
-    GraphSearch<CycleDetectionVisitor, DFS> search(conns, visitor);
-    search.go(init);
-    return visitor.foundCycle;
+bool BlockCycleExists(const ConnectionDB* conns,
+                      const set<OutputPort*>& initList) {
+    for (auto init: initList) {
+        CycleDetectionVisitor visitor;
+        GraphSearch<CycleDetectionVisitor, DFS> search(conns, visitor);
+        vector<OutputPort*> op({init});
+        search.go(op);
+        if (visitor.foundCycle)
+            return true;
+    }
+    return false;
 }
 
 

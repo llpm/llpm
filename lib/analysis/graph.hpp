@@ -27,7 +27,11 @@ enum Terminate {
 // by extending this struct of one of its children.
 template<typename Path>
 struct Visitor {
+    uint64_t _visits;
     typedef Path PathTy;
+
+    Visitor() :
+        _visits(0) { }
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,

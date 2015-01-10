@@ -8,6 +8,7 @@ namespace llpm {
 bool PassManager::run() {
     bool ret = false;
     for (Pass* p: _passes) {
+        printf("== Pass: %s\n", cpp_demangle(typeid(*p).name()).c_str());
         if(p->run())
             ret = true;
     }
@@ -17,6 +18,7 @@ bool PassManager::run() {
 bool PassManager::run(Module* mod) {
     bool ret = false;
     for (Pass* p: _passes) {
+        printf("== Pass: %s\n", cpp_demangle(typeid(*p).name()).c_str());
         ModulePass* mp = dynamic_cast<ModulePass*>(p);
         if (mp)
             if (mp->run(mod))

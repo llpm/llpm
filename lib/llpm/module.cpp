@@ -211,9 +211,9 @@ void ContainerModule::validityCheck() const {
 }
 
 bool ContainerModule::hasCycle() const {
-    vector<OutputPort*> init;
+    set<OutputPort*> init;
     for (auto p: _inputMap) {
-        init.push_back(p.second->dout());
+        init.insert(p.second->dout());
     }
     return queries::BlockCycleExists(&_conns, init);
 }

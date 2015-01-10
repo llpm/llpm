@@ -9,11 +9,19 @@
 namespace llpm {
 
 template<typename Path>
-Terminate Visitor<Path>::next(const ConnectionDB*,
-                              const PathTy& path, 
-                              std::vector<typename PathTy::SrcPortTy*>& out) {
+Terminate Visitor<Path>::next(
+        const ConnectionDB*,
+        const PathTy& path, 
+        std::vector<typename PathTy::SrcPortTy*>& out)
+{
+    _visits += 1;
+    if ((_visits % 25000) == 0 && _visits > 0) {
+        printf("Graph visits: %lu\n", _visits);
+    }
     Block* b = path.endPort()->owner();
-    b->ports(out);
+    std::set<typename PathTy::SrcPortTy*> setOut;
+    b->deps(path.endPort(), setOut);
+    out.insert(out.end(), setOut.begin(), setOut.end());
     return Continue;
 }
 
@@ -86,6 +94,7 @@ template<typename Visitor,
          const SearchAlgo Algo>
 template<typename Container>
 void GraphSearch<Visitor, Algo>::go(const Container& init) {
+    std::set<PathTy> seen;
     std::deque<PathTy> queue;
     for (SrcPortTy* src: init) {
         std::vector<DstPortTy*> dsts;
@@ -115,6 +124,9 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
 
                     for (DstPortTy* dst: dsts) {
                         PathTy p = current.push(src, dst);
+                        if (seen.count(p))
+                            continue;
+                        seen.insert(p);
                         switch (Algo) {
                         case DFS:
                             queue.push_front(p);

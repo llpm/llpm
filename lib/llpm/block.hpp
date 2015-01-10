@@ -92,7 +92,14 @@ public:
     // Find the dependence rule for an output port
     virtual DependenceRule depRule(const OutputPort*) const = 0;
     // Find all of the inputs upon which an output depends.
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const = 0;
+    virtual const std::vector<InputPort*>&
+        deps(const OutputPort*) const = 0;
+
+    // Calls the above and inserts into a set
+    virtual void deps(const OutputPort*, std::set<InputPort*>&) const;
+    // Based on the above deps function, find all of the output ports
+    // which an input may affect
+    virtual void deps(const InputPort*, std::set<OutputPort*>&) const;
 
     // Can this output be pipelined? Almost always yes, but in some cases
     // doing so may create distributed state, which must be specially dealt

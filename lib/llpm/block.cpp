@@ -53,4 +53,17 @@ bool Block::outputsIndependent() const {
     return false;
 }
 
+void Block::deps(const OutputPort* op, std::set<InputPort*>& ret) const {
+    auto depsVec = deps(op);
+    ret.insert(depsVec.begin(), depsVec.end());
+}
+
+void Block::deps(const InputPort* ip, std::set<OutputPort*>& ret) const {
+    for(OutputPort* op: outputs()) {
+        auto depsVec = deps(op);
+        if (find(depsVec.begin(), depsVec.end(), ip) != depsVec.end())
+            ret.insert(op);
+    }
+}
+
 } // namespace llpm
