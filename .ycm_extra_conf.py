@@ -5,7 +5,7 @@ flags = """-fopenmp -g -mfpmath=sse -msse4 -march=native -Wall
 -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
 -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 -Wno-deprecated -D_FILE_OFFSET_BITS=64
--std=c++11 -stdlib=libc++
+-std=c++1y
 -Ilib -Ibin/llvm/include -Illvm/include""".split()
 
 
