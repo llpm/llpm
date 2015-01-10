@@ -89,6 +89,11 @@ public:
         return dynamic_cast<const TEST*>(this) == NULL;
     }
 
+    template<typename TO>
+    TO* as() {
+        return dynamic_cast<TO*>(this);
+    }
+
     // Upon what conditions does a block accept inputs and execute?
     // This routine only works properly when all the outputs have the same
     // dependence rules. If not, it returns "Custom"

@@ -64,13 +64,13 @@ int main() {
     sha->start();
     sw->start();
 
-    printf("Sending data block...\n");
+    printf("Sending data blocks...\n");
     srand(4);
     uint64_t start = sha->cycles();
     for (unsigned c=0; c<10; c++) {
         uint8_t __attribute__((__vector_size__(64))) data;
         for (unsigned i=0; i<64; i++) {
-            data[i] = i+(c<<4);
+            data[i] = rand();
         }
         auto rc1 = sha->update(data, 64);
         auto rc2 = sw->update(data, 64);
@@ -195,16 +195,17 @@ bool SHA256_SW::update(Data data, unsigned len) {
     temp2 = S2(a) + F0(a,b,c);                  \
     d += temp1; h = temp1 + temp2;              \
 }
+    State s = state;
+    A = s[0];
+    B = s[1];
+    C = s[2];
+    D = s[3];
+    E = s[4];
+    F = s[5];
+    G = s[6];
+    H = s[7];
 
-    A = state[0];
-    B = state[1];
-    C = state[2];
-    D = state[3];
-    E = state[4];
-    F = state[5];
-    G = state[6];
-    H = state[7];
-
+#if 1
     P( A, B, C, D, E, F, G, H, W[ 0], 0x428A2F98 );
     P( H, A, B, C, D, E, F, G, W[ 1], 0x71374491 );
     P( G, H, A, B, C, D, E, F, W[ 2], 0xB5C0FBCF );
@@ -269,15 +270,13 @@ bool SHA256_SW::update(Data data, unsigned len) {
     P( D, E, F, G, H, A, B, C, R(61), 0xA4506CEB );
     P( C, D, E, F, G, H, A, B, R(62), 0xBEF9A3F7 );
     P( B, C, D, E, F, G, H, A, R(63), 0xC67178F2 );
+#endif
 
-    state[0] += A;
-    state[1] += B;
-    state[2] += C;
-    state[3] += D;
-    state[4] += E;
-    state[5] += F;
-    state[6] += G;
-    state[7] += H;
+    State newState = {
+        s[0] + A, s[1] + B, s[2] + C, s[3] + D,
+        s[4] + E, s[5] + F, s[6] + G, s[7] + H
+    };
+    this->state = newState;
 
     return true;
 }
@@ -304,7 +303,7 @@ SHA256_SW::Digest SHA256_SW::digest() {
 
     if (!finalized) {
         finalized = false;
-        update(sha256_padding, 64);
+        // update(sha256_padding, 64);
     }
 
     Data len_end = {
@@ -315,7 +314,7 @@ SHA256_SW::Digest SHA256_SW::digest() {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
-    update( len_end, 64 );
+    // update( len_end, 64 );
 
     Digest digest;
     PUT_UINT32( state[0], digest,  0 );

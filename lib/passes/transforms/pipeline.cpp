@@ -23,19 +23,32 @@ void PipelineDependentsPass::runInternal(Module* mod) {
     set<Block*> blocks;
     t.conns()->findAllBlocks(blocks);
     for (auto block: blocks) {
+        unsigned numNormalOutputs = block->outputs().size();
+        for (auto op: block->outputs())
+            if (!op->pipelineable())
+                numNormalOutputs -= 1;
+
         if (block->outputsSeparate() ||
-            block->outputs().size() <= 1)
+            numNormalOutputs <= 1)
             continue;
 
         // Since this block has dependent outputs, all of them better
         // be connected to pipeline regs!
         for (auto op: block->outputs()) {
             set<InputPort*> sinks;
+            PipelineRegister* preg = NULL;
             t.conns()->findSinks(op, sinks);
+            for (auto sink: sinks)
+                preg = sink->owner()->as<PipelineRegister>();
+            if (preg == NULL) {
+                preg = new PipelineRegister(op);
+                t.conns()->connect(op, preg->din());
+            }
+
             for (auto sink: sinks) {
                 if (sink->owner()->isnot<PipelineRegister>()) {
-                    auto preg = new PipelineRegister(op);
-                    t.insertBetween(Connection(op, sink), preg);
+                    t.conns()->disconnect(op, sink);
+                    t.conns()->connect(preg->dout(), sink);
                 }
             }
         }

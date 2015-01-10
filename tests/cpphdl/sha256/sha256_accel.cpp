@@ -193,7 +193,7 @@ bool SHA256::update(Data data, unsigned len)  {
 #endif
 
     State newState = {
-        s[0] + A, s[1] + B, s[2] + D, s[3] + D,
+        s[0] + A, s[1] + B, s[2] + C, s[3] + D,
         s[4] + E, s[5] + F, s[6] + G, s[7] + H
     };
     this->state = newState;

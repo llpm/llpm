@@ -947,6 +947,9 @@ struct ModulePrinter : public AttributePrinter {
 
 struct PipelineRegPrinter : public AttributePrinter {
     std::string name(Block* m) {
+        auto preg = m->as<PipelineRegister>();
+        if (bitwidth(preg->dout()->type()) == 0)
+            return "PipelineReg_DoubleWidth_NoData";
         return "PipelineReg_DoubleWidth";
     }
     void operator()(VerilogSynthesizer::Context& ctxt, PipelineRegister* r) {

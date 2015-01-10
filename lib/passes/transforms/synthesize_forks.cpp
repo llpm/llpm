@@ -3,6 +3,7 @@
 #include <llpm/module.hpp>
 #include <libraries/synthesis/fork.hpp>
 #include <llpm/control_region.hpp>
+#include <libraries/synthesis/pipeline.hpp>
 
 
 using namespace std;
