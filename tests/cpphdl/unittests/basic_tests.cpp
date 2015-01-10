@@ -9,11 +9,16 @@ using namespace std;
 
 class BasicTests {
     uint64_t dummyData;
+    bool cond;
+    unsigned tests;
 
 public:
     uint64_t addUU(uint64_t a, uint64_t b);
     int64_t addUS(uint64_t a, int64_t b);
     int64_t addSS(int64_t a, int64_t b);
+
+    void setCond(bool c);
+    bool condTest(unsigned i);
 };
 
 uint64_t BasicTests::addUU(uint64_t a, uint64_t b) {
@@ -24,6 +29,18 @@ int64_t BasicTests::addUS(uint64_t a, int64_t b) {
 }
 int64_t BasicTests::addSS(int64_t a, int64_t b) {
     return a+b;
+}
+
+void BasicTests::setCond(bool c) {
+    cond = c;
+    tests = 0;
+}
+
+bool BasicTests::condTest(unsigned i) {
+    if (cond || i > 64)
+        return false;
+    tests += 1;
+    return true;
 }
 
 static boost::random::mt19937 rng;
@@ -48,6 +65,9 @@ bool test1() {
         tests.addUS(myrand<uint64_t>(), myrand<int64_t>());
         tests.addSS(myrand<int64_t>(), myrand<int64_t>());
     }
+
+    tests.setCond(false);
+    tests.condTest(64);
 
     printf("All tests passed!\n");
     return true;
