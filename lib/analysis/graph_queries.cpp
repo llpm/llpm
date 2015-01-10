@@ -225,12 +225,12 @@ typedef Path<OutputPort, InputPort> CyclePath;
 struct CycleFindingVisitor: public Visitor<CyclePath> {
     vector< std::pair<OutputPort*, InputPort*> > cycle;
     set< std::pair<OutputPort*, InputPort*> > seen;
-    set<Connection> ignores;
+    boost::function<bool(Block*)> ignoreBlock;
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
                     const CyclePath& path) {
-        if (ignores.count(path.end()) > 0) {
+        if (ignoreBlock(path.endPort()->owner())) {
             // Don't visit this connection
             return TerminatePath;
         } else if (path.hasCycle()) {
@@ -245,10 +245,11 @@ struct CycleFindingVisitor: public Visitor<CyclePath> {
     }
 };
 
-bool FindCycle(Module* mod, const std::set<Connection>& ignore,
+bool FindCycle(Module* mod,
+               boost::function<bool(Block*)> ignoreBlock,
                std::vector< Connection >& cycle) {
     CycleFindingVisitor visitor;
-    visitor.ignores = ignore;
+    visitor.ignoreBlock = ignoreBlock;
     ConnectionDB* conns = mod->conns();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");

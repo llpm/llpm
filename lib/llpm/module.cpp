@@ -1,6 +1,5 @@
 #include "module.hpp"
 
-#include <synthesis/pipeline.hpp>
 #include <analysis/graph_queries.hpp>
 #include <util/llvm_type.hpp>
 
@@ -24,8 +23,6 @@ void Module::internalDrivers(std::vector<OutputPort*>& drivers) const {
 }
 
 ContainerModule::~ContainerModule() {
-    if (_pipeline)
-        delete _pipeline;
 }
 
 InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
@@ -174,13 +171,6 @@ unsigned ContainerModule::internalRefine(int depth,
 
     auto passes = design().refinery().refine(blocksTmp, _conns, depth, sc);
     return passes;
-}
-
-Pipeline* ContainerModule::pipeline() {
-    if (_pipeline == NULL) {
-        _pipeline = new Pipeline(this);
-    }
-    return _pipeline;
 }
 
 void ContainerModule::validityCheck() const {

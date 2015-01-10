@@ -16,6 +16,14 @@ public:
         _conns(mod->conns())
     { }
 
+    bool canMutate() const {
+        return _conns != NULL;
+    }
+
+    ConnectionDB* conns() {
+        return _conns;
+    }
+
     // Remove a block and rewire its connections
     void remove(Block* b);
 
@@ -25,6 +33,10 @@ public:
     // Replace a block with another. Block can have only 1 input to avoid
     // mapping issues.
     void replace(Block* b, Block* with);
+
+    // Break a connection and insert someone in its place
+    void insertBetween(Connection, Block* b);
+    void insertBetween(Connection, InputPort*, OutputPort*);
 };
 
 };

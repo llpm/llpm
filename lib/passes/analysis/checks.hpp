@@ -23,6 +23,15 @@ public:
     virtual void runInternal(Module*);
 };
 
+class CheckCyclesPass: public ModulePass {
+public:
+    CheckCyclesPass(Design& d) :
+        ModulePass(d) 
+    { }
+
+    virtual void runInternal(Module*);
+};
+
 };
 
 #endif // __LLPM_PASSES_ANALYSIS_CHECKS_HPP__

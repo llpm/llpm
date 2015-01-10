@@ -5,6 +5,7 @@
 #include <util/misc.hpp>
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
+#include <analysis/graph_queries.hpp>
 
 using namespace std;
 
@@ -78,6 +79,23 @@ void CheckOutputsPass::runInternal(Module* m) {
     }
 }
 
+static bool isPipelineReg(Block* b) {
+    return b->is<PipelineRegister>();
+}
 
+void CheckCyclesPass::runInternal(Module* m) {
+    std::vector<Connection> cycle;
+    auto found = queries::FindCycle(m, &isPipelineReg, cycle);
+    if (found) {
+        auto& namer = m->design().namer();
+        printf("Error: found combinatorial loop in %s!\n",
+               m->name().c_str());
+        for (auto c: cycle) {
+            printf("    %s -> %s\n",
+                    namer.getName(c.source(), m).c_str(),
+                    namer.getName(c.sink(), m).c_str());
+        }
+    }
+}
 
 };

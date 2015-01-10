@@ -109,4 +109,17 @@ void Transformer::replace(Block* b, Block* with) {
     _conns->removeBlock(b);
 }
 
+void Transformer::insertBetween(Connection c, Block* b) {
+    if (b->inputs().size() != 1 || b->outputs().size() != 1)
+        throw InvalidArgument("This function only works on blocks with "
+                              "1 input and 1 output.");
+    insertBetween(c, b->inputs().front(), b->outputs().front());
+}
+void Transformer::insertBetween(Connection c,
+                                InputPort* ip, OutputPort* op) {
+    _conns->disconnect(c);
+    _conns->connect(c.source(), ip);
+    _conns->connect(op, c.sink());
+}
+
 };

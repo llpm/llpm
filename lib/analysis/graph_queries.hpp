@@ -34,7 +34,7 @@ bool CouldReorderTokens(Interface*);
 
 // Finds a cycle in module while ignoring some connections
 bool FindCycle(Module*,
-               const std::set< Connection >& ignore,
+               boost::function<bool(Block*)> ignoreBlock,
                std::vector< Connection >& cycle);
 
 // Find all edges and blocks which are driven entirely by Constants

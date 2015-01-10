@@ -13,6 +13,7 @@
 #include <util/llvm_type.hpp>
 #include <passes/transforms/synthesize_mem.hpp>
 #include <passes/transforms/synthesize_forks.hpp>
+#include <passes/transforms/pipeline.hpp>
 
 #include <passes/manager.hpp>
 #include <passes/transforms/simplify.hpp>
@@ -56,9 +57,12 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<SimplifyPass>();
+        d.optimizations()->append<PipelineDependentsPass>();
+        d.optimizations()->append<PipelineCyclesPass>();
         d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();
         d.optimizations()->append<CheckOutputsPass>();
+        d.optimizations()->append<CheckCyclesPass>();
 
         FileSet fs(true, dirName, true);
         GraphvizOutput gv(d);

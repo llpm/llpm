@@ -2,7 +2,6 @@
 
 #include <cmath>
 
-#include <synthesis/pipeline.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
@@ -75,9 +74,6 @@ void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
 
 void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
     Context ctxt(os, mod);
-
-    Pipeline* p = mod->pipeline();
-    p->build();
 
     ctxt << "\n\n";
     ctxt << "// The \"" << mod->name() << "\" module of type "

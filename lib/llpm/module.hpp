@@ -16,7 +16,6 @@
 namespace llpm {
 
 class Design;
-class Pipeline;
 
 class Module : public Block {
 protected:
@@ -103,7 +102,6 @@ public:
         this->blocks(crude);
         return sc->refined(crude);
     }
-    virtual Pipeline* pipeline() = 0;
     virtual void validityCheck() const = 0;
 
     virtual OutputPort* getDriver(const InputPort* ip) const = 0;
@@ -196,8 +194,6 @@ protected:
     std::map<InputPort*, DummyBlock*> _inputMap;
     std::map<OutputPort*, DummyBlock*> _outputMap;
 
-    Pipeline* _pipeline;
-
     InputPort* addInputPort(InputPort* ip, std::string name = "");
     void removeInputPort(InputPort* ip);
     OutputPort* addOutputPort(OutputPort* op, std::string name = "");
@@ -220,7 +216,6 @@ public:
     ContainerModule(Design& design, std::string name) :
         MutableModule(design, name),
         _conns(this),
-        _pipeline(NULL),
         _hasCycle(_conns.counterPtr(),
                   boost::bind(&ContainerModule::_hasCycleCompute, this))
     { }
@@ -314,8 +309,6 @@ public:
     
     virtual unsigned internalRefine(int depth = -1,
                                     Refinery::StopCondition* sc = NULL);
-
-    virtual Pipeline* pipeline();
 
     virtual DependenceRule depRule(const OutputPort* op) const;
     virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
