@@ -346,8 +346,8 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
             }
         }
     }
-    os << "        };\n"
-       << "    };\n";
+    os << "        } __attribute__((packed));\n"
+       << "    } __attribute__((packed));\n";
 }
 
 std::string structName(Port* p, string prefix="") {
@@ -701,8 +701,12 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                             % argName(argType, arg)
                             % ((bitwidth(argType) + 7) / 8);
                 else if (bitwidth(argType) > 0)
-                    os << "    arg." << argName(argType, arg) << " = "
-                       << argName(argType, arg) << ";\n";
+                    os << boost::format(
+                        "    memcpy(&arg.%1%, &%1%, %2%);\n")
+                            % argName(argType, arg)
+                            % ((bitwidth(argType) + 7) / 8);
+                    // os << "    arg." << argName(argType, arg) << " = "
+                       // << argName(argType, arg) << ";\n";
             }
         }
 
