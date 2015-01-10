@@ -3,6 +3,7 @@
 #include <llpm/block.hpp>
 #include <llpm/module.hpp>
 #include <libraries/core/interface.hpp>
+#include <libraries/core/logic_intr.hpp>
 #include <analysis/graph.hpp>
 #include <analysis/graph_impl.hpp>
 
@@ -262,6 +263,85 @@ bool FindCycle(Module* mod, const std::set<Connection>& ignore,
     }
 
     return cycle.size() > 0;
+}
+
+struct ConstFindingVisitor : public Visitor<OIEdge> {
+    set<Block*> constBlocks;
+    set<Port*> constPorts;
+    set<InputPort*> seenIP;
+
+    map<Block*, unsigned> numConstInputs;
+
+    void addBlock(Block* b) {
+        constBlocks.insert(b);
+        constPorts.insert(b->outputs().begin(),
+                          b->outputs().end());
+    }
+
+    // Visit a vertex in the graph
+    Terminate visit(const ConnectionDB*,
+                    const OIEdge& edge)
+    {
+        assert(constPorts.count(edge.end().first) > 0);
+        constPorts.insert(edge.endPort());
+        assert(seenIP.count(edge.endPort()) == 0);
+        seenIP.insert(edge.endPort());
+
+        // Increment counter for number of const inputs
+        Block* b = edge.endPort()->owner();
+        unsigned& nc = numConstInputs[b];
+        assert(nc < b->inputs().size());
+        nc++;
+
+        if (nc == b->inputs().size()) {
+            addBlock(b);
+            return Continue;
+        } else {
+            return TerminatePath;
+        }
+    }
+
+};
+
+// Find all edges and blocks which are driven entirely by Constants
+void FindConstants(Module* mod,
+                   std::set<Port*>& constPorts,
+                   std::set<Block*>& constBlocks)
+{
+    ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        throw InvalidArgument("Cannot analyze opaque module!");
+
+    ConstFindingVisitor visitor;
+    GraphSearch<ConstFindingVisitor, BFS> search(conns, visitor);
+    vector<OutputPort*> init;
+
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
+    for (Block* b: blocks) {
+        Constant* c = dynamic_cast<Constant*>(b);
+        if (c != NULL) {
+            visitor.addBlock(c);
+            for (auto op: c->outputs())
+                init.push_back(op);
+        }
+    }
+    printf("Starting with %lu const ports\n", visitor.constPorts.size());
+    search.go(init);
+    printf("Ending with %lu const ports\n", visitor.constPorts.size());
+
+    if (constBlocks.size() == 0)
+        constBlocks.swap(visitor.constBlocks);
+    else
+        constBlocks.insert(visitor.constBlocks.begin(),
+                           visitor.constBlocks.end());
+
+    if (constPorts.size() == 0)
+        constPorts.swap(visitor.constPorts);
+    else
+        constPorts.insert(visitor.constPorts.begin(),
+                           visitor.constPorts.end());
+
 }
 
 } // namespace queries

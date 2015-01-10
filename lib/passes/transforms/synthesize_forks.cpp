@@ -14,8 +14,13 @@ void SynthesizeForksPass::runInternal(Module* mod) {
     if (conns == NULL)
         return;
 
+    printf("Building forks for %s\n", mod->name().c_str());
+
     deque<OutputPort*> forkingSources;
     for (const auto& p: conns->sinksRaw()) {
+        printf("  %s %lu\n",
+               mod->design().namer().getName(p.first, mod).c_str(),
+               p.second.size());
         if (p.second.size() > 1)
             forkingSources.push_back(p.first);
     }
@@ -35,7 +40,7 @@ void SynthesizeForksPass::runInternal(Module* mod) {
 
         // Blocks contained in control regions don't require actual
         // forks since they share valid and backpressure signals
-        if (dynamic_cast<ControlRegion*>(op->owner()->module()) != NULL)
+        if (mod->is<ControlRegion>())
             virt = true;
 
         auto fork = new Fork(op->type(), virt);

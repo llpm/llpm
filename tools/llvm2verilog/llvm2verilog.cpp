@@ -66,8 +66,8 @@ int main(int argc, const char** argv) {
         FileSet fs(true, dirName, true);
 
         for (Module* mod: d.modules()) {
-            vw.writeModule(fs, mod);
             gv.writeModule(fs.create(mod->name() + ".gv"), mod);
+            vw.writeModule(fs, mod);
         }
 
     } catch (Exception& e) {

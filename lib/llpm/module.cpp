@@ -152,15 +152,16 @@ bool ContainerModule::refine(ConnectionDB& conns) const
     for(InputPort* ip: _inputs) {
         auto f = _inputMap.find(ip);
         assert(f != _inputMap.end());
-        conns.remap(ip, f->second->din());
-        conns.deblacklist(getDriver(ip)->owner());
+        std::vector<InputPort*> sinks;
+        _conns.findSinks(f->second->dout(), sinks);
+        conns.remap(ip, sinks);
     }
 
     for(OutputPort* op: _outputs) {
         auto f = _outputMap.find(op);
         assert(f != _outputMap.end());
-        conns.remap(op, f->second->dout());
-        conns.deblacklist(getSink(op)->owner());
+        OutputPort* source = _conns.findSource(f->second->din());
+        conns.remap(op, source);
     }
 
     return true;
@@ -220,8 +221,13 @@ bool ContainerModule::_hasCycleCompute() const {
 
 DependenceRule ContainerModule::depRule(const OutputPort* op) const {
     //TODO: Do a graph search to determine this precisely
-    return DependenceRule(DependenceRule::Custom,
-                          DependenceRule::Maybe);
+    if (inputs().size() <= 1)
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Maybe);
+    else
+        return DependenceRule(DependenceRule::Custom,
+                              DependenceRule::Maybe);
+
 }
 
 const std::vector<InputPort*>& ContainerModule::deps(

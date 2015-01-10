@@ -8,7 +8,7 @@ namespace llpm {
 
 class ControlRegion : public ContainerModule {
     MutableModule* _parent;
-    bool add(Block*);
+    bool add(Block*, const std::set<Port*>& constPorts = {});
 
     std::set<InputPort*> findDependences(OutputPort*) const;
 
@@ -21,11 +21,11 @@ public:
         assert(rc);
     }
 
-    bool add(Connection);
+    bool add(Connection, const std::set<Port*>& constPorts = {});
 
-    bool growUp();
-    bool growDown();
-    bool grow();
+    bool growUp(const std::set<Port*>& constPorts = {});
+    bool growDown(const std::set<Port*>& constPorts = {});
+    bool grow(const std::set<Port*>& constPorts = {});
 
     bool canGrow(InputPort* ip);
     bool canGrow(OutputPort* op);

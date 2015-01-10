@@ -28,16 +28,30 @@ static std::string attrs(const std::map<std::string, std::string>& a) {
     return rc;
 }
 
+static std::string quote(string a) {
+    string ret = "\"";
+    for (auto c: a) {
+        switch (c) {
+        case '"':
+            ret += "\\\"";
+            break;
+        default:
+            ret += c;
+            break;
+        }
+    }
+    return ret + "\"";
+}
+
 static std::string label(ObjectNamer& namer, Block* b) {
-    return "\"" + namer.getName(b, b->module()) + "\\n" 
+    return quote(namer.getName(b, b->module()) + "\\n" 
                 + str(boost::format("[ %1% ] %2% | %3% | %4%") 
                         % b->print()
                         % b->inputs().size()
                         % b->outputs().size()
                         % b->interfaces().size() )
                 + "\\n"
-                + cpp_demangle(typeid(*b).name()) 
-                + "\"";
+                + cpp_demangle(typeid(*b).name()));
 }
 
 static std::string attrs(ObjectNamer& namer, Block* b,
@@ -55,6 +69,8 @@ static std::string attrs(ObjectNamer& namer, Block* b,
     return attrs(o);
 }
 
+
+
 static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
                          std::map<std::string, std::string> o) {
     std::map<std::string, std::string> a;
@@ -64,9 +80,9 @@ static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
     auto ipName = ip->name();
     if (ipName == "")
         ipName = str(boost::format("%1%") % ip->owner()->inputNum(ip));
-    a["label"] = "\"" + opName + "\\n" 
+    a["label"] = quote(opName + "\\n" 
         + ipName + "\\n"
-        + typestr(op->type()) + "\"";
+        + typestr(op->type()));
     a["fontsize"] = "8.0";
 
     o.insert(a.begin(), a.end());

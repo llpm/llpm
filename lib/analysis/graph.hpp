@@ -81,6 +81,12 @@ public:
     }
 };
 
+typedef Edge<OutputPort, InputPort> OIEdge;
+typedef Edge<InputPort, OutputPort> IOEdge;
+typedef Edge<OutputPort, InputPort> SourceSinkEdge;
+typedef Edge<InputPort, OutputPort> SinkSourceEdge;
+typedef Edge<Port, Port>            GenericEdge;
+
 template<typename SrcPort, typename DstPort>
 class Path {
     std::vector< std::pair<SrcPort*, DstPort*> > _path;

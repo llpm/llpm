@@ -217,10 +217,11 @@ void ConnectionDB::removeBlock(Block* b) {
 
 void ConnectionDB::update(const ConnectionDB& newdb) {
     for (const auto& c: newdb._sourceIdx) {
+        if (newdb.isblacklisted(c.first->owner()) ||
+            newdb.isblacklisted(c.second->owner()))
+            continue;
         connect(c.first, c.second);
     }
-    _blacklist.insert(newdb._blacklist.begin(),
-                      newdb._blacklist.end());
     _changeCounter++;
 }
 

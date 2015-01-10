@@ -37,6 +37,11 @@ bool FindCycle(Module*,
                const std::set< Connection >& ignore,
                std::vector< Connection >& cycle);
 
+// Find all edges and blocks which are driven entirely by Constants
+void FindConstants(Module*,
+                   std::set<Port*>& edges,
+                   std::set<Block*>& blocks);
+
 };
 };
 

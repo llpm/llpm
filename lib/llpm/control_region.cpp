@@ -1,6 +1,7 @@
 #include "control_region.hpp"
 
 #include <analysis/graph.hpp>
+#include <analysis/graph_queries.hpp>
 
 #include <boost/format.hpp>
 #include <boost/function.hpp>
@@ -25,9 +26,14 @@ void FormControlRegionPass::runInternal(Module* mod) {
     ConnectionDB* conns = cm->conns();
     unsigned counter = 1;
 
-    set<ControlRegion*> regions;
     set<Block*> seen;
     deque<InputPort*> crInputs;
+
+    // Ports which are driven by const values. Can always be included
+    // or even cloned
+    set<Port*> constPorts;
+    set<Block*> constBlocks;
+    queries::FindConstants(mod, constPorts, constBlocks);
 
     // Start with outputs
     for (OutputPort* op: cm->outputs()) {
@@ -50,8 +56,7 @@ void FormControlRegionPass::runInternal(Module* mod) {
             // This block has been relocated since it was put in the list
             continue;
 
-        if (dynamic_cast<ControlRegion*>(b) != NULL ||
-            dynamic_cast<DummyBlock*>(b) != NULL) {
+        if (b->is<Module>() ||b->is<DummyBlock>()) {
             // It's already a control region? Cool
             // It's a dummy block? Don't mess with it
             // But, we have to find its drivers to continue the search
@@ -67,34 +72,41 @@ void FormControlRegionPass::runInternal(Module* mod) {
                                     % mod->name()
                                     % counter);
         ControlRegion* cr = new ControlRegion(cm, opDriver->owner(), crName);
-        cr->grow();
-        regions.insert(cr);
+        cr->grow(constPorts);
         crInputs.insert(crInputs.end(),
                         cr->inputs().begin(), cr->inputs().end());
-        counter++;       
+        counter++;
     }
     
-    printf("Formed %lu control regions\n", regions.size());
 
+    unsigned regions = 0;
     unsigned flattened = 0;
-    for (auto cr: regions) {
-        if (cr->size() <= 1) {
-            // No need for a CR with one block in it!
-            cr->refine(*conns);
-            flattened++;
+    set<Block*> allBlocks;
+    conns->findAllBlocks(allBlocks);
+    for (auto b: allBlocks) {
+        auto cr = dynamic_cast<ControlRegion*>(b);
+        if (cr != NULL) {
+            regions++;
+            if (cr->size() <= 1) {
+                // No need for a CR with one block in it!
+                cr->refine(*conns);
+                flattened++;
+            }
         }
     }
+
+    printf("Formed %u control regions\n", regions);
     printf("Flattened %u CRs with one internal block\n", flattened);
 }
 
-bool ControlRegion::grow() {
+bool ControlRegion::grow(const std::set<Port*>& constPorts) {
     bool ret = false;
 
     // This loop will probably only run once to grow and fail the second time,
     // but maybe not...
     while (true) {
-        auto gu = growUp();
-        auto gd = growDown();
+        auto gu = growUp(constPorts);
+        auto gd = growDown(constPorts);
         if (gu || gd) {
             ret = true;
         } else {
@@ -105,24 +117,24 @@ bool ControlRegion::grow() {
     return ret;
 }
 
-bool ControlRegion::growUp() {
+bool ControlRegion::growUp(const std::set<Port*>& constPorts) {
     ConnectionDB* pdb = _parent->conns();
     for (InputPort* ip: this->inputs()) {
         OutputPort* driver = pdb->findSource(ip);
         if (driver)
-            if (add(driver->owner()))
+            if (add(driver->owner(), constPorts))
                 return true;
     }
     return false;
 }
 
-bool ControlRegion::growDown() {
+bool ControlRegion::growDown(const std::set<Port*>& constPorts) {
     ConnectionDB* pdb = _parent->conns();
     for (OutputPort* op: this->outputs()) {
         vector<InputPort*> sinks;
         pdb->findSinks(op, sinks);
         for (auto sink: sinks)
-            if (add(sink->owner()))
+            if (add(sink->owner(), constPorts))
                 return true;
     }
     return false;
@@ -157,15 +169,16 @@ bool ControlRegion::canGrow(Port* p) {
     throw InvalidArgument("What in the hell sort of port did you pass me?!");
 }
 
-bool ControlRegion::add(Block* b) {
+bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
     ConnectionDB* pdb = _parent->conns();
 
-    if (dynamic_cast<Module*>(b) != NULL ||
-        dynamic_cast<DummyBlock*>(b) != NULL) {
+    if (b->is<Module>() && b->isnot<ControlRegion>())
         // Don't merge in unrefined modules
-        // or dummy I/O blocks
         return false;
-    }
+
+    if (pdb->isblacklisted(b))
+        // Don't merge my parent's dummy I/O blocks
+        return false;
 
     if (b->hasCycle())
         // Don't allow cycles
@@ -182,7 +195,7 @@ bool ControlRegion::add(Block* b) {
                 oldSource->owner() == this &&
                 canGrow(oldSource))
                 internalizedOutputs[ip] = oldSource;
-            else
+            else if (constPorts.count(ip) == 0)
                 createsInput = true;
         } 
 
@@ -194,7 +207,7 @@ bool ControlRegion::add(Block* b) {
                 if (ip->owner() == this &&
                     canGrow(ip))
                     internalizedInputs[op].insert(ip);
-                else
+                else if (constPorts.count(op) == 0)
                     createsOutput = true;
         }
 
@@ -203,6 +216,16 @@ bool ControlRegion::add(Block* b) {
          */
         bool foundAsSink = internalizedOutputs.size() > 0;
         bool foundAsDriver = internalizedInputs.size() > 0;
+
+#if 0
+        if (b->name() == "bb_finalized_input_join") {
+            printf("%s <- %s, crI: %u, crO: %u, iO: %lu, iI: %lu, "
+                   "fS: %u, fD: %u\n",
+                   b->name().c_str(), this->name().c_str(),
+                   createsInput, createsOutput, internalizedOutputs.size(),
+                   internalizedInputs.size(), foundAsSink, foundAsDriver);
+        }
+#endif
 
         // Must be adjacent
         if (!foundAsDriver && !foundAsSink) {
@@ -230,6 +253,18 @@ bool ControlRegion::add(Block* b) {
             // printf("is select\n");
             return false;
         }
+    }
+
+    if (b->is<ControlRegion>()) {
+        auto bmConns = b->module()->conns();
+        if (bmConns != NULL) {
+            // Get rid of the CR to allow us to absorb its contents
+            // printf("Breaking %s for %s\n",
+                   // b->name().c_str(), name().c_str());
+            b->refine(*bmConns);
+            return true;
+        }
+        return false;
     }
 
     for (OutputPort* op: b->outputs()) {
@@ -293,20 +328,20 @@ bool ControlRegion::add(Block* b) {
     return true;
 }
 
-typedef Edge<InputPort, OutputPort> OIEdge;
+typedef Edge<InputPort, OutputPort> IOEdge;
 
-struct OIEdgeVisitor : public Visitor<OIEdge> {
+struct IOEdgeVisitor : public Visitor<IOEdge> {
     set<InputPort*> deps;
     map<OutputPort*, InputPort*> inputDrivers;
 
-    OIEdgeVisitor(const ContainerModule* cm) {
+    IOEdgeVisitor(const ContainerModule* cm) {
         for (auto ip: cm->inputs())
             inputDrivers[cm->getDriver(ip)] = ip;
     }
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
-                    const OIEdge& edge) {
+                    const IOEdge& edge) {
         OutputPort* current = edge.endPort();
         auto f = inputDrivers.find(current);
         if (f != inputDrivers.end())
@@ -316,8 +351,8 @@ struct OIEdgeVisitor : public Visitor<OIEdge> {
 };
 
 set<InputPort*> ControlRegion::findDependences(OutputPort* op) const {
-    OIEdgeVisitor visitor(this);
-    GraphSearch<OIEdgeVisitor, DFS> search(&_conns, visitor);
+    IOEdgeVisitor visitor(this);
+    GraphSearch<IOEdgeVisitor, DFS> search(&_conns, visitor);
     search.go(std::vector<InputPort*>({getSink(op)}));
     return visitor.deps;
 }
