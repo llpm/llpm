@@ -31,6 +31,9 @@ public:
     bool canGrow(OutputPort* op);
     bool canGrow(Port* p);
 
+    // Ensure that we have only one dependent output
+    void finalize();
+
     virtual void validityCheck() const;
 };
 

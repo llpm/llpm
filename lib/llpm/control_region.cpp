@@ -154,7 +154,7 @@ bool ControlRegion::canGrow(InputPort* ip) {
 bool ControlRegion::canGrow(OutputPort* op) {
     auto sink = getSink(op);
     auto driver = _conns.findSource(sink);
-    return !(driver && driver->owner()->outputsIndependent());
+    return driver && driver->owner()->outputsTied();
 }
 
 bool ControlRegion::canGrow(Port* p) {
@@ -242,7 +242,7 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
             return false;
 
         // Must not create additional valid bits within CR
-        if (foundAsDriver && !foundAsSink && b->outputsIndependent()) {
+        if (foundAsDriver && !foundAsSink && !b->outputsTied()) {
             // printf("is router\n");
             return false;
         }

@@ -34,6 +34,10 @@ public:
                               DependenceRule::Always);
     }
 
+    virtual bool outputsSeparate() const {
+        return true;
+    }
+
     virtual const std::vector<InputPort*>&
             deps(const OutputPort* op) const {
         return inputs();

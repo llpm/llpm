@@ -44,6 +44,10 @@ public:
             return false;
         return true;
     }
+
+    virtual bool outputsSeparate() const {
+        return true;
+    }
 };
 
 

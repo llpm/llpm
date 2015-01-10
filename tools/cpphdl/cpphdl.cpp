@@ -58,6 +58,7 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();
+        d.optimizations()->append<CheckOutputsPass>();
 
         FileSet fs(true, dirName, true);
         GraphvizOutput gv(d);

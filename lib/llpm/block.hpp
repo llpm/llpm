@@ -94,10 +94,19 @@ public:
     // dependence rules. If not, it returns "Custom"
     DependenceRule::InputType firing() const;
 
-    // False if this block has multiple outputs and their dependences
-    // differ or are maybes. Otherwise, output tokens are always produced
-    // based on the same rules, so they are "dependent"
-    bool outputsIndependent() const;
+    // When one output fires, do all of them them? If so, this method
+    // should answer yes.
+    virtual bool outputsTied() const;
+
+    // True iff one of the two conditions holds:
+    //   - A single block firing results in one output token on one
+    //   output port
+    //   - The output ports are buffered and deal with backpressure
+    //   independently from each other.
+    virtual bool outputsSeparate() const {
+        // Nearly nobody does this, so default to no
+        return false;
+    }
 
     // Find the dependence rule for an output port
     virtual DependenceRule depRule(const OutputPort*) const = 0;

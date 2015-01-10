@@ -3,6 +3,8 @@
 #include <llpm/module.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
+#include <llpm/control_region.hpp>
+#include <libraries/synthesis/pipeline.hpp>
 
 using namespace std;
 
@@ -36,5 +38,46 @@ void CheckConnectionsPass::runInternal(Module* m) {
     if (allGood)
         printf("No bad connections found in %s.\n", m->name().c_str());
 }
+
+void CheckOutputsPass::runInternal(Module* m) {
+    if (m->is<ControlRegion>())
+        // Output rules do not apply within control regions.
+        return;
+
+    ConnectionDB* conns = m->conns();
+    if (conns == NULL)
+        return;
+
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
+    auto& namer = m->design().namer();
+    bool printedHeader = false;
+    for (auto block: blocks) {
+        if (block->outputsSeparate() ||
+            block->outputs().size() <= 1)
+            continue;
+
+        // Since this block has dependent outputs, all of them better
+        // be connected to pipeline regs!
+        for (auto op: block->outputs()) {
+            set<InputPort*> sinks;
+            conns->findSinks(op, sinks);
+            for (auto sink: sinks) {
+                if (sink->owner()->isnot<PipelineRegister>()) {
+                    if (!printedHeader) {
+                        printf("ERROR: found un-pipelined connection from "
+                               "block with dependent outputs:\n");
+                        printedHeader = true;
+                    }
+                    printf("    %s -> %s\n",
+                           namer.getName(op, m).c_str(),
+                           namer.getName(sink, m).c_str());
+                }
+            }
+        }
+    }
+}
+
+
 
 };

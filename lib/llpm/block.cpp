@@ -35,9 +35,9 @@ DependenceRule::InputType Block::firing() const {
 // False if this block has multiple outputs and their dependences
 // differ or are maybes. Otherwise, output tokens are always produced
 // based on the same rules, so they are "dependent"
-bool Block::outputsIndependent() const {
+bool Block::outputsTied() const {
     if (outputs().size() <= 1)
-        return false;
+        return true;
 
     auto output1 = outputs()[0];
     const std::vector<InputPort*>& canon = deps(output1);
@@ -47,10 +47,10 @@ bool Block::outputsIndependent() const {
         auto odeps = deps(output);
         if (dr != drCanon || odeps != canon ||
             dr.outputType() != DependenceRule::Always) 
-            return true;
+            return false;
     }
 
-    return false;
+    return true;
 }
 
 void Block::deps(const OutputPort* op, std::set<InputPort*>& ret) const {

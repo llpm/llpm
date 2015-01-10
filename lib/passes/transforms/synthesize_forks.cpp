@@ -14,13 +14,8 @@ void SynthesizeForksPass::runInternal(Module* mod) {
     if (conns == NULL)
         return;
 
-    printf("Building forks for %s\n", mod->name().c_str());
-
     deque<OutputPort*> forkingSources;
     for (const auto& p: conns->sinksRaw()) {
-        printf("  %s %lu\n",
-               mod->design().namer().getName(p.first, mod).c_str(),
-               p.second.size());
         if (p.second.size() > 1)
             forkingSources.push_back(p.first);
     }

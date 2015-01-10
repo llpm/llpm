@@ -31,6 +31,7 @@ VerilogSynthesizer::VerilogSynthesizer(Design& d) :
 
 void VerilogSynthesizer::addStops() {
     _stops.addClass<BlockRAM>();
+    _stops.addClass<RTLReg>();
 }
 
 void VerilogSynthesizer::write(std::ostream& os) {
@@ -259,7 +260,7 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
         printer->print(ctxt, b);
 
         if (!printer->customLID()) {
-            assert(!b->outputsIndependent());
+            assert(b->outputsTied());
 
             std::string joinOp;
             std::string terminator;

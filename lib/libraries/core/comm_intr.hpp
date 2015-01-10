@@ -230,6 +230,11 @@ public:
                               DependenceRule::Maybe);
     }
 
+    virtual bool outputsSeparate() const {
+        // Nearly nobody does this, so default to no
+        return true;
+    }
+
     virtual const std::vector<InputPort*>&
             deps(const OutputPort* op) const {
         assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
