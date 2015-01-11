@@ -42,6 +42,12 @@ void FindConstants(Module*,
                    std::set<Port*>& edges,
                    std::set<Block*>& blocks);
 
+// Given an input port, find all the outputs upon which it may depend
+void FindDependencies(Module*,
+                      InputPort*,
+                      std::set<OutputPort*>& deps,
+                      DependenceRule& rule);
+
 };
 };
 

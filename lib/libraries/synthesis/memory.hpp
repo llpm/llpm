@@ -79,12 +79,17 @@ public:
                               DependenceRule::Always);
     }
 
-    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
-        return _deps.find(op)->second;
+    virtual const std::vector<InputPort*>&
+        deps(const OutputPort* op) const {
+            return _deps.find(op)->second;
     }
 
     virtual bool pipelineable(const OutputPort* op) const {
-        return false;
+        return true;
+    }
+
+    virtual bool outputsSeparate() const {
+        return true;
     }
 };
 

@@ -89,6 +89,11 @@ protected:
     OutputType      _outputType;
 
 public:
+    DependenceRule() :
+        _inputType(Custom),
+        _outputType(Maybe)
+    { }
+
     DependenceRule(InputType inpTy,
                    OutputType outTy) :
         _inputType(inpTy),
@@ -106,6 +111,20 @@ public:
 
     bool operator!=(const DependenceRule& dr) const {
         return !operator==(dr);
+    }
+
+    DependenceRule operator+(const DependenceRule& dr) const {
+        DependenceRule ret;
+        if (dr._inputType == _inputType)
+            ret._inputType = _inputType;
+        else
+            ret._inputType = Custom;
+
+        if (dr._outputType == _outputType)
+            ret._outputType = _outputType;
+        else
+            ret._outputType = Maybe;
+        return ret;
     }
 };
 

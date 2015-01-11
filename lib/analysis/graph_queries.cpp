@@ -345,5 +345,48 @@ void FindConstants(Module* mod,
 
 }
 
+struct DepFindingVisitor : public Visitor<IOEdge> {
+    bool first = true;
+    DependenceRule rule;
+    set<OutputPort*> deps;
+
+    Terminate visit(const ConnectionDB*,
+                    const PathTy& path)
+    {
+        if (first) {
+            rule = path.endPort()->depRule();
+            deps.clear();
+        } else {
+            rule = rule + path.endPort()->depRule();
+        }
+        return Continue;
+    }
+
+    Terminate pathEnd(const ConnectionDB*,
+                      const PathTy& path)
+    {
+        deps.insert(path.endPort());
+        return Continue;
+    }
+};
+
+void FindDependencies(Module* mod,
+                      InputPort* ip,
+                      std::set<OutputPort*>& deps,
+                      DependenceRule& rule)
+{
+    ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        throw InvalidArgument("Cannot analyze opaque module!");
+
+    DepFindingVisitor visitor;
+    GraphSearch<DepFindingVisitor, BFS> search(conns, visitor);
+    search.go(vector<InputPort*>{ip});
+    deps.swap(visitor.deps);
+    rule = visitor.rule;
+}
+
+
+
 } // namespace queries
 } // namespace llpm

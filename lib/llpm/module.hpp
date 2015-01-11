@@ -112,9 +112,17 @@ public:
 };
 
 class DummyBlock: public Identity {
+    Port* _modPort;
 public:
-    DummyBlock(llvm::Type* t) :
-        Identity(t) { }
+    DummyBlock(llvm::Type* t, Port* modPort) :
+        Identity(t),
+        _modPort(modPort) { }
+
+    DummyBlock(Port* modPort) :
+        Identity(modPort->type()),
+        _modPort(modPort) { }
+    
+    DEF_GET_NP(modPort);
 };
 
 // A module which a third party can edit
@@ -212,12 +220,21 @@ protected:
     Cache<bool> _hasCycle;
     bool _hasCycleCompute() const;
 
+    struct Deps {
+        DependenceRule rule;
+        std::vector<InputPort*> deps;
+    };
+    CacheMap<const OutputPort*, Deps> _deps;
+    Deps _findDeps(const OutputPort*);
+
 public:
     ContainerModule(Design& design, std::string name) :
         MutableModule(design, name),
         _conns(this),
         _hasCycle(_conns.counterPtr(),
-                  boost::bind(&ContainerModule::_hasCycleCompute, this))
+                  boost::bind(&ContainerModule::_hasCycleCompute, this)),
+        _deps(_conns.counterPtr(),
+              boost::bind(&ContainerModule::_findDeps, this, _1))
     { }
 
     virtual ~ContainerModule();
@@ -310,6 +327,7 @@ public:
     virtual unsigned internalRefine(int depth = -1,
                                     Refinery::StopCondition* sc = NULL);
 
+    virtual bool outputsSeparate() const;
     virtual DependenceRule depRule(const OutputPort* op) const;
     virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
 };

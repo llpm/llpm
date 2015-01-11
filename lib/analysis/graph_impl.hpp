@@ -25,6 +25,12 @@ Terminate Visitor<Path>::next(
     return Continue;
 }
 
+template<typename Path>
+Terminate Visitor<Path>::pathEnd(const ConnectionDB*,
+                                 const PathTy& path) {
+    return Continue;
+}
+
 template<typename SrcPort,
          typename DstPort>
 bool Path<SrcPort, DstPort>::contains(Block* b) const {
@@ -121,27 +127,29 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
                 for (SrcPortTy* src: next) {
                     std::vector<DstPortTy*> dsts;
                     _conns->find(src, dsts);
-
-                    for (DstPortTy* dst: dsts) {
-                        PathTy p = current.push(src, dst);
-                        if (seen.count(p))
-                            continue;
-                        seen.insert(p);
-                        switch (Algo) {
-                        case DFS:
-                            queue.push_front(p);
-                            break;
-                        case BFS:
-                            queue.push_back(p);
+                    if (dsts.size() == 0) {
+                        t = _visitor.pathEnd(_conns, current);
+                    } else {
+                        for (DstPortTy* dst: dsts) {
+                            PathTy p = current.push(src, dst);
+                            if (seen.count(p))
+                                continue;
+                            seen.insert(p);
+                            switch (Algo) {
+                            case DFS:
+                                queue.push_front(p);
+                                break;
+                            case BFS:
+                                queue.push_back(p);
+                            }
                         }
                     }
                 }
-            } else if (t == TerminateSearch) {
-                terminate = TerminateSearch;
             }
-        } else if (t == TerminateSearch) {
+        }
+        if (t == TerminateSearch) {
             terminate = TerminateSearch;
-        } 
+        }
     }
 }
 

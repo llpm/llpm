@@ -38,7 +38,7 @@ InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
             num++;
         }
     }
-    auto dummy = new DummyBlock(ip->type());
+    auto dummy = new DummyBlock(ip);
     InputPort* extIp = new InputPort(this, ip->type(), name);
     _inputMap.insert(make_pair(extIp, dummy));
     dummy->name(name + "_dummy");
@@ -72,7 +72,7 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
         }
     }
 
-    auto dummy = new DummyBlock(op->type());
+    auto dummy = new DummyBlock(op);
     OutputPort* extOp = new OutputPort(this, op->type(), name);
     _outputMap.insert(make_pair(extOp, dummy));
     dummy->name(name + "_dummy");
@@ -99,13 +99,13 @@ Interface* ContainerModule::addClientInterface(
         OutputPort* req, InputPort* resp, std::string name) {
     auto iface = new Interface(this, resp->type(), req->type(), false, name);
 
-    auto opdummy = new DummyBlock(req->type());
+    auto opdummy = new DummyBlock(req);
     _outputMap.insert(make_pair(iface->dout(), opdummy));
     opdummy->name(name + "_opdummy");
     conns()->blacklist(opdummy);
     conns()->connect(req, opdummy->din());
 
-    auto ipdummy = new DummyBlock(resp->type());
+    auto ipdummy = new DummyBlock(resp);
     _inputMap.insert(make_pair(iface->din(), ipdummy));
     ipdummy->name(name + "_ipdummy");
     conns()->blacklist(ipdummy);
@@ -118,13 +118,13 @@ Interface* ContainerModule::addServerInterface(
         InputPort* req, OutputPort* resp, std::string name) {
     auto iface = new Interface(this, req->type(), resp->type(), true, name);
 
-    auto opdummy = new DummyBlock(resp->type());
+    auto opdummy = new DummyBlock(resp);
     _outputMap.insert(make_pair(iface->dout(), opdummy));
     opdummy->name(name + "_opdummy");
     conns()->blacklist(opdummy);
     conns()->connect(resp, opdummy->din());
 
-    auto ipdummy = new DummyBlock(req->type());
+    auto ipdummy = new DummyBlock(req);
     _inputMap.insert(make_pair(iface->din(), ipdummy));
     ipdummy->name(name + "_ipdummy");
     conns()->blacklist(ipdummy);
@@ -210,20 +210,40 @@ bool ContainerModule::_hasCycleCompute() const {
 }
 
 DependenceRule ContainerModule::depRule(const OutputPort* op) const {
-    //TODO: Do a graph search to determine this precisely
-    if (inputs().size() <= 1)
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Maybe);
-    else
-        return DependenceRule(DependenceRule::Custom,
-                              DependenceRule::Maybe);
-
+    const Deps& deps = _deps(op);
+    return deps.rule;
 }
 
+bool ContainerModule::outputsSeparate() const {
+    Block* singleBlock = NULL;
+    for (auto op: outputs()) {
+        auto driver = _conns.findSource(getSink(op));
+        auto b = driver->owner();
+        if (singleBlock == NULL)
+            singleBlock = b;
+        if (singleBlock != b || !b->outputsSeparate())
+            return false;
+    }
+    return true;
+}
 const std::vector<InputPort*>& ContainerModule::deps(
-    const OutputPort*) const {
-    //TODO: Do a graph search to determine this precisely
-    return inputs();
+    const OutputPort* op) const {
+    const Deps& deps = _deps(op);
+    return deps.deps;
+}
+
+ContainerModule::Deps ContainerModule::_findDeps(const OutputPort* op) {
+    Deps ret;
+    auto internalSink = getSink(op);
+    set<OutputPort*> depSet;
+    queries::FindDependencies(this, internalSink, depSet, ret.rule);
+    for (auto depDriver: depSet) {
+        auto dummy = depDriver->owner()->as<DummyBlock>();
+        assert(dummy != NULL);
+        auto extIP = dummy->modPort()->asInput();
+        ret.deps.push_back(extIP);
+    }
+    return ret;
 }
 
 void Module::createSWModule(llvm::Module* M) {

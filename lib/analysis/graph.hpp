@@ -41,6 +41,11 @@ struct Visitor {
     Terminate next(const ConnectionDB*,
                    const PathTy& path, 
                    std::vector<typename PathTy::SrcPortTy*>&);
+
+    // Called when a path will not grow longer -- when a block has no
+    // inputs, essentially
+    Terminate pathEnd(const ConnectionDB*,
+                      const PathTy& path);
 };
 
 template<typename SrcPort, typename DstPort>

@@ -231,7 +231,6 @@ public:
     }
 
     virtual bool outputsSeparate() const {
-        // Nearly nobody does this, so default to no
         return true;
     }
 
