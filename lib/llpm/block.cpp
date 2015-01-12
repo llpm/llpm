@@ -1,5 +1,7 @@
 #include "block.hpp"
 
+using namespace std;
+
 namespace llpm {
 
 
@@ -39,18 +41,27 @@ bool Block::outputsTied() const {
     if (outputs().size() <= 1)
         return true;
 
-    auto output1 = outputs()[0];
-    const std::vector<InputPort*>& canon = deps(output1);
-    const DependenceRule drCanon = depRule(output1);
-    for (auto&& output: outputs()) {
-        auto dr = depRule(output);
-        auto odeps = deps(output);
-        if (dr != drCanon || odeps != canon ||
-            dr.outputType() != DependenceRule::Always) 
-            return false;
+    if (name() == "SimpleMem_cr15")
+        printf("OT!\n");
+
+    std::set<InputPort*> deps;
+    DependenceRule       rule;
+    for (unsigned i=0; i<outputs().size(); i++) {
+        auto output = outputs()[i];
+        const auto& dvec = this->deps(output);
+        set<InputPort*> mydeps(dvec.begin(), dvec.end());
+        auto myrule = this->depRule(output);
+        if (i == 0) {
+            rule = myrule;
+            deps.swap(mydeps);
+        } else {
+            if (mydeps != deps ||
+                myrule != rule)
+                return false;
+        }
     }
 
-    return true;
+    return rule.outputType() == DependenceRule::Always;
 }
 
 void Block::deps(const OutputPort* op, std::set<InputPort*>& ret) const {

@@ -21,6 +21,8 @@ public:
         assert(rc);
     }
 
+    static bool BlockAllowed(Block*);
+
     bool add(Connection, const std::set<Port*>& constPorts = {});
 
     bool growUp(const std::set<Port*>& constPorts = {});

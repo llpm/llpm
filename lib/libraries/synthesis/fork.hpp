@@ -42,6 +42,12 @@ public:
             deps(const OutputPort* op) const {
         return inputs();
     }
+
+    virtual std::string print() const {
+        if (_virt)
+            return "virt";
+        return "";
+    }
 };
 
 } // namespace llpm

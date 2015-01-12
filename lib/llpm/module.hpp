@@ -312,8 +312,10 @@ public:
         _conns.connect(source, sink);
     }
 
+    // If our outputs are tied, unify them into one join'ed output and
+    // add an extraction to each output
+    bool unifyOutput();
 
-    
     virtual bool refine(ConnectionDB& conns) const;
     virtual bool refinable() const {
         return true;

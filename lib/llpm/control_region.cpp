@@ -56,8 +56,9 @@ void FormControlRegionPass::runInternal(Module* mod) {
             // This block has been relocated since it was put in the list
             continue;
 
-        if (b->is<Module>() ||b->is<DummyBlock>()) {
-            // It's already a control region? Cool
+        if (b->is<Module>() ||
+            b->is<DummyBlock>() ||
+            !ControlRegion::BlockAllowed(b)) {
             // It's a dummy block? Don't mess with it
             // But, we have to find its drivers to continue the search
             if (seen.count(b) == 0) {
@@ -91,12 +92,21 @@ void FormControlRegionPass::runInternal(Module* mod) {
                 // No need for a CR with one block in it!
                 cr->refine(*conns);
                 flattened++;
+            } else {
+                cr->finalize();
             }
         }
     }
 
     printf("Formed %u control regions\n", regions);
     printf("Flattened %u CRs with one internal block\n", flattened);
+}
+
+bool ControlRegion::BlockAllowed(Block* b) {
+    if (!b->outputsTied()) {
+        return false;
+    }
+    return true;
 }
 
 bool ControlRegion::grow(const std::set<Port*>& constPorts) {
@@ -182,6 +192,9 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
 
     if (b->hasCycle())
         // Don't allow cycles
+        return false;
+
+    if (!BlockAllowed(b))
         return false;
 
     map<InputPort*, OutputPort*> internalizedOutputs;
@@ -372,6 +385,10 @@ void ControlRegion::validityCheck() const {
         assert(cannonDeps == deps &&
                "Error: control region may introduce a deadlock.");
     }
+}
+
+void ControlRegion::finalize() {
+    this->unifyOutput();
 }
 
 } // namespace llpm

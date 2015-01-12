@@ -215,6 +215,10 @@ DependenceRule ContainerModule::depRule(const OutputPort* op) const {
 }
 
 bool ContainerModule::outputsSeparate() const {
+    // TODO: This only works for a single member block driving all
+    // outputs, which seems to be common. It is also possible for a
+    // tree of blocks with separate outputs to drive them all. Need to
+    // support this case also.
     Block* singleBlock = NULL;
     for (auto op: outputs()) {
         auto driver = _conns.findSource(getSink(op));
@@ -239,9 +243,10 @@ ContainerModule::Deps ContainerModule::_findDeps(const OutputPort* op) {
     queries::FindDependencies(this, internalSink, depSet, ret.rule);
     for (auto depDriver: depSet) {
         auto dummy = depDriver->owner()->as<DummyBlock>();
-        assert(dummy != NULL);
-        auto extIP = dummy->modPort()->asInput();
-        ret.deps.push_back(extIP);
+        if (dummy != NULL) {
+            auto extIP = dummy->modPort()->asInput();
+            ret.deps.push_back(extIP);
+        }
     }
     return ret;
 }
@@ -353,6 +358,57 @@ llvm::Function* Module::createCallStub(Interface* iface) {
         this->name() + "_" + iface->name(), swModule());
     _interfaceStubs[iface->name()] = func;
     return func;
+}
+
+
+bool ContainerModule::unifyOutput() {
+    if (outputs().size() <= 1)
+        // Already done!
+        return true;
+
+    if (!outputsTied()) {
+        // Only works if our outputs are tied
+        // TODO: find outputs that are tied and unify them
+        printf("unifyOutputs: !outputsTied on %s\n",
+               name().c_str());
+        return false;
+    }
+
+    if (interfaces().size() > 0)
+        // We cannot unify outputs if one belongs to an interface.
+        // This case seems unlikely
+        return false;
+
+    // Get my parent's connection DB
+    ConnectionDB* pConns = module()->conns();
+    if (pConns == NULL)
+        return false;
+
+    printf("Unifying outputs on %s\n",
+           name().c_str());
+
+    // This is just a stub for now
+    vector<OutputPort*> outs = outputs();
+    
+    vector<llvm::Type*> types;
+    vector<InputPort*> intSinks;
+    for (auto op: outs) {
+        types.push_back(op->type());
+        intSinks.push_back(getSink(op));
+    }
+
+    auto join = new Join(types);
+    auto newOut = addOutputPort(join->dout());
+    auto extSplit = new Split(types);
+    pConns->connect(newOut, extSplit->din());
+
+    for (unsigned i=0; i<outs.size(); i++) {
+        _conns.remap(intSinks[i], join->din(i));
+        pConns->remap(outs[i], extSplit->dout(i));
+        removeOutputPort(outs[i]);
+    }
+
+    return true;
 }
 
 } // namespace llpm
