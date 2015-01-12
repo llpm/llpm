@@ -356,6 +356,7 @@ struct DepFindingVisitor : public Visitor<IOEdge> {
         if (first) {
             rule = path.endPort()->depRule();
             deps.clear();
+            first = false;
         } else {
             rule = rule + path.endPort()->depRule();
         }
