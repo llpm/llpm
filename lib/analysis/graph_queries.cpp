@@ -16,7 +16,7 @@ namespace queries {
 
 typedef Path<OutputPort, InputPort> CyclePath;
 struct CycleDetectionVisitor : public Visitor<CyclePath> {
-    set< std::pair<OutputPort*, InputPort*> > seen;
+    set< InputPort* > seen;
     bool foundCycle;
 
     CycleDetectionVisitor() :
@@ -38,10 +38,10 @@ struct CycleDetectionVisitor : public Visitor<CyclePath> {
             // p2.print();
             foundCycle = true;
             return TerminateSearch;
-        } else if (seen.count(path.end()) > 0) {
+        } else if (seen.count(path.endPort()) > 0) {
             return TerminatePath;
         } else {
-            seen.insert(path.end());
+            seen.insert(path.endPort());
             return Continue;
         }
     }
