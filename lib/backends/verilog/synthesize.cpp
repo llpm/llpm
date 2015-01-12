@@ -836,17 +836,29 @@ public:
             style = "VirtFork";
         else 
             style = "Fork";
+        if (bitwidth(f->din()->type()) == 0)
+            style += "_VoidData";
     
+        if (bitwidth(f->din()->type()) > 0) {
+            ctxt << boost::format(
+                    "    wire [%2%:0] %1%_dout;\n")
+                        % ctxt.name(f)
+                        % (bitwidth(f->din()->type()) - 1);
+        }
         ctxt << boost::format(
-                "    wire [%3%:0] %1%_dout;\n"
                 "    wire [%2%:0] %1%_dout_valids;\n"
                 "    wire [%2%:0] %1%_dout_bp;\n") 
                     % ctxt.name(f)
-                    % (f->dout_size() - 1)
-                    % (bitwidth(f->din()->type()) - 1);
+                    % (f->dout_size() - 1);
+
         for (unsigned i=0; i<f->dout_size(); i++) {
+            if (bitwidth(f->dout(i)->type()) > 0) {
+                ctxt << boost::format(
+                    "    assign %2% = %1%_dout;\n")
+                        % ctxt.name(f)
+                        % ctxt.name(f->dout(i));
+            } 
             ctxt << boost::format(
-                "    assign %3% = %1%_dout;\n"
                 "    assign %3%_valid = %1%_dout_valids[%2%];\n"
                 "    assign %1%_dout_bp[%2%] = %3%_bp;\n")
                     % ctxt.name(f)
@@ -861,12 +873,16 @@ public:
                              % f->dout_size()
              << boost::format("    ) %1% (\n") % ctxt.name(f)
              <<               "        .clk(clk),\n"
-             <<               "        .resetn(resetn),\n"
+             <<               "        .resetn(resetn),\n";
 
-             << boost::format("        .din(%2%), \n"
-                              "        .din_valid(%2%_valid), \n"
+        if (bitwidth(f->din()->type()) > 0) {
+            ctxt << boost::format("        .din(%2%), \n"
+                                  "        .dout(%1%_dout), \n")
+                            % ctxt.name(f)
+                            % ctxt.name(f->din());
+        }
+        ctxt << boost::format("        .din_valid(%2%_valid), \n"
                               "        .din_bp(%2%_bp), \n"
-                              "        .dout(%1%_dout), \n"
                               "        .dout_valid(%1%_dout_valids), \n"
                               "        .dout_bp(%1%_dout_bp) \n")
                              % ctxt.name(f)
