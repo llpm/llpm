@@ -13,13 +13,12 @@ using namespace std;
 
 namespace llpm {
 
-void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns, Register* orig) {
+void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns,
+                                         Register* orig) {
     // Transform Registers to RTLRegs
     // TODO: something more intelligent?
-    //
     RTLReg* rr = new RTLReg(orig->type());
-    conns->remap(orig->write()->din(), rr->write()->din());
-    conns->remap(orig->write()->dout(), rr->write()->dout());
+    conns->remap(orig->write(), rr->write());
 
     deque< pair<InputPort*, OutputPort*> > reqs;
     Interface* client = conns->findClient(orig->read());
@@ -29,36 +28,14 @@ void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns, Register* orig) {
         if (im) {
             for (unsigned i=0; i<im->servers_size(); i++) {
                 Interface* imServer = im->servers(i);
-                reqs.push_back(
-                    make_pair(imServer->din(), imServer->dout()));
+                conns->remap(imServer, rr->newRead());
             }
-            conns->disconnect(im->client(), orig->read());
+            conns->removeBlock(im);
+        } else {
+            conns->remap(orig->read(), rr->newRead());
         }
     }
-
-    if (reqs.empty()) {
-        // Reg is not driven by an mux
-        reqs.push_back(
-            make_pair(orig->read()->din(), orig->read()->dout()));
-    }
-
-    for (auto p: reqs) {
-        OutputPort* requestor = conns->findSource(p.first);
-        if (requestor == NULL)
-            continue;
-        Wait* w = new Wait(rr->read()->type());
-        conns->disconnect(p.first, requestor);
-        conns->connect(rr->read(), w->din());
-        conns->connect(w->newControl(requestor->type()), requestor);
-
-        vector<InputPort*> respPorts;
-        conns->findSinks(p.second, respPorts);
-
-        for (auto respPort: respPorts) {
-            conns->disconnect(p.second, respPort);
-            conns->connect(w->dout(), respPort);
-        }
-    }
+    conns->removeBlock(orig);
 }
 
 void SynthesizeMemoryPass::synthesizeFiniteArray(ConnectionDB* conns,

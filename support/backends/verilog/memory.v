@@ -6,7 +6,7 @@
 module RTLReg(clk, resetn,
     write_req, write_req_valid, write_req_bp,
     write_resp_valid, write_resp_bp,
-    read, read_valid, read_bp);
+    read, read_valid);
 
 parameter Width = 8;
 
@@ -22,7 +22,6 @@ input  write_resp_bp;
 
 output [Width-1:0] read;
 output             read_valid;
-input              read_bp;
 
 
 reg             valid;

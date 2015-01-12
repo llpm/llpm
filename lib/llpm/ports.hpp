@@ -145,8 +145,6 @@ public:
     DependenceRule depRule() const;
     const std::vector<InputPort*>& deps() const;
 
-    bool pipelineable() const;
-
     Split* split(ConnectionDB& conns);
     OutputPort* split(ConnectionDB& conns, unsigned idx);
 };

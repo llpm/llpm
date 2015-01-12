@@ -28,12 +28,6 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         assert(sinks.size() > 1);
 
         bool virt = false;
-
-        // Non-pipelineable links cannot have their LI pipelined
-        // either
-        if (!op->pipelineable())
-            virt = true;
-
         // Blocks contained in control regions don't require actual
         // forks since they share valid and backpressure signals
         if (mod->is<ControlRegion>())

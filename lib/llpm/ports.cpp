@@ -46,10 +46,6 @@ const std::vector<InputPort*>& OutputPort::deps() const {
     return owner()->deps(this);
 }
 
-bool OutputPort::pipelineable() const {
-    return owner()->pipelineable(this);
-}
-
 Split* OutputPort::split(ConnectionDB& conns) {
     if (_split == NULL) {
         _split = new Split(_type);

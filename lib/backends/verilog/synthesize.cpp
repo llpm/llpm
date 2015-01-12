@@ -649,11 +649,13 @@ public:
 
         unsigned width = bitwidth(e->dout()->type());
 
-        ctxt << "    assign " << ctxt.name(e->dout()) << " = "
-             << boost::format("%1%[%2%:%3%];\n") 
-                    % dinName
-                    % (offset+width-1)
-                    % offset;
+        if (width > 0) {
+            ctxt << "    assign " << ctxt.name(e->dout()) << " = "
+                 << boost::format("%1%[%2%:%3%];\n") 
+                        % dinName
+                        % (offset+width-1)
+                        % offset;
+        }
     }
 };
 
@@ -891,6 +893,73 @@ public:
     }
 };
 
+class RTLRegPrinter: public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<RTLReg*>(b) != NULL;
+    }
+
+    virtual bool customLID() const {
+        return true;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* b) const {
+        RTLReg* rr = dynamic_cast<RTLReg*>(b);
+        std::string style = "RTLReg";
+        auto type = rr->type();
+        auto typeBW = bitwidth(type);
+    
+        if (typeBW > 0) {
+            ctxt << boost::format(
+                    "    wire [%2%:0] %1%_dout;\n"
+                    "    wire         %1%_valid;\n")
+                        % ctxt.name(rr)
+                        % (typeBW - 1);
+        }
+
+        for (unsigned i=0; i<rr->read_size(); i++) {
+            Interface* readif = rr->read(i);
+            OutputPort* resp = readif->dout();
+            InputPort*  req  = readif->din();
+            if (bitwidth(rr->type()) > 0) {
+                ctxt << boost::format(
+                    "    assign %2% = %1%_dout;\n")
+                        % ctxt.name(rr)
+                        % ctxt.name(resp);
+            } 
+            ctxt << boost::format(
+                "    assign %1%_valid = %2%_valid && %3%_valid;\n"
+                "    assign %2%_bp    = %1%_bp;\n")
+                    % ctxt.name(resp)
+                    % ctxt.name(req)
+                    % ctxt.name(rr);
+        }
+
+        ctxt << boost::format("    %1% # (\n") % style
+             << boost::format("        .Width(%1%)\n") 
+                             % typeBW
+             << boost::format("    ) %1% (\n") % ctxt.name(rr)
+             <<               "        .clk(clk),\n"
+             <<               "        .resetn(resetn),\n";
+
+        if (typeBW) {
+            ctxt << boost::format("        .write_req(%2%), \n"
+                                  "        .read(%1%_dout), \n")
+                            % ctxt.name(rr)
+                            % ctxt.name(rr->write()->din());
+        }
+        ctxt << boost::format("        .write_req_valid(%2%_valid), \n"
+                              "        .write_req_bp(%2%_bp), \n"
+                              "        .write_resp_valid(%3%_valid),\n"
+                              "        .write_resp_bp(%3%_bp),\n"
+                              "        .read_valid(%1%_valid) \n")
+                             % ctxt.name(rr)
+                             % ctxt.name(rr->write()->din())
+                             % ctxt.name(rr->write()->dout())
+             <<               "    );\n";
+    }
+};
+
 struct AttributePrinter {
     template<typename T>
     void print(VerilogSynthesizer::Context& ctxt,
@@ -902,8 +971,6 @@ struct AttributePrinter {
     }
 
 };
-
-
 
 template<typename BType, typename Attrs>
 class VModulePrinter: public VerilogSynthesizer::Printer {
@@ -973,15 +1040,6 @@ struct PipelineRegPrinter : public AttributePrinter {
     }
 };
 
-struct RTLRegAttr : public AttributePrinter {
-    std::string name(Block* b) {
-        return "RTLReg";
-    }
-    void operator()(VerilogSynthesizer::Context& ctxt, RTLReg* r) {
-        print(ctxt, "Width", bitwidth(r->type()), true);
-    }
-};
-
 struct BlockRAMAttr: public AttributePrinter {
     std::string name(Block* b) {
         BlockRAM* bram = dynamic_cast<BlockRAM*>(b);
@@ -1023,9 +1081,9 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new MultiplexerPrinter());
     _printers.appendEntry(new RouterPrinter());
 
+    _printers.appendEntry(new RTLRegPrinter());
     _printers.appendEntry(new VModulePrinter<PipelineRegister,
                                              PipelineRegPrinter>());
-    _printers.appendEntry(new VModulePrinter<RTLReg, RTLRegAttr>());
     _printers.appendEntry(new VModulePrinter<BlockRAM, BlockRAMAttr>());
     _printers.appendEntry(new VModulePrinter<Module, ModulePrinter>());
 }

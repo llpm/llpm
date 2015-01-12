@@ -24,10 +24,6 @@ void PipelineDependentsPass::runInternal(Module* mod) {
     t.conns()->findAllBlocks(blocks);
     for (auto block: blocks) {
         unsigned numNormalOutputs = block->outputs().size();
-        for (auto op: block->outputs())
-            if (!op->pipelineable())
-                numNormalOutputs -= 1;
-
         if (block->outputsSeparate() ||
             numNormalOutputs <= 1)
             continue;

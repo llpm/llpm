@@ -266,8 +266,6 @@ public:
         return internalOPSink;
     }
 
-    virtual bool pipelineable(const OutputPort*) const;
-
 #if 0
     void addBlock(Block* b) {
         assert(b != NULL);

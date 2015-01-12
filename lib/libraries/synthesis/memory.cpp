@@ -10,9 +10,19 @@ namespace llpm {
 
 RTLReg::RTLReg(llvm::Type* dt) :
     _type(dt),
-    _write(this, dt, llvm::Type::getVoidTy(dt->getContext()), true, "write"),
-    _read(this, dt, "read")
+    _write(this, dt, llvm::Type::getVoidTy(dt->getContext()), true, "write")
 { }
+
+Interface* RTLReg::newRead() {
+    auto iface = new Interface(
+                    this,
+                    llvm::Type::getVoidTy(_type->getContext()),
+                    _type,
+                    true,
+                    str(boost::format("read%1%") % _read.size()));
+    _read.push_back(iface);
+    return iface;
+}
 
 BlockRAM::BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts) :
     _type(ty),

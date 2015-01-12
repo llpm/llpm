@@ -10,39 +10,33 @@ namespace llpm {
 class RTLReg : public Block {
     llvm::Type* _type;
     Interface _write;
-    OutputPort _read;
+    std::vector<Interface*> _read;
 
 public:
     RTLReg(llvm::Type* datatype);
 
     DEF_GET_NP(type);
     DEF_GET(write);
-    DEF_GET(read);
+    DEF_ARRAY_GET(read);
 
     virtual bool hasState() const {
         return true;
     }
 
+    Interface* newRead();
+
     virtual DependenceRule depRule(const OutputPort* op) const {
         if (op == _write.dout())
             return DependenceRule(DependenceRule::AND,
                                   DependenceRule::Always);
-        else if (op == &_read)
-            return DependenceRule(DependenceRule::Custom,
-                                  DependenceRule::Maybe);
-        else
-            assert(false);
-    }
-    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
-        assert(op == _write.dout() ||
-               op == &_read);
-        return inputs();
+        // Assume it's the read port otherwise
+        return DependenceRule(DependenceRule::Custom,
+                              DependenceRule::Maybe);
     }
 
-    virtual bool pipelineable(const OutputPort* op) const {
-        if (op == read())
-            return false;
-        return true;
+    virtual const std::vector<InputPort*>& deps(
+            const OutputPort* op) const {
+        return inputs();
     }
 
     virtual bool outputsSeparate() const {
@@ -82,10 +76,6 @@ public:
     virtual const std::vector<InputPort*>&
         deps(const OutputPort* op) const {
             return _deps.find(op)->second;
-    }
-
-    virtual bool pipelineable(const OutputPort* op) const {
-        return true;
     }
 
     virtual bool outputsSeparate() const {
