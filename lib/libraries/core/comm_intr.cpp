@@ -110,15 +110,13 @@ bool Split::refineToExtracts(ConnectionDB& conns) const {
 }
 
 llvm::Type* Extract::GetOutput(llvm::Type* t, std::vector<unsigned> path) {
-    if (t->isVectorTy()) {
-        if (path.size() != 1)
-            throw InvalidArgument("Can only extract 1 element from vector!");
-        unsigned idx = path.front();
-        if (idx > t->getVectorNumElements())
+    for (unsigned i=0; i<path.size(); i++) {
+        unsigned idx = path[i];
+        if (idx > numContainedTypes(t))
             throw InvalidArgument("Extract index beyond vector bound!");
-        return t->getVectorElementType();
+        t = nthType(t, idx);
     }
-    return llvm::ExtractValueInst::getIndexedType(t, path);
+    return t;
 }
 
 Extract::Extract(llvm::Type* t, vector<unsigned> path) :

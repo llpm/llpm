@@ -2,6 +2,7 @@
 
 #include <util/transform.hpp>
 #include <util/llvm_type.hpp>
+#include <libraries/core/logic_intr.hpp>
 
 #include <deque>
 
@@ -204,6 +205,133 @@ void SimplifyPass::runInternal(Module* m) {
     if (origBlocks != blocks) {
         // Did this pass do something?
         this->run(m);
+    }
+}
+
+void CanonicalizeInputs::runInternal(Module* mod) {
+    Transformer t(mod);
+    if (!t.canMutate())
+        return;
+
+    set<Block*> blocks;
+    t.conns()->findAllBlocks(blocks);
+    for (auto b: blocks) {
+        if (b->is<Extract>() ||
+            b->is<Identity>() ||
+            b->is<Split>() ||
+            b->is<Cast>() ||
+            b->is<Wait>()) {
+            continue;
+        }
+        for (auto ip: b->inputs()) {
+            canonicalizeInput(t, ip);
+        }
+    }
+}
+
+void CanonicalizeInputs::canonicalizeInput(
+        Transformer& t, InputPort* target) {
+    // Set of things upon this input must wait but is not actually
+    // dependent
+    set<OutputPort*> waits;
+    bool cast = false;
+
+    deque<unsigned> extractions;
+    OutputPort* source = NULL;
+    InputPort* ip = target;
+    while (ip != NULL) {
+        InputPort* oldip = ip;
+        source = t.conns()->findSource(ip);
+        if (source == NULL) {
+            ip = NULL;
+            break;
+        }
+        
+        Block* b = source->owner();
+        if (b->is<Extract>()) {
+            auto e = b->as<Extract>();
+            const auto& path = e->path();
+            extractions.insert(extractions.begin(),
+                               path.begin(), path.end());
+            ip = e->din();
+        } else if (b->is<Split>()) {
+            auto s = b->as<Split>();
+            unsigned idx;
+            for (idx = 0; idx < s->dout_size(); idx++)
+                if (s->dout(idx) == source)
+                    break;
+            extractions.push_front(idx);
+            ip = s->din();
+        } else if (b->is<Join>()) {
+            auto j = b->as<Join>();
+            if (extractions.empty()) {
+                // We need the whole contents of the join, so keep it
+                // and end the search
+                ip = NULL;
+            } else {
+                unsigned idx = extractions.front();
+                extractions.pop_front();
+                assert(idx < j->din_size());
+                ip = j->din(idx);
+                waits.insert(j->dout());
+            }
+        } else if (b->is<Identity>()) {
+            ip = b->as<Identity>()->din();
+        } else if (b->is<Cast>()) {
+            cast = true;
+            ip = b->as<Cast>()->din();
+        } else if (b->is<Wait>()) {
+            auto w = b->as<Wait>();
+            ip = w->din();
+            for (unsigned i=0; i<w->controls_size(); i++) {
+                auto wsource = t.conns()->findSource(w->controls(i));
+                if (wsource != NULL)
+                    waits.insert(wsource);
+            }
+        } else {
+            // Don't know how to deal with node. Terminate search
+            ip = NULL;
+        }
+
+        // Check for infinite loop
+        assert(oldip != ip);
+    }
+
+    OutputPort* currentSource = t.conns()->findSource(target);
+    if (source && source != currentSource) {
+        t.conns()->disconnect(currentSource, target);
+
+        if (target->type()->isVoidTy()) {
+            waits.insert(source);
+            auto c = Constant::getVoid(_design);
+            source = c->dout();
+        } else {
+            if (extractions.size() > 0) {
+                auto e = new Extract(source->type(),
+                                     vector<unsigned>(extractions.begin(),
+                                                      extractions.end()));
+                assert(e->dout()->type() != NULL);
+                t.conns()->connect(source, e->din());
+                source = e->dout();
+            }
+
+            if (cast) {
+                auto c = new Cast(source->type(), target->type());
+                t.conns()->connect(source, c->din());
+                source = c->dout();
+            }
+        }
+
+        if (waits.size() > 0) {
+            auto w = new Wait(source->type());
+            t.conns()->connect(source, w->din());
+            source = w->dout();
+            for (auto c: waits) {
+                t.conns()->connect(w->newControl(c->type()), c);
+            }
+        }
+
+        t.conns()->connect(source, target);
     }
 }
 
