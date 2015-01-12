@@ -57,6 +57,7 @@ public:
     }
 
     InputPort* newControl(llvm::Type*);
+    void newControl(ConnectionDB*, OutputPort*);
 };
 
 // Convert one data type to another. Usually compiles down to a

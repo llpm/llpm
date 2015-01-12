@@ -22,6 +22,7 @@ template< class T > struct add_const_if_ref<T&&> {typedef const T&& type;};
     auto F() -> decltype(_##F) { return _##F; }
 
 #define DEF_ARRAY_GET(F) \
+    auto F() const -> const decltype(_##F)& { return _##F; } \
     unsigned F##_size() const { return _##F.size(); } \
     auto F(unsigned i) const -> const decltype(_##F)::value_type { return _##F[i]; }
 

@@ -14,6 +14,10 @@ void FindDominators(const ConnectionDB* conns,
                     Block* b,
                     std::set<Block*>& dominators);
 
+void FindDominators(const ConnectionDB* conns,
+                    const std::vector<InputPort*>& b,
+                    std::set<OutputPort*>& dominators);
+
 
 /* Analyze the sources and ordering of tokens between a source and a sink. 
  * - Returns false if the source does not appear to drive the sink.

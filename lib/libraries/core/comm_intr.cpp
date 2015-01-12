@@ -35,6 +35,10 @@ InputPort* Wait::newControl(llvm::Type* t) {
     return ip;
 }
 
+void Wait::newControl(ConnectionDB* conns, OutputPort* op) {
+    conns->connect(op, newControl(op->type()));
+}
+
 Cast::Cast(llvm::CastInst* cast) :
     Function(cast->getSrcTy(), cast->getDestTy()),
     _cast(cast)

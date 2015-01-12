@@ -63,22 +63,31 @@ bool BlockCycleExists(const ConnectionDB* conns,
 
 typedef Edge<InputPort, OutputPort> IOEdge;
 struct DominatorVisitor : public Visitor<IOEdge> {
-    std::set<Block*> dominators;
+    std::set<OutputPort*> dominators;
 
     Terminate visit(const ConnectionDB*,
                     const IOEdge& edge) {
-        dominators.insert(edge.endPort()->owner());
+        dominators.insert(edge.endPort());
         return Continue;
     }
 };
 
 void FindDominators(const ConnectionDB* conns,
-                    Block* b,
-                    std::set<Block*>& dominators) {
+                    const vector<InputPort*>& b,
+                    std::set<OutputPort*>& dominators)
+{
     DominatorVisitor visitor;
     GraphSearch<DominatorVisitor, DFS> search(conns, visitor);
-    search.go(b->inputs());
+    search.go(b);
     dominators.swap(visitor.dominators);
+}
+void FindDominators(const ConnectionDB* conns,
+                    Block* b,
+                    std::set<Block*>& dominators) {
+    std::set<OutputPort*> opDoms;
+    FindDominators(conns, b->inputs(), opDoms);
+    for (auto op: opDoms)
+        dominators.insert(op->owner());
 }
 
 

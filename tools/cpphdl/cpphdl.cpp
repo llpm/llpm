@@ -54,7 +54,10 @@ int main(int argc, const char** argv) {
         d.elaborations()->append<SynthesizeTagsPass>();
         d.elaborations()->append<RefinePass>();
 
+
+        d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<CanonicalizeInputs>();
+        d.optimizations()->append<SimplifyWaits>();
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<SimplifyPass>();

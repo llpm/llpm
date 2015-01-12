@@ -4,15 +4,29 @@
 #include <llpm/ports.hpp>
 #include <passes/pass.hpp>
 
+#include <set>
+
 namespace llpm {
 
 // Fwd defs. I'll stop insulting C++ now. It feels like beating a dead
 // horse. Too bad it's not actually dead.
 class Transformer;
+class Wait;
 
 class SimplifyPass : public ModulePass {
 public:
     SimplifyPass(Design& d) :
+        ModulePass(d) 
+    { }
+
+    virtual void runInternal(Module*);
+};
+
+class SimplifyWaits:  public ModulePass {
+    void collectControls(
+        Transformer& t, Wait*);
+public:
+    SimplifyWaits(Design& d) :
         ModulePass(d) 
     { }
 

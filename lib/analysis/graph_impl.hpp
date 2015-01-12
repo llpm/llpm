@@ -143,11 +143,14 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
                         }
                     }
                 }
-                if (!foundDst)
+                if (!foundDst) {
                     t = _visitor.pathEnd(_conns, current);
+                }
             }
-        }
-        if (t == TerminateSearch) {
+        } 
+        if (t == TerminatePath) {
+            t = _visitor.pathEnd(_conns, current);
+        } else if (t == TerminateSearch) {
             terminate = TerminateSearch;
         }
     }

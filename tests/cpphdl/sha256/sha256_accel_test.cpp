@@ -12,6 +12,7 @@ static T myrand() {
 
 bool test1() {
     SHA256 sha;
+    printf("Starting SHA256 unitttest\n");
     sha.start();
 
     printf("test1 Testing update\n");
