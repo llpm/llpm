@@ -23,7 +23,11 @@ env = Environment(
     LIBPATH=map(lambda x: "bin/" + x, LibPaths),
     LINKFLAGS=[]
               + CxxLdFlags
-              + map(lambda x: "-Wl,-rpath=\$$ORIGIN/%s" % x, LibPaths))
+              + map(lambda x: "-Wl,-rpath=\$$ORIGIN/%s" % x,
+              LibPaths),
+    tools = ["default", "doxygen"],
+    toolpath = '.'
+)
 
 libenv = env.Clone()
 llpm = libenv.SharedLibrary('bin/llpm', Glob("./lib/*.cpp") +
@@ -45,5 +49,6 @@ for f in supportFiles:
         i = env.Install("bin/" + str(f.get_dir()), f)
         Default(i)
 
+docs = env.Doxygen("Doxyfile")
 
 

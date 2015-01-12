@@ -1,8 +1,6 @@
-# Binary outputs
+# Outputs
 /bin
-
-# Working directory
-/working
+/docs
 
 # Compiled Object files
 *.slo
