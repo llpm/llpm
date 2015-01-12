@@ -24,7 +24,7 @@ Wait::Wait(llvm::Type* type) :
 
 Wait::~Wait() {
     for (auto ip: _controls) {
-        delete ip;
+        // delete ip;
     }
 }
 

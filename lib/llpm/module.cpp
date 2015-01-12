@@ -55,7 +55,7 @@ void ContainerModule::removeInputPort(InputPort* ip) {
     auto vecLoc = find(_inputs.begin(), _inputs.end(), ip);
     assert(vecLoc != _inputs.end());
     _inputs.erase(vecLoc);
-    delete ip;
+    // delete ip;
 }
 
 OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
@@ -92,7 +92,7 @@ void ContainerModule::removeOutputPort(OutputPort* op) {
     _outputMap.erase(f);
     auto vecLoc = find(_outputs.begin(), _outputs.end(), op);
     _outputs.erase(vecLoc);
-    delete op;
+    // delete op;
 }
 
 Interface* ContainerModule::addClientInterface(
