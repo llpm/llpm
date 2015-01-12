@@ -197,10 +197,19 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
     if (!BlockAllowed(b))
         return false;
 
+    map<OutputPort*, InputPort*> existingInputValues;
+    for (auto ip: inputs()) {
+        auto driver = pdb->findSource(ip);
+        if (driver)
+            existingInputValues[driver] = ip;
+    }
+
     map<InputPort*, OutputPort*> internalizedOutputs;
     map<OutputPort*, set<InputPort*> > internalizedInputs;
     if (_conns.numConnections() != 0) {
-        // Make sure the block is adjacent to this CR
+        /* Make sure this block is valid for inclusion */
+        
+        // First, determine if it would add a new input
         bool createsInput = false;
         for (InputPort* ip: b->inputs()) {
             OutputPort* oldSource = pdb->findSource(ip);
@@ -208,10 +217,13 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
                 oldSource->owner() == this &&
                 canGrow(oldSource))
                 internalizedOutputs[ip] = oldSource;
-            else if (constPorts.count(ip) == 0)
+            else if (constPorts.count(ip) == 0 &&
+                     (existingInputValues.find(oldSource) ==
+                         existingInputValues.end()) )
                 createsInput = true;
-        } 
+        }
 
+        // Determine if it would add a new Output
         bool createsOutput = false;
         for (OutputPort* op: b->outputs()) {
             vector<InputPort*> oldSinks;
@@ -239,6 +251,8 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
                    internalizedInputs.size(), foundAsSink, foundAsDriver);
         }
 #endif
+        /* Now check a bunch of conditions based on the above
+         * analysis */
 
         // Must be adjacent
         if (!foundAsDriver && !foundAsSink) {
@@ -328,14 +342,23 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
             }
         }
 
+
         // Make a new input port
         OutputPort* oldSource = pdb->findSource(ip);
         if (oldSource)
             pdb->disconnect(ip, oldSource);
 
-        auto newIP = addInputPort(ip);
-        if (oldSource)
-            pdb->connect(newIP, oldSource);
+        auto existingF = existingInputValues.find(oldSource);
+        if (existingF == existingInputValues.end()) {
+            // New input value, so create a new input port
+            auto newIP = addInputPort(ip);
+            if (oldSource)
+                pdb->connect(newIP, oldSource);
+        } else {
+            // Just tie it to the existing port
+            auto intDriver = getDriver(existingF->second);
+            _conns.connect(intDriver, ip);
+        }
     }
 
     return true;

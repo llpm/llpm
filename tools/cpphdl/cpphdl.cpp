@@ -100,6 +100,11 @@ int main(int argc, const char** argv) {
             printf("Writing graphviz output...\n");
             gv.writeModule(fs.create(mod->name() + ".gv"), mod, true);
             gv.writeModule(fs.create(mod->name() + "_simple.gv"), mod, false);
+            vector<Module*> submodules;
+            mod->submodules(submodules);
+            for (auto sm: submodules) {
+                gv.writeModule(fs.create(sm->name() + ".gv"), sm, true);
+            }
 
             printf("Writing Verilog output...\n");
             vw.writeModule(fs, mod);
