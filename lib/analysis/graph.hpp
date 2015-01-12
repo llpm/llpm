@@ -93,6 +93,43 @@ typedef Edge<InputPort, OutputPort> SinkSourceEdge;
 typedef Edge<Port, Port>            GenericEdge;
 
 template<typename SrcPort, typename DstPort>
+class VisitPort {
+public:
+    typedef SrcPort SrcPortTy;
+    typedef DstPort DstPortTy;
+
+protected:
+    DstPort* _dst;
+
+public:
+    VisitPort(SrcPort* src, DstPort* dst):
+        _dst(dst)
+    { }
+
+    VisitPort push(SrcPort* src, DstPort* dst) const {
+        return VisitPort(src, dst);
+    }
+
+    DstPort* end() const {
+        return _dst;
+    }
+    DstPort* endPort() const {
+        return _dst;
+    }
+
+    bool operator==(const VisitPort& e) const {
+        return _dst == e._dst;
+    }
+
+    bool operator<(const VisitPort& e) const {
+        return _dst < e._dst;
+    }
+};
+
+typedef VisitPort<OutputPort, InputPort> VisitInputPort;
+typedef VisitPort<InputPort, OutputPort> VisitOutputPort;
+
+template<typename SrcPort, typename DstPort>
 class Path {
     std::vector< std::pair<SrcPort*, DstPort*> > _path;
 

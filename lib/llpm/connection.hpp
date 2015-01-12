@@ -186,6 +186,9 @@ public:
     size_t numConnections() const {
         return _sourceIdx.size();
     }
+    size_t size() const {
+        return numConnections();
+    }
 
     void findSinks(const OutputPort* op,
                    std::vector<InputPort*>& out) const;

@@ -344,20 +344,28 @@ void SimplifyWaits::runInternal(Module* mod) {
 
     set<Block*> blocks;
     t.conns()->findAllBlocks(blocks);
+    unsigned ctr = 0;
     for (auto b: blocks) {
         if (b->is<Wait>()) {
             collectControls(t, b->as<Wait>());
+            ctr++;
+            if (ctr % 100 == 0) {
+                printf(".");
+                fflush(stdout);
+            }
         }
     }
+    if (ctr >= 100)
+        printf("\n");
 }
 
-struct SimplifyWaitsVisitor: public Visitor<IOEdge> {
+struct SimplifyWaitsVisitor: public Visitor<VisitOutputPort> {
     unsigned pass = 1;
     std::set<OutputPort*> allDominators; 
     std::set<OutputPort*> initPoints;
 
     Terminate visit(const ConnectionDB*,
-                    const IOEdge& edge)
+                    const VisitOutputPort& edge)
     {
         auto op = edge.endPort();
         if (pass == 1) {
@@ -373,7 +381,7 @@ struct SimplifyWaitsVisitor: public Visitor<IOEdge> {
     }
     
     Terminate pathEnd(const ConnectionDB*,
-                      const IOEdge& edge)
+                      const VisitOutputPort& edge)
     {
         auto op = edge.endPort();
         if (op->owner()->is<Constant>() ||
@@ -392,7 +400,7 @@ void SimplifyWaits::collectControls(
     GraphSearch<SimplifyWaitsVisitor, DFS> search(t.conns(), visitor);
     search.go(vector<InputPort*>({wait->din()}));
     visitor.pass = 2;
-    search.go(vector<InputPort*>({wait->controls()}));
+    search.go(vector<InputPort*>(wait->controls()));
 
     if (visitor.initPoints.empty()) {
         auto driver = t.conns()->findSource(wait->din());

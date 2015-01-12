@@ -10,14 +10,15 @@ namespace llpm {
 
 template<typename Path>
 Terminate Visitor<Path>::next(
-        const ConnectionDB*,
-        const PathTy& path, 
+        const ConnectionDB* conns,
+        const PathTy& path,
         std::vector<typename PathTy::SrcPortTy*>& out)
 {
     _visits += 1;
-    if ((_visits % 25000) == 0 && _visits > 0) {
-        printf("Graph visits: %lu\n", _visits);
-    }
+    // if ((_visits % 25000) == 0 && _visits > 0) {
+        // printf("Graph visits: %lu / %lu\n",
+               // _visits, conns->size());
+    // }
     Block* b = path.endPort()->owner();
     std::set<typename PathTy::SrcPortTy*> setOut;
     b->deps(path.endPort(), setOut);
