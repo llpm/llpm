@@ -175,6 +175,16 @@ public:
         assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
         return inputs();
     }
+
+    virtual bool refinable() const {
+        return true;
+    }
+
+    virtual bool refine(ConnectionDB& conns) const {
+        return refineToExtracts(conns);
+    }
+
+    virtual bool refineToExtracts(ConnectionDB& conns) const;
 };
 
 // Extract a single element from a message

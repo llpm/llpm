@@ -32,6 +32,13 @@ void PipelineDependentsPass::runInternal(Module* mod) {
             numNormalOutputs <= 1)
             continue;
 
+        if (block->is<Split>()) {
+            // if this block is a "split" we can resolve the non-tied
+            // inputs by replacing it with some extracts instead.
+            if (block->as<Split>()->refineToExtracts(*t.conns()))
+                continue;
+        }
+
         // Since this block has dependent outputs, all of them better
         // be connected to pipeline regs!
         for (auto op: block->outputs()) {
