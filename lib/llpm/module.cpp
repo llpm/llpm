@@ -38,8 +38,8 @@ InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
             num++;
         }
     }
-    auto dummy = new DummyBlock(ip);
     InputPort* extIp = new InputPort(this, ip->type(), name);
+    auto dummy = new DummyBlock(extIp);
     _inputMap.insert(make_pair(extIp, dummy));
     dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
@@ -72,8 +72,8 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
         }
     }
 
-    auto dummy = new DummyBlock(op);
     OutputPort* extOp = new OutputPort(this, op->type(), name);
+    auto dummy = new DummyBlock(extOp);
     _outputMap.insert(make_pair(extOp, dummy));
     dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
@@ -99,13 +99,13 @@ Interface* ContainerModule::addClientInterface(
         OutputPort* req, InputPort* resp, std::string name) {
     auto iface = new Interface(this, resp->type(), req->type(), false, name);
 
-    auto opdummy = new DummyBlock(req);
+    auto opdummy = new DummyBlock(iface->dout());
     _outputMap.insert(make_pair(iface->dout(), opdummy));
     opdummy->name(name + "_opdummy");
     conns()->blacklist(opdummy);
     conns()->connect(req, opdummy->din());
 
-    auto ipdummy = new DummyBlock(resp);
+    auto ipdummy = new DummyBlock(iface->din());
     _inputMap.insert(make_pair(iface->din(), ipdummy));
     ipdummy->name(name + "_ipdummy");
     conns()->blacklist(ipdummy);
@@ -118,13 +118,13 @@ Interface* ContainerModule::addServerInterface(
         InputPort* req, OutputPort* resp, std::string name) {
     auto iface = new Interface(this, req->type(), resp->type(), true, name);
 
-    auto opdummy = new DummyBlock(resp);
+    auto opdummy = new DummyBlock(iface->dout());
     _outputMap.insert(make_pair(iface->dout(), opdummy));
     opdummy->name(name + "_opdummy");
     conns()->blacklist(opdummy);
     conns()->connect(resp, opdummy->din());
 
-    auto ipdummy = new DummyBlock(req);
+    auto ipdummy = new DummyBlock(iface->din());
     _inputMap.insert(make_pair(iface->din(), ipdummy));
     ipdummy->name(name + "_ipdummy");
     conns()->blacklist(ipdummy);
@@ -236,7 +236,8 @@ const std::vector<InputPort*>& ContainerModule::deps(
     return deps.deps;
 }
 
-ContainerModule::Deps ContainerModule::_findDeps(const OutputPort* op) {
+ContainerModule::Deps ContainerModule::_findDeps(
+        const OutputPort* op) const {
     Deps ret;
     auto internalSink = getSink(op);
     set<OutputPort*> depSet;

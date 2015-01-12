@@ -371,17 +371,17 @@ struct DepFindingVisitor : public Visitor<IOEdge> {
     }
 };
 
-void FindDependencies(Module* mod,
+void FindDependencies(const Module* mod,
                       InputPort* ip,
                       std::set<OutputPort*>& deps,
                       DependenceRule& rule)
 {
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->conns();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
 
     DepFindingVisitor visitor;
-    GraphSearch<DepFindingVisitor, BFS> search(conns, visitor);
+    GraphSearch<DepFindingVisitor, DFS> search(conns, visitor);
     search.go(vector<InputPort*>{ip});
     deps.swap(visitor.deps);
     rule = visitor.rule;

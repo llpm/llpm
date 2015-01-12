@@ -37,6 +37,8 @@ public:
     void finalize();
 
     virtual void validityCheck() const;
+
+    // virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
 };
 
 class FormControlRegionPass : public ModulePass {

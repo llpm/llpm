@@ -85,8 +85,10 @@ public:
 
     // For opaque modules, this may return NULL
     virtual ConnectionDB* conns() = 0;
-    // Return the current change count -- useful for tracking if changes have
-    // been made to a module
+    virtual const ConnectionDB* conns() const = 0;
+
+    // Return the current change count -- useful for tracking if
+    // changes have been made to a module
     virtual uint64_t changeCounter() = 0;
 
     virtual void blocks(std::vector<Block*>&) const = 0;
@@ -225,7 +227,7 @@ protected:
         std::vector<InputPort*> deps;
     };
     CacheMap<const OutputPort*, Deps> _deps;
-    Deps _findDeps(const OutputPort*);
+    Deps _findDeps(const OutputPort*) const;
 
 public:
     ContainerModule(Design& design, std::string name) :

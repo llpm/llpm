@@ -124,27 +124,27 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
             std::vector<SrcPortTy*> next;
             t = _visitor.next(_conns, current, next);
             if (t == Continue) {
+                bool foundDst = false;
                 for (SrcPortTy* src: next) {
                     std::vector<DstPortTy*> dsts;
                     _conns->find(src, dsts);
-                    if (dsts.size() == 0) {
-                        t = _visitor.pathEnd(_conns, current);
-                    } else {
-                        for (DstPortTy* dst: dsts) {
-                            PathTy p = current.push(src, dst);
-                            if (seen.count(p))
-                                continue;
-                            seen.insert(p);
-                            switch (Algo) {
-                            case DFS:
-                                queue.push_front(p);
-                                break;
-                            case BFS:
-                                queue.push_back(p);
-                            }
+                    for (DstPortTy* dst: dsts) {
+                        foundDst = true;
+                        PathTy p = current.push(src, dst);
+                        if (seen.count(p))
+                            continue;
+                        seen.insert(p);
+                        switch (Algo) {
+                        case DFS:
+                            queue.push_front(p);
+                            break;
+                        case BFS:
+                            queue.push_back(p);
                         }
                     }
                 }
+                if (!foundDst)
+                    t = _visitor.pathEnd(_conns, current);
             }
         }
         if (t == TerminateSearch) {

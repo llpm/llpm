@@ -391,4 +391,23 @@ void ControlRegion::finalize() {
     this->unifyOutput();
 }
 
+
+#if 0
+const std::vector<InputPort*>&
+    ControlRegion::deps(const OutputPort* op) const {
+    auto pvec = _findDeps(op); //ContainerModule::deps(op);
+    set<InputPort*> depSet(pvec.deps.begin(), pvec.deps.end());
+    set<InputPort*> inpSet(inputs().begin(), inputs().end());
+    if (depSet != inpSet) {
+        printf("Bad find deps!\n");
+        for (auto ip: pvec.deps) {
+            printf("  %s %s\n",
+                   ip->name().c_str(), ip->owner()->name().c_str());
+        }
+        _findDeps(op);
+    }
+    return ContainerModule::deps(op);
+}
+
+#endif
 } // namespace llpm
