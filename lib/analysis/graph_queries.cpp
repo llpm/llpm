@@ -218,27 +218,49 @@ bool CouldReorderTokens(Interface* iface) {
     return singleSource && !reorderPotential;
 }
 
-typedef Path<OutputPort, InputPort> CyclePath;
-struct CycleFindingVisitor: public Visitor<CyclePath> {
-    vector< std::pair<OutputPort*, InputPort*> > cycle;
-    set< std::pair<OutputPort*, InputPort*> > seen;
+struct CycleFindingVisitor: public Visitor<OIEdge> {
+    std::vector<Connection> stackVec;
+    std::set<OutputPort*> stackSet;
     boost::function<bool(Block*)> ignoreBlock;
+    unsigned visits = 0;
+
+    std::vector<Connection> cycle;
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
-                    const CyclePath& path) {
-        if (ignoreBlock(path.endPort()->owner())) {
+                    const OIEdge& edge) {
+        visits++;
+        stackVec.push_back(edge);
+        stackSet.insert(edge.end().first);
+
+        if (ignoreBlock(edge.endPort()->owner())) {
             // Don't visit this connection
             return TerminatePath;
-        } else if (path.hasCycle()) {
-            this->cycle = path.extractCycle();
-            return TerminateSearch;
-        } else if (seen.count(path.end())) {
-            return TerminatePath;
-        } else {
-            seen.insert(path.end());
-            return Continue;
         }
+        return Continue;
+    }
+
+    Terminate next(const ConnectionDB* conns,
+                   const OIEdge& edge, 
+                   std::vector<OutputPort*>& deps)
+    {
+        Visitor<OIEdge>::next(conns, edge, deps);
+        for (auto dep: deps) {
+            if (stackSet.find(dep) != stackSet.end()) {
+                Connection c = edge.end();
+                auto f = find(stackVec.begin(), stackVec.end(), c);
+                cycle = vector<Connection>(f, stackVec.end());
+                return TerminateSearch;
+            } 
+        }
+        return Continue;
+    }
+
+    Terminate pop(const ConnectionDB*) {
+        assert(stackVec.size() > 0);
+        stackSet.erase(stackVec.back().source());
+        stackVec.pop_back();
+        return Continue;
     }
 };
 
@@ -254,13 +276,14 @@ bool FindCycle(Module* mod,
     vector<OutputPort*> init;
     mod->internalDrivers(init);
     search.go(init);
+    // printf("%u / %lu visits in %s\n", visitor.visits, conns->size(),
+           // mod->name().c_str());
 
-    cycle.resize(visitor.cycle.size());
-    for (unsigned j=0; j<visitor.cycle.size(); j++) {
-        cycle[j] = visitor.cycle[j];
+    if (visitor.cycle.size() > 0) {
+        cycle = visitor.cycle;
+        return true;
     }
-
-    return cycle.size() > 0;
+    return false;
 }
 
 struct ConstFindingVisitor : public Visitor<OIEdge> {

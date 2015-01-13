@@ -19,11 +19,11 @@ void CheckConnectionsPass::runInternal(Module* m) {
     set<Block*> blocks;
     conns->findAllBlocks(blocks);
     auto& namer = m->design().namer();
-    bool allGood = true;
+    // bool allGood = true;
     for (auto block: blocks) {
         for (auto ip: block->inputs()) {
             if (conns->findSource(ip) == NULL) {
-                allGood = false;
+                // allGood = false;
                 fprintf(stderr,
                         "WARNING: could not find driver for %s: %s %s\n",
                         namer.getName(ip, m).c_str(),
@@ -36,8 +36,8 @@ void CheckConnectionsPass::runInternal(Module* m) {
         }
     }
 
-    if (allGood)
-        printf("No bad connections found in %s.\n", m->name().c_str());
+    // if (allGood)
+        // printf("No bad connections found in %s.\n", m->name().c_str());
 }
 
 void CheckOutputsPass::runInternal(Module* m) {

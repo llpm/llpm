@@ -27,7 +27,6 @@ bool test1() {
     for (unsigned i=0; i<capacity; i++) {
         sa.push(myrand<uint64_t>());
         // sa.push(i + 2);
-        printf("   checking size...\n");
         sa.sz();
     }
 

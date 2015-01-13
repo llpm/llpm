@@ -97,19 +97,35 @@ void Path<SrcPort, DstPort>::print() const {
     }
 }
 
+template<typename PathTy>
+struct Next {
+    PathTy path;
+    bool pop;
+
+    static Next newPop() {
+        Next n = { PathTy(), true };
+        return n;
+    }
+
+    static Next newPath(PathTy p) {
+        Next n = { p, false };
+        return n;
+    }
+};
+
 template<typename Visitor,
          const SearchAlgo Algo>
 template<typename Container>
 void GraphSearch<Visitor, Algo>::go(const Container& init) {
     std::set<PathTy> seen;
-    std::deque<PathTy> queue;
+    std::deque<Next<PathTy>> queue;
     for (SrcPortTy* src: init) {
         std::vector<DstPortTy*> dsts;
         _conns->find(src, dsts);
 
         for (DstPortTy* dst: dsts) {
             PathTy p(src, dst);
-            queue.push_front(p);
+            queue.push_back(Next<PathTy>::newPath(p));
         }
     }
 
@@ -120,37 +136,49 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
         auto current = queue.front();
         queue.pop_front();
         
-        Terminate t = _visitor.visit(_conns, current);
-        if (t == Continue) {
-            std::vector<SrcPortTy*> next;
-            t = _visitor.next(_conns, current, next);
+        Terminate t;
+        if (current.pop) {
+            t = _visitor.pop(_conns);
+        } else {
+            t = _visitor.visit(_conns, current.path);
+            if (Algo == DFS) {
+                queue.push_front(Next<PathTy>::newPop());
+            }
             if (t == Continue) {
-                bool foundDst = false;
-                for (SrcPortTy* src: next) {
-                    std::vector<DstPortTy*> dsts;
-                    _conns->find(src, dsts);
-                    for (DstPortTy* dst: dsts) {
-                        foundDst = true;
-                        PathTy p = current.push(src, dst);
-                        if (seen.count(p))
-                            continue;
-                        seen.insert(p);
-                        switch (Algo) {
-                        case DFS:
-                            queue.push_front(p);
-                            break;
-                        case BFS:
-                            queue.push_back(p);
+                std::vector<SrcPortTy*> next;
+                t = _visitor.next(_conns, current.path, next);
+                if (t == Continue) {
+                    bool foundDst = false;
+                    for (SrcPortTy* src: next) {
+                        std::vector<DstPortTy*> dsts;
+                        _conns->find(src, dsts);
+                        for (DstPortTy* dst: dsts) {
+                            foundDst = true;
+                            PathTy p = current.path.push(src, dst);
+                            if (seen.count(p))
+                                continue;
+                            seen.insert(p);
+                            switch (Algo) {
+                            case DFS:
+                                queue.push_front(Next<PathTy>::newPath(p));
+                                break;
+                            case BFS:
+                                queue.push_back(Next<PathTy>::newPath(p));
+                            }
                         }
                     }
+                    if (!foundDst) {
+                        t = _visitor.pathEnd(_conns, current.path);
+                    }
                 }
-                if (!foundDst) {
-                    t = _visitor.pathEnd(_conns, current);
-                }
+            } 
+            if (!current.pop && Algo == BFS) { 
+                queue.push_back(Next<PathTy>::newPop());
             }
-        } 
+        }
+
         if (t == TerminatePath) {
-            t = _visitor.pathEnd(_conns, current);
+            t = _visitor.pathEnd(_conns, current.path);
         } else if (t == TerminateSearch) {
             terminate = TerminateSearch;
         }

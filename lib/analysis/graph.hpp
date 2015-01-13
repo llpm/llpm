@@ -35,7 +35,15 @@ struct Visitor {
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
-                    const PathTy& path);
+                    const PathTy& path) {
+        return Continue;
+    }
+
+    // When we are done recursively visiting a node, run this. Can be
+    // used for the client to maintain a stack
+    Terminate pop(const ConnectionDB*) {
+        return Continue;
+    }
 
     // Find the src ports exposed by the vertex we are visiting.
     Terminate next(const ConnectionDB*,
@@ -49,19 +57,15 @@ struct Visitor {
 };
 
 template<typename SrcPort, typename DstPort>
-class Edge {
+class Edge : public std::pair<SrcPort*, DstPort*> {
 public:
     typedef SrcPort SrcPortTy;
     typedef DstPort DstPortTy;
 
-protected:
-    SrcPort* _src;
-    DstPort* _dst;
+    Edge() { }
 
-public:
     Edge(SrcPort* src, DstPort* dst):
-        _src(src),
-        _dst(dst)
+        std::pair<SrcPort*, DstPort*>(src, dst)
     { }
 
     Edge push(SrcPort* src, DstPort* dst) const {
@@ -69,20 +73,10 @@ public:
     }
 
     std::pair<SrcPort*, DstPort*> end() const {
-        return std::make_pair(_src, _dst);
+        return *this;
     }
     DstPort* endPort() const {
-        return _dst;
-    }
-
-    bool operator==(const Edge& e) const {
-        return _src == e._src && _dst == e._dst;
-    }
-
-    bool operator<(const Edge& e) const {
-        if (_src == e._src)
-            return _dst < e._dst;
-        return _src < e._src;
+        return this->second;
     }
 };
 
@@ -102,6 +96,8 @@ protected:
     DstPort* _dst;
 
 public:
+    VisitPort() { }
+
     VisitPort(SrcPort* src, DstPort* dst):
         _dst(dst)
     { }
@@ -136,6 +132,8 @@ class Path {
 public:
     typedef SrcPort SrcPortTy;
     typedef DstPort DstPortTy;
+
+    Path() { }
 
     Path(SrcPort* src, DstPort* dst) {
         _path.push_back(std::make_pair(src, dst));

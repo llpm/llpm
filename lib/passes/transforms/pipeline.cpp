@@ -71,6 +71,8 @@ void PipelineCyclesPass::runInternal(Module* mod) {
     if (!t.canMutate())
         return;
 
+    unsigned count = 0;
+
     // Strictly speaking, pipeline registers are only necessary for
     // _correctness_ when there exists a cycle in the graph. Therefore,
     // the _minimum_ pipelining is found by locating graph cycles and breaking
@@ -83,7 +85,13 @@ void PipelineCyclesPass::runInternal(Module* mod) {
         Connection toBreak = cycle.back();
         auto preg = new PipelineRegister(toBreak.source());
         t.insertBetween(toBreak, preg);
+        // printf("    preg at: %s -> %s\n",
+               // toBreak.source()->owner()->globalName().c_str(),
+               // toBreak.sink()->owner()->globalName().c_str());
+        count++;
     }
+
+    printf("    Inserted %u pipeline registers\n", count);
 }
 
 } // namespace llpm
