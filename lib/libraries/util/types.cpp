@@ -4,6 +4,7 @@
 #include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
+#include <llpm/module.hpp>
 
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Constants.h>
@@ -30,17 +31,25 @@ StructTwiddler::StructTwiddler(llvm::Type* input,
 
 bool StructTwiddler::refine(ConnectionDB& conns) const
 {
-    Split* split = new Split(this->din()->type());
-    Join*  join  = new Join(this->dout()->type());
+    if (_mapping.size() > 0) {
+        Split* split = new Split(this->din()->type());
+        Join*  join  = new Join(this->dout()->type());
 
-    unsigned ji = 0;
-    for (unsigned si: _mapping) {
-        conns.connect(split->dout(si), join->din(ji));
-        ji += 1;
+        unsigned ji = 0;
+        for (unsigned si: _mapping) {
+            conns.connect(split->dout(si), join->din(ji));
+            ji += 1;
+        }
+
+        conns.remap(this->din(), {split->din()});
+        conns.remap(this->dout(), join->dout());
+    } else {
+        auto empty = new Constant(dout()->type());
+        auto wait = new Wait(empty->dout()->type());
+        conns.connect(empty->dout(), wait->din());
+        conns.remap(dout(), wait->dout());
+        conns.remap(din(), wait->newControl(din()->type()));
     }
-
-    conns.remap(this->din(), {split->din()});
-    conns.remap(this->dout(), join->dout());
 
     return true;
 }

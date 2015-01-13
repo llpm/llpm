@@ -27,6 +27,10 @@ public:
 
         vector<InputPort*> inputs;
 
+        Wait* controlWait = new Wait(lbb->output()->type());
+        inputs.push_back(controlWait->newControl(lbb->input()->type()));
+        conns.remap(lbb->output(), controlWait->dout());
+
         llvm::BasicBlock* bb = lbb->basicBlock();
         map<llvm::Instruction*, LLVMInstruction*> blockMap;
         map<llvm::Value*, OutputPort*> valueMap;
@@ -163,7 +167,7 @@ public:
 
         // Inform the DB about the external connection mapping
         conns.remap(lbb->input(), inputs);
-        conns.remap(lbb->output(), output->dout());
+        conns.connect(output->dout(), controlWait->din());
 
         return true;
     }
