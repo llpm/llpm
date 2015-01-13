@@ -19,14 +19,23 @@ bool test1() {
     printf("Beginning sort test...\n");
     sa.clear();
 
+    printf("   checking size...\n");
+    sa.sz();
+
     printf("   pushing...\n");
     unsigned capacity = sa.capacity();
     for (unsigned i=0; i<capacity; i++) {
-        sa.push(myrand<uint64_t>());
+        // sa.push(myrand<uint64_t>());
+        sa.push(i + 2);
+        printf("   checking size...\n");
+        sa.sz();
     }
 
     printf("   sorting...\n");
     sa.sort();
+    printf("   checking size...\n");
+    sa.sz();
+ 
 
     printf("   reading...\n");
     uint64_t last;

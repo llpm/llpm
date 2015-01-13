@@ -18,6 +18,7 @@ public:
     }
 
     unsigned capacity();
+    uint64_t sz();
     void push(uint64_t v);
     uint64_t read(unsigned idx);
     void clear();

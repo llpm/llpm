@@ -43,6 +43,10 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
                 fnName = fnNameArgs.substr(0, parenLoc);
             }
 
+            if (fnName== className)
+                // Found a constructor! Skip them.
+                continue;
+
             printf("Found class member: %s\n", demangledName.c_str());
             chClass->addMember(
                 fnName,

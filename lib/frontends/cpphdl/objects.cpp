@@ -223,7 +223,7 @@ unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
     auto gep = getClassDeref(ptr);
 
     // I can deal with this since we are indexing off of my base type
-    assert(gep->getNumOperands() >= 3);
+    assert(gep->getNumOperands() == 3);
     llvm::Value* operand = gep->getOperand(2); 
     llvm::ConstantInt* ci =
         llvm::dyn_cast_or_null<llvm::ConstantInt>(operand);

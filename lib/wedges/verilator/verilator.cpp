@@ -932,6 +932,9 @@ void VerilatorWedge::addAssertsToTest(Module* mod, llvm::Function* test) {
         for (auto& ins: bb.getInstList()) {
             if (ins.getOpcode() == llvm::Instruction::Call) {
                 llvm::CallInst* ci = llvm::dyn_cast<llvm::CallInst>(&ins);
+                if (ci->getCalledFunction() == NULL)
+                    continue; // Skip indirect function calls
+                
                 string rawFuncName =
                     ci->getCalledFunction()->getName().str();
                 if (rawFuncName.rfind("_sw") == (rawFuncName.size() - 3)) {
