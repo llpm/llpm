@@ -15,12 +15,15 @@ void PassManager::debug(Pass* p, Module* mod) {
                         % mod->name()
                         % _name
                         % ctr);
+
+    auto f =_design.workingDir()->create(fn);
     _design.gv()->writeModule(
-        _design.workingDir()->create(fn),
+        f,
         mod,
-        true,
+        false,
         "After pass " + cpp_demangle(typeid(*p).name()));
     _debugCounter[mod]++;
+    f->close();
 }
 
 bool PassManager::run(bool debug) {

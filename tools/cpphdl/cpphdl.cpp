@@ -14,6 +14,7 @@
 #include <passes/transforms/synthesize_mem.hpp>
 #include <passes/transforms/synthesize_forks.hpp>
 #include <passes/transforms/pipeline.hpp>
+#include <passes/print.hpp>
 
 #include <passes/manager.hpp>
 #include <passes/transforms/simplify.hpp>
@@ -50,15 +51,16 @@ int main(int argc, const char** argv) {
         }
 
         d.elaborations()->append<SynthesizeMemoryPass>();
-        d.elaborations()->append<SynthesizeTagsPass>();
         d.elaborations()->append<RefinePass>();
-
 
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<CanonicalizeInputs>();
         d.optimizations()->append<SimplifyWaits>();
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
+        d.optimizations()->append<SimplifyPass>();
+        d.optimizations()->append<GVPrinterPass>();
+        d.optimizations()->append<SynthesizeTagsPass>();
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<PipelineDependentsPass>();
         d.optimizations()->append<PipelineCyclesPass>();
@@ -77,9 +79,9 @@ int main(int argc, const char** argv) {
         // }
  
         printf("Elaborating...\n");
-        d.elaborate(true);
+        d.elaborate();
         printf("Optimizing...\n");
-        d.optimize(true);
+        d.optimize();
 
         for (Module* mod: d.modules()) {
             printf("Interfaces: \n");
@@ -101,8 +103,13 @@ int main(int argc, const char** argv) {
             }
 
             printf("Writing graphviz output...\n");
-            gv.writeModule(fs->create(mod->name() + ".gv"), mod, true);
-            gv.writeModule(fs->create(mod->name() + "_simple.gv"), mod, false);
+            auto f =fs->create(mod->name() + ".gv");
+            gv.writeModule(f, mod, true);
+            f->close();
+            f = fs->create(mod->name() + "_simple.gv");
+            gv.writeModule(f, mod, false);
+            f->close();
+
             vector<Module*> submodules;
             mod->submodules(submodules);
             for (auto sm: submodules) {
