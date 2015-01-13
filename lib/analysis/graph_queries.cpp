@@ -155,6 +155,9 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
             foundSource = true;
             addSource(path);
             return TerminatePath;
+        } else  if (conns->isInternalDriver(current)) {
+            addSource(path);
+            return TerminatePath;
         } else {
             if (pathCycle)
                 return TerminatePath;
@@ -162,21 +165,6 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
                 return Continue;
         }
     }
-
-    // Find the src ports exposed by the vertex we are visiting.
-    Terminate next(const ConnectionDB* conns,
-                   const IOPath& path, 
-                   std::vector<typename PathTy::SrcPortTy*>& nextvec) {
-        OutputPort* current = path.endPort();
-        if (conns->isInternalDriver(current)) {
-            addSource(path);
-            return TerminatePath;
-        }
-
-        auto deps = current->deps();
-        nextvec.insert(nextvec.end(), deps.begin(), deps.end());
-        return Continue;
-   }
 };
 
 bool TokenOrderAnalysis(
