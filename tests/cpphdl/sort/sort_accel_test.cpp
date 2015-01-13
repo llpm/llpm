@@ -4,8 +4,9 @@
 #include <limits>
 #include <cassert>
 
-static boost::random::mt19937 rng;
 using namespace std;
+
+static boost::random::mt19937 rng;
 
 template<typename T>
 static T myrand() {
@@ -15,6 +16,9 @@ static T myrand() {
 }
 
 bool test1() {
+    boost::random::uniform_int_distribution<uint64_t>
+        dist(0, 1000);
+
     SortAccel sa;
     printf("Beginning sort test...\n");
     sa.clear();
@@ -25,8 +29,9 @@ bool test1() {
     printf("   pushing...\n");
     unsigned capacity = sa.capacity();
     for (unsigned i=0; i<capacity; i++) {
-        sa.push(myrand<uint64_t>());
-        // sa.push(i + 2);
+        // sa.push(myrand<uint64_t>());
+        // sa.push(400 - i);
+        sa.push(dist(rng));
         sa.sz();
     }
 
@@ -35,17 +40,18 @@ bool test1() {
     printf("   checking size...\n");
     sa.sz();
  
+#if 0
+    for (unsigned i=0; i<capacity; i++) {
+        printf("%lu\n", sa.vals[i]);
+    }
+#endif
 
     printf("   reading...\n");
-    uint64_t last;
     for (unsigned i=0; i<capacity; i++) {
         uint64_t v = sa.read(i);
-        if (i > 0)
-            assert(last < v);
-        last = v;
     }
 
-    printf("Apparently everything worked!\n");
+    printf("Test exiting\n");
     return true;
 }
 

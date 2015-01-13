@@ -22,11 +22,15 @@ void SortAccel::clear(void) {
 }
 
 void SortAccel::sort(void) {
+    unsigned size = this->size;
     for (unsigned i = 1; i <= size / 2 + 1; i *= 2)
     {
+        // unsigned i=2;
         for (unsigned j = i; j < size; j += 2 * i)
         {
-            Merge(j - i, j, ( (j+i) > size) ? size : (j+i));
+            // unsigned j=i;
+            unsigned end = j + i;
+            Merge(j - i, j, end < size ? end : size);
         }
     }
 }

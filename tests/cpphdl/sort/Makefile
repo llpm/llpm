@@ -25,12 +25,15 @@ obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
 ${ROOT}.hpp: obj/${ROOT}.hpp
 	cp obj/${ROOT}.hpp .
 
-${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
-	${CXX} -c -emit-llvm ${CXXFLAGS} ${NAME}_test.cpp -o ${NAME}_test.cpp.bc
-	${CXX} -O0 -o ${NAME}_test ${NAME}_test.cpp.bc obj/${ROOT}_sw.bc
+${NAME}_test.bc: ${ROOT}.hpp
+
+${NAME}_test: ${NAME}_test.bc obj/${ROOT}_sw.bc
+	#${CXX} -c -g -emit-llvm ${CXXFLAGS} ${NAME}_test.cpp -o ${NAME}_test.cpp.bc
+	${LINK} -o ${NAME}_test_all.bc $^
+	${CXX} -O0 -g -o $@ ${NAME}_test_all.bc
 
 %.bc: %.cpp
-	${CLANGXX} -c -fno-inline -emit-llvm ${CFLAGS} $< -o $@.tmp
+	${CLANGXX} -c -g -fno-inline -emit-llvm ${CFLAGS} $< -o $@.tmp
 	${OPT} ${OPTS} $@.tmp -o $@
 	${DIS} $@
 
@@ -38,4 +41,4 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	dot -Tpdf -o $@ $< || true
 
 clean:
-	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll *.tmp
+	rm -rf ${NAME}_test ${ROOT}.hpp *.bc obj *.ll *.tmp
