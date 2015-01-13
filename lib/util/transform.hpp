@@ -37,6 +37,9 @@ public:
     // Break a connection and insert someone in its place
     void insertBetween(Connection, Block* b);
     void insertBetween(Connection, InputPort*, OutputPort*);
+
+    void insertAfter(OutputPort*, Block* b);
+    void insertAfter(OutputPort*, InputPort*, OutputPort*);
 };
 
 };

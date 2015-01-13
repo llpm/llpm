@@ -64,6 +64,44 @@ public:
     }
 };
 
+class Latch: public Block {
+    OutputPort* _source;
+    InputPort _din;
+    OutputPort _dout;
+
+public:
+    Latch(OutputPort* src) :
+        _source(src),
+        _din(this, src->type(), "d"),
+        _dout(this, src->type(), "q")
+    {
+        auto ownerName = _source->owner()->name();
+        if (ownerName != "")
+            this->name(ownerName + "_latch");
+        this->history().setOptimization(src->owner());
+    }
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    DEF_GET(din);
+    DEF_GET(dout);
+    DEF_GET_NP(source);
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == &_dout);
+        return inputs();
+    }
+};
+
 };
 
 #endif // __LLPM_LIBRARIES_SYNTHESIS_PIPELINE_HPP__

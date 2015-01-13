@@ -50,9 +50,6 @@ bool Block::outputsTied() const {
     if (outputs().size() <= 1)
         return true;
 
-    if (name() == "SimpleMem_cr15")
-        printf("OT!\n");
-
     std::set<InputPort*> deps;
     DependenceRule       rule;
     for (unsigned i=0; i<outputs().size(); i++) {

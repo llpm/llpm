@@ -94,5 +94,31 @@ void PipelineCyclesPass::runInternal(Module* mod) {
     printf("    Inserted %u pipeline registers\n", count);
 }
 
+void LatchUntiedOutputs::runInternal(Module* mod) {
+    if (mod->is<ControlRegion>())
+        // Never insert registers within a CR
+        return;
+
+    Transformer t(mod); 
+    if (!t.canMutate())
+        return;
+
+    unsigned count = 0;
+    set<Block*> blocks;
+    t.conns()->findAllBlocks(blocks);
+    for (auto b: blocks) {
+        if (b->outputsTied())
+            continue;
+
+        // If the outputs aren't tied, a latch may be necessary
+        for (auto op: b->outputs()) {
+            auto l = new Latch(op);
+            t.insertAfter(op, l);
+            count++;
+        }
+    }
+    printf("    Inserted %u latches\n", count);
+}
+
 } // namespace llpm
 

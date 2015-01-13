@@ -31,6 +31,7 @@ VerilogSynthesizer::VerilogSynthesizer(Design& d) :
 void VerilogSynthesizer::addStops() {
     _stops.addClass<BlockRAM>();
     _stops.addClass<RTLReg>();
+    _stops.addClass<Latch>();
 }
 
 void VerilogSynthesizer::write(std::ostream& os) {
@@ -1054,22 +1055,38 @@ public:
     }
 };
 
-struct ModulePrinter : public AttributePrinter {
+struct ModuleAttr: public AttributePrinter {
     std::string name(Module* m) {
         return m->name();
     }
     void operator()(VerilogSynthesizer::Context& ctxt, Block* b) { }
 };
 
-struct PipelineRegPrinter : public AttributePrinter {
+struct PipelineRegAttr: public AttributePrinter {
     std::string name(Block* m) {
         auto preg = m->as<PipelineRegister>();
         if (bitwidth(preg->dout()->type()) == 0)
             return "PipelineReg_DoubleWidth_NoData";
         return "PipelineReg_DoubleWidth";
     }
-    void operator()(VerilogSynthesizer::Context& ctxt, PipelineRegister* r) {
+
+    void operator()(VerilogSynthesizer::Context& ctxt,
+                    PipelineRegister* r) {
         print(ctxt, "Width", bitwidth(r->din()->type()), true);
+    }
+};
+
+struct LatchAttr: public AttributePrinter {
+    std::string name(Block* m) {
+        auto latch = m->as<Latch>();
+        if (bitwidth(latch->dout()->type()) == 0)
+            return "Latch_NoData";
+        return "Latch";
+    }
+
+    void operator()(VerilogSynthesizer::Context& ctxt,
+                    Latch* l) {
+        print(ctxt, "Width", bitwidth(l->din()->type()), true);
     }
 };
 
@@ -1117,9 +1134,10 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(new RTLRegPrinter());
     _printers.appendEntry(new VModulePrinter<PipelineRegister,
-                                             PipelineRegPrinter>());
+                                             PipelineRegAttr>());
     _printers.appendEntry(new VModulePrinter<BlockRAM, BlockRAMAttr>());
-    _printers.appendEntry(new VModulePrinter<Module, ModulePrinter>());
+    _printers.appendEntry(new VModulePrinter<Latch, LatchAttr>());
+    _printers.appendEntry(new VModulePrinter<Module, ModuleAttr>());
 }
 
 bool VerilogSynthesizer::blockIsPrimitive(Block* b) {

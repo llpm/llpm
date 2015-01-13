@@ -219,3 +219,106 @@ end
 
 endmodule;
 
+// A latch is totally transparent, but isolates previous stuff from
+// backpressure by latching incoming data when downstream backpressure
+// requires it.
+module Latch(clk, resetn,
+    d, d_valid, d_bp,
+    q, q_valid, q_bp);
+
+parameter Width = 8;
+
+input clk;
+input resetn;
+
+input [Width-1:0] d;
+input             d_valid;
+output            d_bp;
+
+output [Width-1:0] q;
+output             q_valid;
+input              q_bp;
+
+
+reg [Width-1:0] data;
+reg             valid;
+
+assign q = valid ? data : d;
+assign q_valid = valid || d_valid;
+
+// Backpressure our input if we have data
+assign d_bp = valid;
+
+// Must we absorb a token?
+wire incoming = d_valid && ~d_bp;
+
+// Is the current token leaving us?
+wire outgoing = valid && ~q_bp;
+
+always@(posedge clk)
+begin
+    if(~resetn)
+    begin
+        valid <= 1'b0;
+    end else begin
+        if (outgoing)
+        begin
+            valid <= 1'b0;
+        end
+        else if (incoming && q_bp)
+        begin
+            valid <= 1'b1;
+            data  <= d;
+        end 
+    end
+end
+
+endmodule;
+
+// Just like above, but NULL data
+module Latch_NoData(clk, resetn,
+    d_valid, d_bp,
+    q_valid, q_bp);
+
+parameter Width = 8;
+
+input clk;
+input resetn;
+
+input             d_valid;
+output            d_bp;
+
+output             q_valid;
+input              q_bp;
+
+reg             valid;
+
+assign q_valid = valid || d_valid;
+
+// Backpressure our input if we have data
+assign d_bp = valid;
+
+// Must we absorb a token?
+wire incoming = d_valid && ~d_bp;
+
+// Is the current token leaving us?
+wire outgoing = valid && ~q_bp;
+
+always@(posedge clk)
+begin
+    if(~resetn)
+    begin
+        valid <= 1'b0;
+    end else begin
+        if (outgoing)
+        begin
+            valid <= 1'b0;
+        end
+        else if (incoming && q_bp)
+        begin
+            valid <= 1'b1;
+        end 
+    end
+end
+
+endmodule;

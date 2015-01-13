@@ -23,6 +23,15 @@ public:
     virtual void runInternal(Module*);
 };
 
+class LatchUntiedOutputs: public ModulePass {
+public:
+    LatchUntiedOutputs(Design& d) :
+        ModulePass(d) 
+    { }
+
+    virtual void runInternal(Module*);
+};
+
 
 } // namespace llpm
 

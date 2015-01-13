@@ -122,4 +122,22 @@ void Transformer::insertBetween(Connection c,
     _conns->connect(op, c.sink());
 }
 
+void Transformer::insertAfter(OutputPort* op, Block* b) {
+    if (b->inputs().size() != 1 || b->outputs().size() != 1)
+        throw InvalidArgument("This function only works on blocks with "
+                              "1 input and 1 output.");
+    insertAfter(op, b->inputs().front(), b->outputs().front());
+}
+void Transformer::insertAfter(OutputPort* op,
+                              InputPort* nip, OutputPort* nop)
+{
+    vector<InputPort*> sinks;
+    _conns->findSinks(op, sinks);
+    for (auto ip: sinks) {
+        _conns->disconnect(op, ip);
+        _conns->connect(nop, ip);
+    }
+    _conns->connect(op, nip);
+}
+
 };
