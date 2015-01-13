@@ -22,4 +22,11 @@ void SortAccel::clear(void) {
 }
 
 void SortAccel::sort(void) {
+    for (unsigned i = 1; i <= size / 2 + 1; i *= 2)
+    {
+        for (unsigned j = i; j < size; j += 2 * i)
+        {
+            Merge(j - i, j, ( (j+i) > size) ? size : (j+i));
+        }
+    }
 }

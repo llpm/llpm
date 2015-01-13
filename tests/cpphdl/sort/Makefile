@@ -1,6 +1,6 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-disable-inlining -mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
+OPTS=-mem2reg -dce -constprop -die -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
@@ -12,7 +12,7 @@ OPT=../../../bin/llvm/bin/opt
 NAME=sort
 ROOT=SortAccel
 
-default: ${NAME}_test ${ROOT}.pdf ${ROOT}_simple.pdf
+default: ${NAME}_test ${ROOT}_simple.pdf
 
 ${NAME}.bc: ${NAME}_accel.bc ${NAME}_accel_test.bc
 	${LINK} -o $@ $^

@@ -25,8 +25,8 @@ bool test1() {
     printf("   pushing...\n");
     unsigned capacity = sa.capacity();
     for (unsigned i=0; i<capacity; i++) {
-        // sa.push(myrand<uint64_t>());
-        sa.push(i + 2);
+        sa.push(myrand<uint64_t>());
+        // sa.push(i + 2);
         printf("   checking size...\n");
         sa.sz();
     }
@@ -41,8 +41,8 @@ bool test1() {
     uint64_t last;
     for (unsigned i=0; i<capacity; i++) {
         uint64_t v = sa.read(i);
-        // if (i > 0)
-            // assert(last < v);
+        if (i > 0)
+            assert(last < v);
         last = v;
     }
 
