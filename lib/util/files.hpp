@@ -151,6 +151,11 @@ public:
         return f;
     }
 
+    void flush() {
+        for (auto f: _files)
+            f->flush();
+    }
+
     std::string tmpdir() {
         char name[_dfltDir.size() + 16];
         sprintf(name, "%s/tmpXXXXXX", _dfltDir.c_str());

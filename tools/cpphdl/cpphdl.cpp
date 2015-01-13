@@ -108,6 +108,7 @@ int main(int argc, const char** argv) {
             for (auto sm: submodules) {
                 gv.writeModule(fs->create(sm->name() + ".gv"), sm, true);
             }
+            fs->flush();
 
             printf("Writing Verilog output...\n");
             vw.writeModule(*fs, mod);
