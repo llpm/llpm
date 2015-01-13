@@ -11,11 +11,15 @@ class BasicTests {
     uint64_t dummyData;
     bool cond;
     unsigned tests;
+    uint64_t mem[8];
 
 public:
     uint64_t addUU(uint64_t a, uint64_t b);
     int64_t addUS(uint64_t a, int64_t b);
     int64_t addSS(int64_t a, int64_t b);
+
+    void set(unsigned idx, uint64_t v);
+    uint64_t memadd(unsigned i, unsigned j);
 
     void setCond(bool c);
     bool condTest(unsigned i);
@@ -29,6 +33,14 @@ int64_t BasicTests::addUS(uint64_t a, int64_t b) {
 }
 int64_t BasicTests::addSS(int64_t a, int64_t b) {
     return a+b;
+}
+
+void BasicTests::set(unsigned idx, uint64_t v) {
+    mem[idx] = v;
+}
+
+uint64_t BasicTests::memadd(unsigned i, unsigned j) {
+    return mem[i] + mem[j];
 }
 
 void BasicTests::setCond(bool c) {
@@ -54,6 +66,13 @@ static T myrand() {
 
 bool test1() {
     BasicTests tests;
+
+    tests.set(1, 65);
+    tests.set(3, 98);
+    printf("memadd... ");
+    fflush(stdout);
+    tests.memadd(1, 3);
+    printf("done\n");
     tests.addSS(numeric_limits<int64_t>::min(),
                 numeric_limits<int64_t>::min());
     tests.addSS(numeric_limits<int64_t>::min(),
