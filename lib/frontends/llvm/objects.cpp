@@ -148,9 +148,19 @@ const std::vector<InputPort*>& LLVMImpureBasicBlock::deps(
 
 
 void LLVMBasicBlock::addInput(llvm::Value* v) {
-    if (_inputMap.find(v) != _inputMap.end())
+    // Calling this function implies that the _original_ value v is
+    // desired. If it's already absorbed by a PHI, we need another
+    // copy to pass around the original value.
+    if (_nonPhiInputMap.find(v) != _nonPhiInputMap.end()) {
+        // Other code (the PHI input code, for example) insert into
+        // inputMap, but only we insert into nonPhiInputMap. If it
+        // ain't here, we haven't seen it.
         return;
-    const unsigned inputNum = _numInputs++;
+    }
+
+    // If we haven't seen this input, then we need to create an input
+    // for it and request it from all predecessors.
+    unsigned inputNum = _numInputs++;
     _inputMap[v].insert(inputNum);
     _nonPhiInputMap[v] = inputNum;
     unsigned pred_count = 0;
@@ -237,13 +247,6 @@ void LLVMBasicBlock::requestOutput(llvm::Value* v) {
     } else {
         _passthroughs.insert(v);
         addInput(v);
-        if (!isLocalArg(_basicBlock, v)) {
-            std::set<llvm::BasicBlock*> predecessors(llvm::pred_begin(_basicBlock), llvm::pred_end(_basicBlock));
-            for(auto pred: predecessors) {
-                auto predBlock = _function->blockMap(pred);
-                predBlock->requestOutput(v);
-            }
-        }
     }
 }
 
