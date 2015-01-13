@@ -761,12 +761,18 @@ public:
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Select* s = dynamic_cast<Select*>(c);
         std::string style = "LLPM_Select_Priority";
-    
-        ctxt << boost::format("    wire [%1%:0] %2%_input_combined [%3%:0];\n") 
-                            % (bitwidth(s->dout()->type()) - 1)
-                            % ctxt.name(s)
-                            % (s->din_size() - 1)
-             << boost::format("    wire %1%_valids[%2%:0];\n") 
+        if (bitwidth(s->dout()->type()) == 0) {
+            style += "NoData";
+        }
+ 
+        if (bitwidth(s->dout()->type()) > 0) {
+            ctxt << boost::format("    wire [%1%:0] %2%_input_combined [%3%:0];\n") 
+                                % (bitwidth(s->dout()->type()) - 1)
+                                % ctxt.name(s)
+                                % (s->din_size() - 1);
+        }
+
+        ctxt << boost::format("    wire %1%_valids[%2%:0];\n") 
                             % ctxt.name(s)
                             % (s->din_size() - 1)
              << boost::format("    wire %1%_bp[%2%:0];\n") 
@@ -774,11 +780,13 @@ public:
                             % (s->din_size() - 1)
             ;
         for (unsigned i=0; i<s->din_size(); i++) {
-            ctxt << boost::format("    assign %1%_input_combined[%2%] = %3%;\n")
-                            % ctxt.name(s)
-                            % i
-                            % ctxt.name(s->din(i))
-                 << boost::format("    assign %1%_valids[%2%] = %3%_valid;\n")
+            if (bitwidth(s->dout()->type()) > 0) {
+                ctxt << boost::format("    assign %1%_input_combined[%2%] = %3%;\n")
+                                % ctxt.name(s)
+                                % i
+                                % ctxt.name(s->din(i));
+            }
+            ctxt << boost::format("    assign %1%_valids[%2%] = %3%_valid;\n")
                             % ctxt.name(s)
                             % i
                             % ctxt.name(s->din(i))
@@ -798,13 +806,15 @@ public:
                         % std::max((unsigned)1, (unsigned)ceil(log2(s->din_size())))
              << boost::format("    ) %1% (\n") % ctxt.name(c)
              <<               "        .clk(clk),\n"
-             <<               "        .resetn(resetn),\n"
+             <<               "        .resetn(resetn),\n";
 
-             << boost::format("        .x(%1%_input_combined), \n") % ctxt.name(s)
-             << boost::format("        .x_valid(%1%_valids), \n") % ctxt.name(s)
+        if (bitwidth(s->dout()->type()) > 0) { 
+             ctxt << boost::format("        .x(%1%_input_combined), \n") % ctxt.name(s)
+                  << boost::format("        .a(%1%), \n") % ctxt.name(s->dout());
+        }
+        ctxt << boost::format("        .x_valid(%1%_valids), \n") % ctxt.name(s)
              << boost::format("        .x_bp(%1%_bp), \n") % ctxt.name(s)
 
-             << boost::format("        .a(%1%), \n") % ctxt.name(s->dout())
              << boost::format("        .a_valid(%1%_valid), \n") % ctxt.name(s->dout())
              << boost::format("        .a_bp(%1%_bp) \n") % ctxt.name(s->dout())
              <<               "    );\n"

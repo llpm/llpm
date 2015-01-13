@@ -62,3 +62,55 @@ assign a       = x[select];
 
 endmodule;
 
+module LLPM_Select_PriorityNoData(
+    clk, resetn,
+    x_valid, x_bp,
+    a_valid, a_bp);
+
+parameter Width = 8;
+parameter NumInputs = 4;
+parameter CLog2NumInputs = 2;
+
+input clk;
+input resetn;
+
+input              x_valid [NumInputs-1:0];
+output             x_bp    [NumInputs-1:0];
+
+output             a_valid;
+input              a_bp;
+
+wire has_valid;
+wire [CLog2NumInputs-1:0] select;
+
+integer i;
+always@(x_valid)
+begin
+    select = {CLog2NumInputs{1'bx}};
+    has_valid = 1'b0;
+    for (i=0; i<NumInputs; i = i + 1)
+    begin
+        if (x_valid[i])
+        begin
+            select = i[CLog2NumInputs-1:0];
+            has_valid = 1'b1;
+        end
+    end
+end
+
+integer j;
+always@(a_bp, select, has_valid)
+begin
+    for (j=0; j<NumInputs; j = j + 1)
+    begin
+        if (a_bp)
+            x_bp[j] = 1'b1;
+        else
+            x_bp[j] = ~(select == j[CLog2NumInputs-1:0]);
+    end
+end
+
+assign a_valid = has_valid;
+
+endmodule;
+
