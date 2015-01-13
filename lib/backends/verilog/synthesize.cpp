@@ -490,6 +490,29 @@ public:
     }
 };
 
+class NeverPrinter: public VerilogSynthesizer::Printer {
+public:
+    virtual bool customLID() const {
+        return true;
+    }
+
+    bool handles(Block* b) const {
+        return dynamic_cast<Never*>(b) != NULL;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        Never* f = dynamic_cast<Never*>(c);
+        if (bitwidth(f->dout()->type()) > 0)
+            ctxt << boost::format(
+                        "    assign %1% = {%2%{1'bx}};\n")
+                            % ctxt.name(f->dout())
+                            % bitwidth(f->dout()->type());
+        ctxt << boost::format(
+                    "    assign %1%_valid = 1'b0;\n")
+                        % ctxt.name(f->dout());
+    }
+};
+
 class ConstantPrinter: public VerilogSynthesizer::Printer {
 public:
     bool handles(Block* b) const {
@@ -1081,6 +1104,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(new IdentityOpPrinter<Wait>());
 
     _printers.appendEntry(new ConstantPrinter());
+    _printers.appendEntry(new NeverPrinter());
 
     _printers.appendEntry(new JoinPrinter());
     _printers.appendEntry(new SelectPrinter());

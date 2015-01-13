@@ -67,6 +67,30 @@ public:
     }
 };
 
+// A data source which never produces tokens. Basically the opposite
+// of a constant.
+class Never: public Block {
+    OutputPort   _dout;
+public:
+    Never(llvm::Type* t) :
+        _dout(this, t, "c")
+    { }
+
+    virtual bool hasState() const { return false; }
+
+    DEF_GET(dout);
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
+        return inputs();
+    }
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Maybe);
+    }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_LIBRARIES_CORE_MEM_INTR_HPP__

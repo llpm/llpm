@@ -9,6 +9,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/CFG.h>
 #include <llvm/Support/Casting.h>
+#include <llvm/IR/IntrinsicInst.h>
 
 using namespace std;
 
@@ -179,6 +180,9 @@ void LLVMBasicBlock::buildRequests() {
     std::vector<llvm::Type*> inputTypes;
 
     for(llvm::Instruction& ins: _basicBlock->getInstList()) {
+        if (llvm::DbgInfoIntrinsic::classof(&ins))
+            // Skip debug info
+            continue;
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             inputTypes.push_back(LLVMInstruction::GetOutput(phi));
@@ -306,6 +310,10 @@ void LLVMImpureBasicBlock::buildIO() {
 
     llvm::BasicBlock* bb = basicBlock();
     for(llvm::Instruction& ins: bb->getInstList()) {
+        if (llvm::DbgInfoIntrinsic::classof(&ins))
+            // Skip debug info
+            continue;
+
         if (ins.mayReadOrWriteMemory() &&
             !LLVMLoadInstruction::isByvalLoad(&ins)) {
             auto iface = new Interface(this,

@@ -6,6 +6,7 @@
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 #include <analysis/graph_queries.hpp>
+#include <libraries/core/logic_intr.hpp>
 
 using namespace std;
 
@@ -32,6 +33,8 @@ void CheckConnectionsPass::runInternal(Module* m) {
 
                 fprintf(stderr, "History:\n");
                 block->history().print();
+                auto never = new Never(ip->type());
+                conns->connect(never->dout(), ip);
             }
         }
     }
