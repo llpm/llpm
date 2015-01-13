@@ -64,6 +64,7 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<PipelineDependentsPass>();
         d.optimizations()->append<PipelineCyclesPass>();
+        d.optimizations()->append<LatchUntiedOutputs>();
         d.optimizations()->append<SynthesizeForksPass>();
         d.optimizations()->append<CheckConnectionsPass>();
         d.optimizations()->append<CheckOutputsPass>();
@@ -80,9 +81,9 @@ int main(int argc, const char** argv) {
         // }
  
         printf("Elaborating...\n");
-        d.elaborate();
+        d.elaborate(true);
         printf("Optimizing...\n");
-        d.optimize();
+        d.optimize(true);
 
         for (Module* mod: d.modules()) {
             printf("Interfaces: \n");
