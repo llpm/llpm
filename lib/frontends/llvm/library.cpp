@@ -8,6 +8,7 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/IntrinsicInst.h>
 
 #include <util/llvm_type.hpp>
 
@@ -40,6 +41,10 @@ public:
 
         // Construct each block
         for(llvm::Instruction& ins: bb->getInstList()) {
+            if (llvm::DbgInfoIntrinsic::classof(&ins))
+                // Skip debug info
+                continue;
+
             auto block = LLVMInstruction::Create(lbb, &ins);
             blockMap[&ins] = block;
             valueMap[&ins] = block->output();
@@ -81,6 +86,10 @@ public:
 
         // Connect the inputs to each block
         for(llvm::Instruction& ins: bb->getInstList()) {
+            if (llvm::DbgInfoIntrinsic::classof(&ins))
+                // Skip debug info
+                continue;
+
             LLVMInstruction* li = blockMap[&ins];
             assert(li != NULL);
 
@@ -125,7 +134,11 @@ public:
                 // passthoughs
                 for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
                     llvm::Value* predV = phi->getIncomingValue(i);
-                    valueMap[predV] = li->output();
+                    if (llvm::Constant::classof(predV))
+                        continue;
+                    assert(valueMap.find(predV) == valueMap.end());
+                    if (lbb->passthroughs().count(predV) > 0)
+                        valueMap[predV] = li->output();
                 }
             } else {
                 // Every other node performs normally
