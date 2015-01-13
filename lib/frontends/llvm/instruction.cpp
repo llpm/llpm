@@ -193,8 +193,10 @@ bool WrapperInstruction<Multiplexer>::refine(
     conns.connect(b->dout(), m->din());
     conns.remap(input(), split->din());
     conns.connect(split->dout(0), b->din(0));
-    conns.connect(split->dout(1), b->din(1));
-    conns.connect(split->dout(2), b->din(2));
+    // Reverse the second and third inputs since select is 'true'
+    // result then 'false' result.
+    conns.connect(split->dout(1), b->din(2));
+    conns.connect(split->dout(2), b->din(1));
     conns.remap(output(), m->dout());
     return true;
 }

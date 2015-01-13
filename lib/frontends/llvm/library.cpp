@@ -136,9 +136,10 @@ public:
                     llvm::Value* predV = phi->getIncomingValue(i);
                     if (llvm::Constant::classof(predV))
                         continue;
-                    assert(valueMap.find(predV) == valueMap.end());
-                    if (lbb->passthroughs().count(predV) > 0)
+                    if (lbb->passthroughs().count(predV) > 0) {
+                        assert(valueMap.find(predV) == valueMap.end());
                         valueMap[predV] = li->output();
+                    }
                 }
             } else {
                 // Every other node performs normally
