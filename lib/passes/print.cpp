@@ -25,4 +25,28 @@ void GVPrinterPass::runInternal(Module* mod) {
     f->close();
 }
 
+void TextPrinterPass::runInternal(Module* mod) {
+    unsigned ctr = _counter[mod];
+    std::string fn = str(boost::format("%1%_%2%%3$03u.txt")
+                            % mod->name()
+                            % _name
+                            % ctr);
+
+    ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        return;
+    auto f =_design.workingDir()->create(fn);
+    auto fd = f->openFile("w");
+    for (auto p: conns->sourcesRaw()) {
+        fprintf(fd, "%s (%u:%s) -> %s (%u:%s)\n",
+                p.second->owner()->globalName().c_str(),
+                p.second->num(),
+                p.second->name().c_str(),
+                p.first->owner()->globalName().c_str(),
+                p.first->num(),
+                p.first->name().c_str());
+    }
+    f->close();
+}
+
 } // namespace llpm

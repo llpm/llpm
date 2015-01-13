@@ -50,6 +50,8 @@ public:
 
     OutputPort* asOutput();
     const OutputPort* asOutput() const;
+
+    unsigned num() const;
 };
 
 class InputPort : public Port {

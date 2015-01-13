@@ -161,7 +161,7 @@ public:
         return false;
     }
 
-    int inputNum(InputPort* ip) const {
+    int inputNum(const InputPort* ip) const {
         auto f = find(_inputs.begin(), _inputs.end(), ip);
         if (f == _inputs.end())
             return -1;
@@ -169,7 +169,7 @@ public:
             return std::distance(_inputs.begin(), f);
     }
 
-    int outputNum(OutputPort* op) const {
+    int outputNum(const OutputPort* op) const {
         auto f = find(_outputs.begin(), _outputs.end(), op);
         if (f == _outputs.end())
             return -1;

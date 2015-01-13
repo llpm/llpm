@@ -6,6 +6,13 @@
 
 namespace llpm {
 
+unsigned Port::num() const {
+    if (asInput() != NULL)
+        return owner()->inputNum(asInput());
+    else
+        return owner()->outputNum(asOutput());
+}
+
 InputPort::InputPort(Block* owner, llvm::Type* type, std::string name) :
     Port(owner, type, name),
     _join(NULL)

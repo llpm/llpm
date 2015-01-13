@@ -68,6 +68,7 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<CheckConnectionsPass>();
         d.optimizations()->append<CheckOutputsPass>();
         d.optimizations()->append<CheckCyclesPass>();
+        d.optimizations()->append<TextPrinterPass>();
 
         FileSet* fs = d.workingDir();
         GraphvizOutput gv(d);
