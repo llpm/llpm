@@ -11,9 +11,15 @@ using namespace std;
 
 namespace llpm {
 
+string getName(Block* b) {
+    return str(boost::format("p%2%")
+                % b->name()
+                % b);
+}
+
 void GraphvizOutput::writeModule(FileSet::File* fn, Module* mod,
-                                 bool transparent) {
-    this->writeModule(fn->openStream(), mod, transparent);
+                                 bool transparent, string comment) {
+    this->writeModule(fn->openStream(), mod, transparent, comment);
 }
 
 static std::string attrs(const std::map<std::string, std::string>& a) {
@@ -44,12 +50,15 @@ static std::string quote(string a) {
 
 static std::string label(ObjectNamer& namer, Block* b) {
     return quote(namer.getName(b, b->module()) + "\\n" 
-                + str(boost::format("[ %1% ] %2% | %3% | %4%") 
+                + str(boost::format(
+                        "[ %1% ] %2% | %3% | %4%\\n"
+                        "%5%\\n") 
                         % b->print()
                         % b->inputs().size()
                         % b->outputs().size()
-                        % b->interfaces().size() )
-                + "\\n"
+                        % b->interfaces().size()
+                        % b
+                    )
                 + cpp_demangle(typeid(*b).name()));
 }
 
@@ -126,8 +135,8 @@ void printConns(std::ostream& os,
                 is_hidden(ip->owner(), mod))
                     continue;
 
-            os << "    " << namer.getName(op->owner(), mod) << " -> "
-               << namer.getName(ip->owner(), mod) 
+            os << "    " << getName(op->owner()) << " -> "
+               << getName(ip->owner()) 
                << "[" << attrs(namer, op, ip, extra_attr) << "];\n";
         }
     }
@@ -135,10 +144,11 @@ void printConns(std::ostream& os,
 
 void printIO(std::ostream& os,
              ObjectNamer& namer,
-             ContainerModule* cm) {
+             ContainerModule* cm,
+             Module* mod) {
     for (InputPort* ip: cm->inputs()) {
         auto dummy = cm->getDriver(ip)->owner();
-        os << "    " << namer.getName(dummy, cm)
+        os << "    " << getName(dummy)
            << "[" << attrs(namer, dummy,
                            {{"label", ip->name()},
                             {"shape", "house"}}) << "];\n";
@@ -146,7 +156,7 @@ void printIO(std::ostream& os,
 
     for (OutputPort* op: cm->outputs()) {
         auto dummy = cm->getSink(op)->owner();
-        os << "    " << namer.getName(dummy, cm)
+        os << "    " << getName(dummy)
            << "[" << attrs(namer, dummy,
                            {{"label", op->name()},
                             {"shape", "invhouse"}}) << "];\n";
@@ -178,13 +188,13 @@ void printBlock(std::ostream& os,
 
     } else {
         std::map<std::string, std::string> ea;
-        os << "        " << namer.getName(block, mod)
+        os << "        " << getName(block)
            << "[" << attrs(namer, block, ea) << "];\n";
     }
 }
 
 void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
-                                 bool transparent) {
+                                 bool transparent, string comment) {
     ObjectNamer& namer = mod->design().namer();
 
     ConnectionDB* conns = mod->conns();
@@ -192,11 +202,13 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
 
     os << "digraph " << mod->name() << " {\n";
     os << "    size=100;\n";
+    os << "    labelsize=28;\n";
+    os << "    label=" << quote(comment) << ";\n";
 
 
     ContainerModule* cmMod = dynamic_cast<ContainerModule*>(mod);
     if (cmMod) {
-        printIO(os, namer, cmMod);
+        printIO(os, namer, cmMod, mod);
     }
 
     vector<Block*> blocks;

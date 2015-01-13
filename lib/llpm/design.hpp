@@ -8,6 +8,7 @@
 #include <synthesis/object_namer.hpp>
 #include <backends/backend.hpp>
 #include <util/macros.hpp>
+#include <util/files.hpp>
 #include <passes/manager.hpp>
 #include <vector>
 
@@ -15,6 +16,7 @@ namespace llpm {
 
 // Fwd defs. Are modern compilers really still 1-pass?
 class Module;
+class GraphvizOutput;
 
 class Design {
     llvm::LLVMContext& _context;
@@ -22,6 +24,8 @@ class Design {
     std::vector<Module*> _modules;
     ObjectNamer* _namer;
     Backend* _backend;
+    GraphvizOutput* _gvOutput;
+    FileSet _workingDir;
 
     PassManager _elaborations;
     PassManager _optimizations;
@@ -31,12 +35,15 @@ class Design {
 public:
     static llvm::LLVMContext& Default_LLVMContext;
 
-    Design(llvm::LLVMContext& ctxt = Default_LLVMContext) :
+    Design(std::string workingDir,
+           bool keepTemps = false,
+           llvm::LLVMContext& ctxt = Default_LLVMContext) :
         _context(ctxt),
         _refinery(new Refinery()),
         _namer(NULL),
-        _elaborations(*this),
-        _optimizations(*this)
+        _workingDir(keepTemps, workingDir),
+        _elaborations(*this, "elab"),
+        _optimizations(*this, "opt")
     {
         _refinery->refiners().appendEntry(new BlockDefaultRefiner());
     }
@@ -50,8 +57,11 @@ public:
     DEF_GET(elaborations);
     DEF_GET(optimizations);
 
-    void elaborate();
-    void optimize();
+    DEF_GET(workingDir);
+    GraphvizOutput* gv();
+
+    void elaborate(bool debug = false);
+    void optimize(bool debug = false);
 
     void refine(Module* m);
 

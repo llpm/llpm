@@ -4,17 +4,22 @@
 #include <passes/pass.hpp>
 
 #include <deque>
+#include <map>
 
 namespace llpm {
 
 class PassManager {
 protected:
     Design& _design;
+    std::string _name;
     std::deque<Pass*> _passes;
+    std::map<Module*, unsigned> _debugCounter;
+    void debug(Pass* p, Module* mod);
 
 public:
-    PassManager(Design& design) :
-        _design(design)
+    PassManager(Design& design, std::string name="passes") :
+        _design(design),
+        _name(name)
     { }
 
     void append(Pass* p) {
@@ -30,8 +35,8 @@ public:
         _passes.push_front(p);
     }
 
-    bool run();
-    bool run(Module* mod);
+    bool run(bool debug = false);
+    bool run(Module* mod, bool debug = false);
 };
 
 };

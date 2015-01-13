@@ -27,7 +27,7 @@ public:
         anonBlockCounter(0)
     { }
 
-    virtual std::string primBlockName(Block* b);
+    virtual std::string primBlockName(Block* b, Module* ctxt);
     virtual std::string getName(Block* b, Module* ctxt, bool ignore=false);
     virtual std::string getName(InputPort* p, Module* ctxt, bool io=false);
     virtual std::string getName(OutputPort* p, Module* ctxt, bool io=false);

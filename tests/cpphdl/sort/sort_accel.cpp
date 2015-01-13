@@ -5,7 +5,7 @@ unsigned SortAccel::capacity() {
 }
 
 void SortAccel::push(uint64_t v) {
-    if (size < CAPACITY)
+    // if (size < CAPACITY)
         vals[size++] = v;
 }
 

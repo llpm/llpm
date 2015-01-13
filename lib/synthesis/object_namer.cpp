@@ -40,17 +40,17 @@ static std::string sanitize(std::string s) {
     return s;
 }
 
-std::string ObjectNamer::primBlockName(Block* b) {
+std::string ObjectNamer::primBlockName(Block* b, Module* ctxt) {
     std::string& base = _blockNames[b];
     if (base == "") {
         base = b->name();
         if (base == "") {
             if (b->history().src() == BlockHistory::Refinement &&
                 b->history().hasSrcBlock()) {
-                base = primBlockName(b->history().srcBlock()) + "p";
+                base = primBlockName(b->history().srcBlock(), ctxt) + "p";
             } else if (b->history().src() == BlockHistory::Optimization &&
                        b->history().hasSrcBlock()) {
-                base = primBlockName(b->history().srcBlock()) + "o";
+                base = primBlockName(b->history().srcBlock(), ctxt) + "o";
             } else {
                 base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
             }
@@ -60,7 +60,7 @@ std::string ObjectNamer::primBlockName(Block* b) {
 
         size_t ctr = 0;
         string orig_base = base;
-        while (_existingNames.count(std::make_pair(b->module(), base))) {
+        while (_existingNames.count(std::make_pair(ctxt, base))) {
             base = str(boost::format("%1%_%2%") % orig_base % ++ctr);
         }
         _existingNames.insert(make_pair(b->module(), base));
@@ -69,7 +69,7 @@ std::string ObjectNamer::primBlockName(Block* b) {
 }
 
 std::string ObjectNamer::getName(Block* b, Module* ctxt, bool ignore) {
-    std::string base = primBlockName(b);
+    std::string base = primBlockName(b, ctxt);
     return addContext(base, b, ctxt);
 }
 
@@ -92,7 +92,9 @@ std::string ObjectNamer::getName(InputPort* p, Module* ctxt, bool io) {
         }
 
         if (!io)
-            base = str(boost::format("%1%_input%2%") % primBlockName(p->owner()) % base);
+            base = str(boost::format("%1%_input%2%") 
+                        % primBlockName(p->owner(), ctxt)
+                        % base);
     }
     return addContext(base, p->owner(), ctxt);
 }
@@ -116,7 +118,9 @@ std::string ObjectNamer::getName(OutputPort* p, Module* ctxt, bool io) {
         }
 
         if (!io)
-            base = str(boost::format("%1%_output%2%") % primBlockName(p->owner()) % base);
+            base = str(boost::format("%1%_output%2%")
+                       % primBlockName(p->owner(), ctxt)
+                       % base);
     }
     return addContext(base, p->owner(), ctxt);
 }

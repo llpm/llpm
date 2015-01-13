@@ -1,6 +1,7 @@
 #include "design.hpp"
 
 #include <llpm/module.hpp>
+#include <backends/graphviz/graphviz.hpp>
 #include <util/misc.hpp>
 
 #include <llvm/Pass.h>
@@ -48,7 +49,13 @@ void setUnknownElaboration(Module* m) {
     }
 }
 
-void Design::elaborate() {
+GraphvizOutput* Design::gv() {
+    if (_gvOutput == NULL)
+        _gvOutput = new GraphvizOutput(*this);
+    return _gvOutput;
+}
+
+void Design::elaborate(bool debug) {
     auto sc = backend()->primitiveStops();
 
     // Set "frontend" as history for all Unset histories
@@ -61,7 +68,7 @@ void Design::elaborate() {
         bool refined;
         unsigned passes;
         for (passes = 0; passes < MaxPasses; passes++) {
-            bool changed = _elaborations.run(m);
+            bool changed = _elaborations.run(m, debug);
             refined = m->refined(sc);
             if (refined || !changed)
                 break;
@@ -86,8 +93,8 @@ void Design::elaborate() {
     }
 }
 
-void Design::optimize() {
-    _optimizations.run();
+void Design::optimize(bool debug) {
+    _optimizations.run(debug);
 
     LambdaModulePass p(*this,
         [](Module* m) {

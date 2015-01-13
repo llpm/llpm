@@ -27,16 +27,15 @@ using namespace std;
 
 int main(int argc, const char** argv) {
     try {
-        Design d;
-        VerilogSynthesizer vs(d);
-        d.backend(&vs);
-
         if (argc < 3) {
             fprintf(stderr, "Usage: %s <llvm_bitcode> <output directory> [<class_name>*]\n", argv[0]);
             return 1;
         }
 
         string dirName = argv[2];
+        Design d(dirName, true);
+        VerilogSynthesizer vs(d);
+        d.backend(&vs);
 
         {
             CPPHDLTranslator trans(d);
@@ -68,7 +67,7 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<CheckOutputsPass>();
         d.optimizations()->append<CheckCyclesPass>();
 
-        FileSet fs(true, dirName, true);
+        FileSet* fs = d.workingDir();
         GraphvizOutput gv(d);
         VerilatorWedge vw(&vs);
  
@@ -78,9 +77,9 @@ int main(int argc, const char** argv) {
         // }
  
         printf("Elaborating...\n");
-        d.elaborate();
+        d.elaborate(true);
         printf("Optimizing...\n");
-        d.optimize();
+        d.optimize(true);
 
         for (Module* mod: d.modules()) {
             printf("Interfaces: \n");
@@ -102,16 +101,16 @@ int main(int argc, const char** argv) {
             }
 
             printf("Writing graphviz output...\n");
-            gv.writeModule(fs.create(mod->name() + ".gv"), mod, true);
-            gv.writeModule(fs.create(mod->name() + "_simple.gv"), mod, false);
+            gv.writeModule(fs->create(mod->name() + ".gv"), mod, true);
+            gv.writeModule(fs->create(mod->name() + "_simple.gv"), mod, false);
             vector<Module*> submodules;
             mod->submodules(submodules);
             for (auto sm: submodules) {
-                gv.writeModule(fs.create(sm->name() + ".gv"), sm, true);
+                gv.writeModule(fs->create(sm->name() + ".gv"), sm, true);
             }
 
             printf("Writing Verilog output...\n");
-            vw.writeModule(fs, mod);
+            vw.writeModule(*fs, mod);
         }
 
     } catch (Exception& e) {

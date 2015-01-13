@@ -69,7 +69,7 @@ public:
         }
 
         std::string primBlockName(Block* b) {
-            return _namer.primBlockName(b);
+            return _namer.primBlockName(b, _ctxt);
         }
 
         DEF_GET_NP(namer);

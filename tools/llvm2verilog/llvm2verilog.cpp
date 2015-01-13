@@ -25,19 +25,20 @@ using namespace std;
 
 int main(int argc, const char** argv) {
     try {
-        Design d;
-        VerilogSynthesizer vs(d);
-        d.backend(&vs);
+
 
         if (argc < 3) {
             fprintf(stderr, "Usage: %s <llvm_bitcode> <output directory> [<function_name>*]\n", argv[0]);
             return 1;
         }
 
+        string dirName = argv[2];
+        Design d(dirName, true);
+        VerilogSynthesizer vs(d);
+        d.backend(&vs);
+
         LLVMTranslator trans(d);
         trans.readBitcode(argv[1]);
-
-        string dirName = argv[2];
 
         vector<Module*> modules;
         for (int i=3; i<argc; i++) {
@@ -63,11 +64,11 @@ int main(int argc, const char** argv) {
         GraphvizOutput gv(d);
         VerilatorWedge vw(&vs);
 
-        FileSet fs(true, dirName, true);
+        FileSet* fs = d.workingDir();
 
         for (Module* mod: d.modules()) {
-            gv.writeModule(fs.create(mod->name() + ".gv"), mod);
-            vw.writeModule(fs, mod);
+            gv.writeModule(fs->create(mod->name() + ".gv"), mod);
+            vw.writeModule(*fs, mod);
         }
 
     } catch (Exception& e) {

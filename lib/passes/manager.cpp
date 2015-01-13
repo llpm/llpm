@@ -2,20 +2,42 @@
 
 #include <llpm/module.hpp>
 #include <util/misc.hpp>
+#include <backends/graphviz/graphviz.hpp>
+#include <boost/format.hpp>
+
+using namespace std;
 
 namespace llpm {
 
-bool PassManager::run() {
+void PassManager::debug(Pass* p, Module* mod) {
+    unsigned ctr = _debugCounter[mod];
+    string fn = str(boost::format("%1%_%2%%3$03u.gv")
+                        % mod->name()
+                        % _name
+                        % ctr);
+    _design.gv()->writeModule(
+        _design.workingDir()->create(fn),
+        mod,
+        true,
+        "After pass " + cpp_demangle(typeid(*p).name()));
+    _debugCounter[mod]++;
+}
+
+bool PassManager::run(bool debug) {
     bool ret = false;
     for (Pass* p: _passes) {
         printf("== Pass: %s\n", cpp_demangle(typeid(*p).name()).c_str());
-        if(p->run())
+        if(p->run()) {
             ret = true;
+            if (debug)
+                for (Module* mod: _design.modules())
+                    this->debug(p, mod);
+        }
     }
     return ret;
 }
 
-bool PassManager::run(Module* mod) {
+bool PassManager::run(Module* mod, bool debug) {
     bool ret = false;
     for (Pass* p: _passes) {
         printf("== Pass: %s\n", cpp_demangle(typeid(*p).name()).c_str());
@@ -37,6 +59,9 @@ bool PassManager::run(Module* mod) {
                 }
             });
         historypass.run(mod);
+
+        if (ret && debug)
+            this->debug(p, mod);
     }
     mod->validityCheck();
     return ret;
