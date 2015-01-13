@@ -11,6 +11,7 @@ class RTLReg : public Block {
     llvm::Type* _type;
     Interface _write;
     std::vector<Interface*> _read;
+    std::vector<InputPort*> _writeRespDeps = {_write.din()};
 
 public:
     RTLReg(llvm::Type* datatype);
@@ -36,6 +37,8 @@ public:
 
     virtual const std::vector<InputPort*>& deps(
             const OutputPort* op) const {
+        if (op == _write.dout())
+            return _writeRespDeps;
         return inputs();
     }
 
