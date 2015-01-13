@@ -94,6 +94,8 @@ public:
         return dynamic_cast<TO*>(this);
     }
 
+    std::string globalName() const;
+
     // Upon what conditions does a block accept inputs and execute?
     // This routine only works properly when all the outputs have the same
     // dependence rules. If not, it returns "Custom"

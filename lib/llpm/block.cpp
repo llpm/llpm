@@ -1,5 +1,7 @@
 #include "block.hpp"
 
+#include <llpm/module.hpp>
+
 using namespace std;
 
 namespace llpm {
@@ -12,6 +14,13 @@ bool Block::refine(std::vector<Block*>& blocks) {
     assert(false && "Not yet implemented!");
 }
 #endif
+
+string Block::globalName() const {
+    auto m = module();
+    if (m == NULL)
+        return name();
+    return m->design().namer().getName((Block*)this, m);
+}
 
 
 // Upon what conditions does a block accept inputs and execute?

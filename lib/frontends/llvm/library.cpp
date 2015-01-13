@@ -120,6 +120,13 @@ public:
                 inputs.push_back(e->din());
                 assert(inputPorts.size() == 1);
                 conns.connect(e->dout(), inputPorts[0]);
+
+                // Add alias for the input values for any which may be
+                // passthoughs
+                for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
+                    llvm::Value* predV = phi->getIncomingValue(i);
+                    valueMap[predV] = li->output();
+                }
             } else {
                 // Every other node performs normally
                 unsigned hwNum = 0;

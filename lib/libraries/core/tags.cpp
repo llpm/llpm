@@ -46,6 +46,8 @@ void SynthesizeTagsPass::runInternal(Module* mod) {
 
 void SynthesizeTagsPass::synthesizeTagger(MutableModule* mm, Tagger* tagger) {
     ConnectionDB* conns = mm->conns();
+    printf("    creating tag for tagger '%s'\n",
+           tagger->globalName().c_str());
     if (!queries::CouldReorderTokens(tagger->client())) {
         // The server to which I am connected does not reorder tokens.
         // In this case, I merely need to join responses with request tags
