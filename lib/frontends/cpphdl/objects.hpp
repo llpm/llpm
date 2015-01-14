@@ -51,7 +51,8 @@ public:
 
     void addMember(std::string name, llvm::Function*, LLVMFunction*);
     void connectMem(LLVMFunction*);
-    llvm::GetElementPtrInst* getClassDeref(llvm::Value*) const;
+    void getGEPChainAsVector(llvm::Value* ptr,
+                             std::vector<llvm::Value*>& chain) const;
     unsigned resolveMember(llvm::Value*) const;
     void buildVariables();
     Block* buildVariable(unsigned i);

@@ -202,40 +202,94 @@ void CPPHDLClass::connectMem(LLVMFunction* func) {
     }
 }
 
-llvm::GetElementPtrInst* CPPHDLClass::getClassDeref(llvm::Value* ptr) const {
+void CPPHDLClass::getGEPChainAsVector(llvm::Value* ptr,
+                                      vector<llvm::Value*>& chain) const
+{
     assert(ptr->getType()->isPointerTy());
-    llvm::GetElementPtrInst* gep =
-        llvm::dyn_cast_or_null<llvm::GetElementPtrInst>(ptr);
-    if (gep == NULL)
-        throw InvalidArgument("Can only deal with loads determined "
-                              "by GEP instructions!");
-    llvm::PointerType* ptrType =
-        llvm::dyn_cast<llvm::PointerType>(gep->getPointerOperandType());
-    if (ptrType->getPointerElementType() == this->_type) {
-        return gep; 
 
-    } else {
-        return getClassDeref(gep->getPointerOperand());
+    llvm::Instruction* ins = llvm::dyn_cast_or_null<llvm::Instruction>(ptr);
+    if (ins == NULL) {
+        throw InvalidArgument(
+            "Only instructions which get pointers can be used to refer "
+            "to member variables");
+    }
+
+    switch(ins->getOpcode()) {
+    case llvm::Instruction::Load:
+        return getGEPChainAsVector(ins->getOperand(0), chain);
+    case llvm::Instruction::GetElementPtr: {
+        llvm::GetElementPtrInst* gep =
+            llvm::dyn_cast_or_null<llvm::GetElementPtrInst>(ptr);
+        if (gep == NULL) {
+            throw InvalidArgument("Can only deal with loads determined "
+                                  "by GEP instructions! Not this: " +
+                                  valuestr(ptr));
+        }
+
+        llvm::PointerType* ptrType =
+            llvm::dyn_cast<llvm::PointerType>(gep->getPointerOperandType());
+        if (ptrType->getPointerElementType() != this->_type) {
+            getGEPChainAsVector(gep->getPointerOperand(), chain);
+        }
+
+        auto numOperands = gep->getNumOperands();
+        for (unsigned i=1; i<numOperands; i++) {
+            chain.push_back(gep->getOperand(i));
+        }
+        return;
+    }
+    case llvm::Instruction::PHI: {
+        llvm::PHINode* phi = llvm::dyn_cast_or_null<llvm::PHINode>(ptr);
+        assert(phi != NULL);
+        assert(phi->getNumIncomingValues() > 0);
+        getGEPChainAsVector(phi->getIncomingValue(0), chain);
+        for (unsigned i=1; i<phi->getNumIncomingValues(); i++) {
+            vector<llvm::Value*> otherChain;
+            getGEPChainAsVector(phi->getIncomingValue(i), otherChain);
+            assert(otherChain.size() >= 2);
+            assert(otherChain[0] == chain[0]);
+            assert(otherChain[1] == chain[1]);
+        }
+        return;
+    }
+    default:
+        throw InvalidArgument(
+            "I dunno how to resolve this value: " + valuestr(ptr));
     }
 }
 
 unsigned CPPHDLClass::resolveMember(llvm::Value* ptr) const {
-    auto gep = getClassDeref(ptr);
-
-    // I can deal with this since we are indexing off of my base type
-    assert(gep->getNumOperands() == 3);
-    llvm::Value* operand = gep->getOperand(2); 
-    llvm::ConstantInt* ci =
-        llvm::dyn_cast_or_null<llvm::ConstantInt>(operand);
-    if (ci == NULL)
+    std::vector<llvm::Value*> chain;
+    getGEPChainAsVector(ptr, chain);
+    if (chain.size() < 2) {
         throw InvalidArgument(
-            "Cannot dynamically index into module variables!");
-    uint64_t idx = ci->getLimitedValue();
-    if (idx >= _variables.size()) {
-        throw InvalidArgument(
-            "Pointer is out of module bounds!");
+            "This GEP instruction seems to be attempting to get a "
+            "reference to the module. I don't know what a pointer to "
+            "silicon looks like but I suspect it's glittery...");
     }
-    return (unsigned)idx;
+
+    llvm::ConstantInt* ci;
+    
+    ci = llvm::dyn_cast_or_null<llvm::ConstantInt>(chain[0]);
+    if (ci == NULL || ci->getLimitedValue() != 0) {
+        throw InvalidArgument(
+            "First in GEP chain must be 0. Higher than that implies "
+            "that an array of modules is being indexed, which isn't "
+            "supported.");
+    }
+
+    ci = llvm::dyn_cast_or_null<llvm::ConstantInt>(chain[1]);
+    if (ci == NULL) {
+        throw InvalidArgument(
+            "First in GEP chain must be a constant integer to index "
+            "into the members in the module.");
+    } else if (ci->getLimitedValue() > this->_type->getStructNumElements()) {
+        throw InvalidArgument(
+            "This GEP appears to index past the end of this module. "
+            "That's not gonna work for us...");
+    } else {
+        return ci->getLimitedValue();
+    }
 }
 
 void CPPHDLClass::adoptSWVersion(std::string name, llvm::Function* func) {

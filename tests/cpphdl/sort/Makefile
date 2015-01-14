@@ -1,6 +1,6 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-mem2reg -dce -constprop -die -simplifycfg -loop-simplify
+OPTS=-O1 -mem2reg -dce -constprop -die -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
