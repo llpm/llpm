@@ -12,6 +12,9 @@ CxxLdFlags = """
 -g -pthread -fno-omit-frame-pointer
 """.split()
 
+AddOption('--cxx', action='store', type='string', dest='cxx', nargs=1, metavar='COMPILER',
+		   help='Use argument as the C++ compiler.')
+
 env = Environment(
     CPPPATH=['./lib', './bin/llvm/include/'],
     CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
@@ -28,6 +31,9 @@ env = Environment(
     tools = ["default", "doxygen"],
     toolpath = '.'
 )
+
+if GetOption('cxx') != None:
+   env.Replace(CXX = GetOption('cxx'))
 
 libenv = env.Clone()
 llpm = libenv.SharedLibrary('bin/llpm', Glob("./lib/*.cpp") +
