@@ -550,11 +550,20 @@ public:
         }
 
         switch (valueID) {
-            case llvm::Value::ConstantIntVal:
-                return str(boost::format("%1%'d%2%") 
-                            % bitwidth(ty)
-                            % llvm::dyn_cast<llvm::ConstantInt>(lc)->
-                                    getValue().toString(10, true));
+            case llvm::Value::ConstantIntVal: {
+                string num =
+                    llvm::dyn_cast<llvm::ConstantInt>(lc)
+                        ->getValue().toString(10, true);
+                if (num[0] == '-') {
+                    return str(boost::format("-%1%'d%2%") 
+                                % bitwidth(ty)
+                                % num.substr(1));
+                } else {
+                    return str(boost::format("%1%'d%2%") 
+                                % bitwidth(ty)
+                                % num);
+                }
+            }
             case llvm::Value::ConstantPointerNullVal:
                 assert(lc == NULL || lc->isNullValue());
                 return str(boost::format("%1%'h%2%") 

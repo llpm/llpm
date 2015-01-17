@@ -88,7 +88,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 module PipelineReg_DoubleWidth_NoData(
     clk, resetn,
@@ -162,7 +162,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 // This pipeline register contains only one buffer slot so it can only
 // operate at 1/2 throughput unless it is optimized via static scheduling
@@ -217,7 +217,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 // A latch is totally transparent, but isolates previous stuff from
 // backpressure by latching incoming data when downstream backpressure
@@ -273,7 +273,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 // Just like above, but NULL data
 module Latch_NoData(clk, resetn,
@@ -321,4 +321,4 @@ begin
     end
 end
 
-endmodule;
+endmodule

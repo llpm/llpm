@@ -43,10 +43,10 @@ static const std::vector<std::string> externalFiles = {
     "/verilator/share/verilator/include/verilated_vcd_c.cpp",
 
     // Verilog libraries
-    "/support/backends/verilog/select.v",
-    "/support/backends/verilog/pipeline.v",
-    "/support/backends/verilog/memory.v",
-    "/support/backends/verilog/fork.v",
+    "/support/backends/verilog/select.sv",
+    "/support/backends/verilog/pipeline.sv",
+    "/support/backends/verilog/memory.sv",
+    "/support/backends/verilog/fork.sv",
 };
 
 
@@ -82,7 +82,7 @@ static void run(std::string command) {
 
 void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     // Write verilog module
-    FileSet::File* vModFile = fileset.create(mod->name() + ".v");
+    FileSet::File* vModFile = fileset.create(mod->name() + ".sv");
     _verilog->writeModule(vModFile, mod);
 
     std::list<FileSet::File*> cppFiles;
@@ -98,7 +98,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
             cppFiles.push_back(cpy);
         if (ext == ".h")
             verilatedHppFiles.push_back(cpy);
-        if (ext == ".v")
+        if (ext == ".v" || ext == ".sv")
             vFiles.push_back(cpy);
     }
 

@@ -47,7 +47,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 // Same thing without data
 module Fork_VoidData(
@@ -89,7 +89,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 // A "virtual" fork which has no actual storage and merely computes
 // the AND of backpressure
@@ -117,7 +117,7 @@ assign dout = din;
 assign din_bp = !(&accepted);
 assign dout_valid = {NumOutputs{din_valid}};
 
-endmodule;
+endmodule
 
 // Same thing, without data
 module VirtFork_VoidData(
@@ -142,5 +142,5 @@ wire [NumOutputs-1:0] accepted = (~dout_bp & dout_valid);
 assign din_bp = !(&accepted);
 assign dout_valid = {NumOutputs{din_valid}};
 
-endmodule;
+endmodule
 

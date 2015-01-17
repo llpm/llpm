@@ -47,7 +47,7 @@ begin
     end
 end
 
-endmodule;
+endmodule
 
 
 /**
@@ -131,5 +131,5 @@ begin
     end
 end
 
-endmodule;
+endmodule
 

@@ -19,16 +19,16 @@ parameter CLog2NumInputs = 2;
 input clk;
 input resetn;
 
-input [Width-1:0]  x       [NumInputs-1:0];
-input              x_valid [NumInputs-1:0];
-output             x_bp    [NumInputs-1:0];
+input      [Width-1:0] x       [NumInputs-1:0];
+input                  x_valid [NumInputs-1:0];
+output reg             x_bp    [NumInputs-1:0];
 
 output [Width-1:0] a;
 output             a_valid;
 input              a_bp;
 
-wire has_valid;
-wire [CLog2NumInputs-1:0] select;
+reg has_valid;
+reg [CLog2NumInputs-1:0] select;
 
 integer i;
 always@(x_valid)
@@ -60,7 +60,7 @@ end
 assign a_valid = has_valid;
 assign a       = x[select];
 
-endmodule;
+endmodule
 
 module LLPM_Select_PriorityNoData(
     clk, resetn,
@@ -75,13 +75,13 @@ input clk;
 input resetn;
 
 input              x_valid [NumInputs-1:0];
-output             x_bp    [NumInputs-1:0];
+output reg         x_bp    [NumInputs-1:0];
 
 output             a_valid;
 input              a_bp;
 
-wire has_valid;
-wire [CLog2NumInputs-1:0] select;
+reg has_valid;
+reg [CLog2NumInputs-1:0] select;
 
 integer i;
 always@(x_valid)
@@ -112,5 +112,5 @@ end
 
 assign a_valid = has_valid;
 
-endmodule;
+endmodule
 
