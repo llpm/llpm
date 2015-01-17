@@ -7,7 +7,7 @@
 namespace llpm {
 using namespace llvm;
 
-BooleanLogic::BooleanLogic(unsigned F,
+BooleanLogic::BooleanLogic(unsigned,
                            llvm::Type* inputType,
                            llvm::Type* outputType) :
     Function(inputType, outputType)
