@@ -41,6 +41,8 @@ public:
         _context(ctxt),
         _refinery(new Refinery()),
         _namer(NULL),
+        _backend(NULL),
+        _gvOutput(NULL),
         _workingDir(keepTemps, workingDir),
         _elaborations(*this, "elab"),
         _optimizations(*this, "opt")
