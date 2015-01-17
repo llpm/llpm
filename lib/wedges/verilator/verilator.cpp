@@ -150,7 +150,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     for (auto f: cppFiles) {
         FileSet::File* objFile = f->deriveExt(".bc");
         run(str(
-            boost::format("%1%/llvm/bin/clang++ -c -emit-llvm -O1 -g -o %2% %3% %4%")
+            boost::format("%1%/llvm/bin/clang++ -c -emit-llvm -O1 -o %2% %3% %4%")
                 % Directories::executablePath()
                 % objFile->name()
                 % f->name()
