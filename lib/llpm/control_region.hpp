@@ -8,14 +8,18 @@ namespace llpm {
 
 class ControlRegion : public ContainerModule {
     MutableModule* _parent;
+    bool _finalized;
     bool add(Block*, const std::set<Port*>& constPorts = {});
 
     std::set<InputPort*> findDependences(OutputPort*) const;
 
 public:
-    ControlRegion(MutableModule* parent, Block* seed, std::string name="") :
+    ControlRegion(MutableModule* parent,
+                  Block* seed,
+                  std::string name="") :
         ContainerModule(parent->design(), name),
-        _parent(parent) {
+        _parent(parent),
+        _finalized(false) {
         this->module(parent);
         auto rc = add(seed);
         assert(rc);
@@ -35,10 +39,17 @@ public:
 
     // Ensure that we have only one dependent output
     void finalize();
+    DEF_GET_NP(finalized);
 
     virtual void validityCheck() const;
 
-    // virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual bool refine(ConnectionDB& conns) const;
+    virtual bool refinable() const {
+        return true;
+    }
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual DependenceRule depRule(const OutputPort* op) const;
 };
 
 class FormControlRegionPass : public ModulePass {

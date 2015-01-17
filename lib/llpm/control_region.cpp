@@ -2,6 +2,7 @@
 
 #include <analysis/graph.hpp>
 #include <analysis/graph_queries.hpp>
+#include <libraries/synthesis/fork.hpp>
 
 #include <boost/format.hpp>
 #include <boost/function.hpp>
@@ -400,6 +401,18 @@ void ControlRegion::validityCheck() const {
     // NO cycles!
     assert(!hasCycle());
 
+    set<Block*> blocks;
+    _conns.findAllBlocks(blocks);
+    for (auto b: blocks) {
+        assert(b->firing() == DependenceRule::AND);
+        assert(b->outputsTied());
+        assert(!b->outputsSeparate());
+    }
+}
+
+void ControlRegion::finalize() {
+    this->unifyOutput();
+
     // Check to make sure all outputs have the same deps as the module as a
     // whole
     set<InputPort*> cannonDeps =
@@ -409,29 +422,61 @@ void ControlRegion::validityCheck() const {
         assert(cannonDeps == deps &&
                "Error: control region may introduce a deadlock.");
     }
-}
 
-void ControlRegion::finalize() {
-    this->unifyOutput();
-}
-
-
-#if 0
-const std::vector<InputPort*>&
-    ControlRegion::deps(const OutputPort* op) const {
-    auto pvec = _findDeps(op); //ContainerModule::deps(op);
-    set<InputPort*> depSet(pvec.deps.begin(), pvec.deps.end());
-    set<InputPort*> inpSet(inputs().begin(), inputs().end());
-    if (depSet != inpSet) {
-        printf("Bad find deps!\n");
-        for (auto ip: pvec.deps) {
-            printf("  %s %s\n",
-                   ip->name().c_str(), ip->owner()->name().c_str());
+    // Eliminate Waits and Forks
+    set<Block*> blocks;
+    _conns.findAllBlocks(blocks);
+    for (auto b: blocks) {
+        if (b->is<Wait>()) {
+            auto w = b->as<Wait>();
+            OutputPort* source = _conns.findSource(w->din());
+            vector<InputPort*> sinks;
+            _conns.findSinks(w->dout(), sinks);
+            for (auto sink: sinks) {
+                _conns.disconnect(w->dout(), sink);
+                if (source != NULL)
+                    _conns.connect(source, sink);
+            }
+            _conns.removeBlock(w);
         }
-        _findDeps(op);
+
+        if (b->is<Fork>()) {
+            auto f = b->as<Fork>();
+            OutputPort* source = _conns.findSource(f->din());
+            for (unsigned i=0; i<f->dout_size(); i++) {
+                vector<InputPort*> sinks;
+                _conns.findSinks(f->dout(i), sinks);
+                for (auto sink: sinks) {
+                    _conns.disconnect(f->dout(i), sink);
+                    if (source != NULL)
+                        _conns.connect(source, sink);
+                }
+            }
+            _conns.removeBlock(f);
+        }
     }
-    return ContainerModule::deps(op);
+
+    this->_finalized = true;
 }
 
-#endif
+bool ControlRegion::refine(ConnectionDB& conns) const {
+    if (!_finalized)
+        return ContainerModule::refine(conns);
+
+    assert(false &&
+           "CR Refinement not written. Needs to add Wait and Forks.");
+    return false;
+}
+
+
+const std::vector<InputPort*>&
+    ControlRegion::deps(const OutputPort*) const {
+    return inputs();
+}
+
+DependenceRule ControlRegion::depRule(const OutputPort*) const {
+    return DependenceRule(DependenceRule::AND, DependenceRule::Always);
+}
+
+
 } // namespace llpm
