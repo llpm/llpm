@@ -116,7 +116,7 @@ bool Split::refineToExtracts(ConnectionDB& conns) const {
 llvm::Type* Extract::GetOutput(llvm::Type* t, std::vector<unsigned> path) {
     for (unsigned i=0; i<path.size(); i++) {
         unsigned idx = path[i];
-        if (idx > numContainedTypes(t))
+        if (idx >= numContainedTypes(t))
             throw InvalidArgument("Extract index beyond vector bound!");
         t = nthType(t, idx);
     }

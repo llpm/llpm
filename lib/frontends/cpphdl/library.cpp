@@ -31,7 +31,8 @@ class GetElementPtrRefiner : public BlockRefiner {
 
         assert(ins->getType()->isPointerTy());
         auto pt = llvm::dyn_cast<llvm::PointerType>(ins->getType());
-        auto extr = new Extract(mi->din()->type(), {2});
+        auto extr = new Extract(mi->din()->type(),
+                                {ins->getNumOperands()-1});
         conns.remap(mi->din(), extr->din());
         int widthDiff = bitwidth(pt) - bitwidth(extr->dout()->type());
         OutputPort* valOut = extr->dout();

@@ -99,6 +99,7 @@ std::string name(llvm::BasicBlock* bb) {
 }
 
 llvm::Type* nthType(llvm::Type* ty, unsigned i) {
+    assert(i < numContainedTypes(ty));
     switch(ty->getTypeID()) {
     case llvm::Type::StructTyID:
         return ty->getStructElementType(i);
