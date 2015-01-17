@@ -30,6 +30,19 @@ public:
     virtual void runInternal(Module* mod);
 };
 
+class StatsPrinterPass: public ModulePass {
+    std::map<std::string, uint64_t> _typeCounters;
+    std::string _name;
+public:
+    StatsPrinterPass(Design& design, std::string name=""):
+        ModulePass(design),
+        _name(name)
+    { }
+
+    virtual void runInternal(Module* mod);
+    virtual void finalize();
+};
+
 } // namespace llpm
 
 #endif // __LLPM_PASSES_PRINT_HPP__

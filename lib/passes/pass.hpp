@@ -29,6 +29,7 @@ public:
 
     virtual bool run();
     bool run(Module* mod);
+    virtual void finalize() { }
 };
 
 class LambdaModulePass: public ModulePass {

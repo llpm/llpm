@@ -1,8 +1,10 @@
 #include "print.hpp"
 
 #include <llpm/module.hpp>
-#include <boost/format.hpp>
+#include <util/misc.hpp>
 #include <backends/graphviz/graphviz.hpp>
+
+#include <boost/format.hpp>
 
 using namespace std;
 
@@ -45,6 +47,31 @@ void TextPrinterPass::runInternal(Module* mod) {
                 p.first->owner()->globalName().c_str(),
                 p.first->num(),
                 p.first->name().c_str());
+    }
+    f->close();
+}
+
+void StatsPrinterPass::runInternal(Module* mod) {
+    ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        return;
+
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
+    for (auto b: blocks) {
+        _typeCounters[typeid(*b).name()] += 1;
+    }
+}
+
+void StatsPrinterPass::finalize() {
+    std::string fn = str(boost::format("stats%1%.csv")
+                            % _name);
+    auto f =_design.workingDir()->create(fn);
+    auto fd = f->openFile("w");
+    for (auto p: _typeCounters) {
+        fprintf(fd, "%s, %lu\n",
+                cpp_demangle(p.first).c_str(),
+                p.second);
     }
     f->close();
 }

@@ -70,6 +70,7 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<CheckOutputsPass>();
         d.optimizations()->append<CheckCyclesPass>();
         d.optimizations()->append<TextPrinterPass>();
+        d.optimizations()->append<StatsPrinterPass>();
 
         FileSet* fs = d.workingDir();
         GraphvizOutput gv(d);

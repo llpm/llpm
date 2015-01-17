@@ -28,6 +28,7 @@ bool ModulePass::run(Module* mod) {
     for (auto sm: submodules) {
         this->run(sm);
     }
+    finalize();
     return mod->changeCounter() > ctr;
 }
 
