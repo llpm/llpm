@@ -21,7 +21,7 @@ static T myrand() {
 
 int main() {
     SortAccel* sa = new SortAccel();
-    sa->trace("debug.vcd");
+    // sa->trace("debug.vcd");
     sa->reset();
 
 #if 0

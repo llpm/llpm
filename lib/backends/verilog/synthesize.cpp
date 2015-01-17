@@ -134,11 +134,65 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
          << "    input clk,\n"
          << "    input resetn\n"
          << ");\n\n";
-    
 
+    bool globalBP = ctxt.module()->is<ControlRegion>();
+    if (globalBP) {
+        writeCRControl(ctxt);
+    } else {
+        writeLocalIOControl(ctxt);
+    }
+}
+
+void VerilogSynthesizer::writeCRControl(Context& ctxt) {
+    Module* mod = ctxt.module();
     ConnectionDB* conns = mod->conns();
     if (conns == NULL) {
-        throw InvalidArgument("Verilog synthesizer cannot operate on opaque modules!");
+        throw InvalidArgument("Verilog synthesizer cannot operate on "
+                              "opaque modules!");
+    }
+
+    ctxt << "    wire cr_valid = \n";
+    for (auto ip: mod->inputs()) {
+        ctxt << "        " << ctxt.name(ip, true) << "_valid & \n";
+    }
+    ctxt << "        1'b1;\n\n";
+
+    ctxt << "    wire cr_bp = \n"
+         << "        ~cr_valid | \n";
+    for (auto op: mod->outputs()) {
+        ctxt << "        " << ctxt.name(op, true) << "_bp | \n";
+    }
+    ctxt << "        1'b0;\n\n";
+
+    for (auto&& ip: mod->inputs()) {
+        OutputPort* dummyOP = mod->getDriver(ip);
+        ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip, true));
+        ctxt << boost::format("    assign %1%_bp = cr_bp;\n")
+                        % ctxt.name(ip, true);
+    }
+
+    for (auto&& op: mod->outputs()) {
+        InputPort* dummyIP = mod->getSink(op);
+        OutputPort* source = conns->findSource(dummyIP);
+        ctxt.namer().assignName(dummyIP, mod, ctxt.name(op, true));
+        if (bitwidth(op->type()) > 0)
+            ctxt << boost::format("    assign %1% = %2%;\n")
+                        % ctxt.name(op, true)
+                        % ctxt.name(source);
+
+        ctxt << boost::format("    assign %1%_valid = cr_valid;\n")
+                        % ctxt.name(op, true);
+    }
+
+    ctxt << "\n";
+}
+
+void VerilogSynthesizer::writeLocalIOControl(Context& ctxt) {
+    Module* mod = ctxt.module();
+    ConnectionDB* conns = mod->conns();
+    if (conns == NULL) {
+        throw InvalidArgument("Verilog synthesizer cannot operate on "
+                              "opaque modules!");
     }
 
     ctxt << "    // Input back pressure connection\n";
@@ -176,6 +230,7 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
 
 void VerilogSynthesizer::writeBlocks(Context& ctxt) {
     ConnectionDB* conns = ctxt.module()->conns();
+    bool writeControlBits = !ctxt.module()->is<ControlRegion>();
     
     vector<Block*> blocks;
     ctxt.module()->blocks(blocks);
@@ -200,39 +255,37 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                 opName = ctxt.name(c.source());
             }
 
-            if (bitwidth(ip->type()) == 0) {
-                ctxt << boost::format("    reg %1%_valid = %2%_valid;\n"
-                                      "    reg %1%_bp;\n")
+            if (bitwidth(ip->type()) > 0) {
+                ctxt << boost::format("    reg [%1%-1:0] %2% = %3%;\n")
+                            % bitwidth(ip->type())
                             % ctxt.name(ip)
                             % opName;
-            } else {
-                ctxt << boost::format("    reg [%1%-1:0] %2% = %3%;\n"
-                                      "    reg %2%_valid = %3%_valid;\n"
-                                      "    reg %2%_bp;\n")
-                            % bitwidth(ip->type())
+            }
+            if (writeControlBits) {
+                ctxt << boost::format("    reg %1%_valid = %2%_valid;\n"
+                                      "    reg %1%_bp;\n")
                             % ctxt.name(ip)
                             % opName;
             }
         }
 
         for (OutputPort* op: b->outputs()) {
-            if (bitwidth(op->type()) == 0) {
-                ctxt << boost::format("    reg %1%_valid;\n"
-                                      "    reg %1%_bp = ")
-                            % ctxt.name(op);
-            } else {
-                ctxt << boost::format("    reg [%1%-1:0] %2%;\n"
-                                      "    reg %2%_valid;\n"
-                                      "    reg %2%_bp = ")
+            if (bitwidth(op->type()) > 0) {
+                ctxt << boost::format("    reg [%1%-1:0] %2%;\n")
                             % bitwidth(op->type())
                             % ctxt.name(op);
             }
 
-            InputPort* sink = findSink(conns, op);
-            if (sink) {
-                ctxt << ctxt.name(sink) << "_bp;\n";
-            } else {
-                ctxt << "1'b0;\n";
+            if (writeControlBits) {
+                ctxt << boost::format("    reg %1%_valid;\n"
+                                      "    reg %1%_bp = ")
+                            % ctxt.name(op);
+                InputPort* sink = findSink(conns, op);
+                if (sink) {
+                    ctxt << ctxt.name(sink) << "_bp;\n";
+                } else {
+                    ctxt << "1'b0;\n";
+                }
             }
         }
 
@@ -255,8 +308,13 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
     } else {
         auto printer = possible_printers.front();
         printer->print(ctxt, b);
+        bool writeControlBits = !ctxt.module()->is<ControlRegion>();
+        if (!writeControlBits) {
+            assert(!printer->customLID());
+            assert(b->firing() == DependenceRule::AND);
+        }
 
-        if (!printer->customLID()) {
+        if (writeControlBits && !printer->customLID()) {
             assert(b->outputsTied());
 
             std::string joinOp;

@@ -97,6 +97,8 @@ public:
     };
 
     void writeIO(Context&);
+    void writeCRControl(Context&);
+    void writeLocalIOControl(Context&);
     void writeBlocks(Context&);
 
 private:

@@ -15,6 +15,10 @@ void SynthesizeForksPass::runInternal(Module* mod) {
     if (conns == NULL)
         return;
 
+    if (mod->is<ControlRegion>())
+        // Don't add forks to CRs
+        return;
+
     deque<OutputPort*> forkingSources;
     for (const auto& p: conns->sinksRaw()) {
         if (p.second.size() > 1)
