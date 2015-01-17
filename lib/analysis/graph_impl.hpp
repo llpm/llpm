@@ -10,7 +10,7 @@ namespace llpm {
 
 template<typename Path>
 Terminate Visitor<Path>::next(
-        const ConnectionDB* conns,
+        const ConnectionDB*,
         const PathTy& path,
         std::vector<typename PathTy::SrcPortTy*>& out)
 {
@@ -28,7 +28,7 @@ Terminate Visitor<Path>::next(
 
 template<typename Path>
 Terminate Visitor<Path>::pathEnd(const ConnectionDB*,
-                                 const PathTy& path) {
+                                 const PathTy&) {
     return Continue;
 }
 

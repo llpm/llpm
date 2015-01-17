@@ -25,7 +25,7 @@ public:
         // Library* _library;
 
     protected:
-        Refiner(Library* lib = NULL)
+        Refiner(Library* = NULL)
             // _library(lib)
         { }
 

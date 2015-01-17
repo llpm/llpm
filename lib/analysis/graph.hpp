@@ -98,7 +98,7 @@ protected:
 public:
     VisitPort() { }
 
-    VisitPort(SrcPort* src, DstPort* dst):
+    VisitPort(SrcPort*, DstPort* dst):
         _dst(dst)
     { }
 

@@ -157,7 +157,7 @@ public:
 
     // Can previous blocks re-order the fields of this input and obtain the
     // same result from this block?
-    virtual bool inputCommutative(InputPort* op) const {
+    virtual bool inputCommutative(InputPort*) const {
         return false;
     }
 
@@ -201,9 +201,10 @@ public:
      * @arg opMap Mapping of output ports in original block to
      *            output ports in new blocks
      */
-    virtual bool refine(ConnectionDB& conns) const {
+    virtual bool refine(ConnectionDB&) const {
         if (refinable())
-            throw ImplementationError("Block needs to implement refine method!");
+            throw ImplementationError(
+                "Block needs to implement refine method!");
         return false;
     }
 

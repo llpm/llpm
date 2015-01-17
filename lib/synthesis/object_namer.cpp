@@ -68,7 +68,7 @@ std::string ObjectNamer::primBlockName(Block* b, Module* ctxt) {
     return base;
 }
 
-std::string ObjectNamer::getName(Block* b, Module* ctxt, bool ignore) {
+std::string ObjectNamer::getName(Block* b, Module* ctxt, bool) {
     std::string base = primBlockName(b, ctxt);
     return addContext(base, b, ctxt);
 }

@@ -25,7 +25,7 @@ llvm::Type* Memory::GetWriteReq(llvm::Type* dt, llvm::Type* idx) {
             vector<llvm::Type*>({dt, idx}));
 }
 
-llvm::Type* Memory::GetReadReq(llvm::Type* dt, llvm::Type* idx) {
+llvm::Type* Memory::GetReadReq(llvm::Type*, llvm::Type* idx) {
     return idx;
 }
 

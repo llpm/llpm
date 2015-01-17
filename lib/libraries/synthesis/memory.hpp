@@ -71,7 +71,7 @@ public:
         return true;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule depRule(const OutputPort*) const {
         return DependenceRule(DependenceRule::OR,
                               DependenceRule::Always);
     }

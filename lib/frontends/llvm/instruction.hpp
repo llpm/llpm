@@ -140,6 +140,14 @@ public:
     virtual bool hasState() const {
         return false;
     }
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        return Constant::depRule(op);
+    }
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+        return Constant::deps(op);
+    }
 };
 
 // To represent an instruction with which the base library cannot deal

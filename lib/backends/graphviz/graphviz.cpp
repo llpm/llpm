@@ -79,7 +79,7 @@ static std::string attrs(ObjectNamer& namer, Block* b,
 
 
 
-static std::string attrs(ObjectNamer& namer, OutputPort* op, InputPort* ip,
+static std::string attrs(ObjectNamer&, OutputPort* op, InputPort* ip,
                          std::map<std::string, std::string> o) {
     std::map<std::string, std::string> a;
     auto opName = op->name();
@@ -144,8 +144,7 @@ void printConns(std::ostream& os,
 
 void printIO(std::ostream& os,
              ObjectNamer& namer,
-             ContainerModule* cm,
-             Module* mod) {
+             ContainerModule* cm) {
     for (InputPort* ip: cm->inputs()) {
         auto dummy = cm->getDriver(ip)->owner();
         os << "    " << getName(dummy)
@@ -208,7 +207,7 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
 
     ContainerModule* cmMod = dynamic_cast<ContainerModule*>(mod);
     if (cmMod) {
-        printIO(os, namer, cmMod, mod);
+        printIO(os, namer, cmMod);
     }
 
     vector<Block*> blocks;

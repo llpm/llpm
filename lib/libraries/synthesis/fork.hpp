@@ -29,7 +29,7 @@ public:
         return false;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule depRule(const OutputPort*) const {
         return DependenceRule(DependenceRule::AND,
                               DependenceRule::Always);
     }
@@ -39,7 +39,7 @@ public:
     }
 
     virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
+            deps(const OutputPort*) const {
         return inputs();
     }
 

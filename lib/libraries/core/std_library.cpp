@@ -73,7 +73,7 @@ IntSubtraction::IntSubtraction(llvm::Type* a, llvm::Type* b) :
 {
 }
 
-llvm::Type* ConstShift::InType(llvm::Type* a, int shift, Style style) {
+llvm::Type* ConstShift::InType(llvm::Type* a, int, Style) {
     if (!a->isIntegerTy())
         throw InvalidArgument("All inputs to IntAddition must be ints!");
     return a;
@@ -84,7 +84,7 @@ llvm::Type* ConstShift::OutType(llvm::Type* a, int shift, Style style) {
         throw InvalidArgument("All inputs to IntAddition must be ints!");
 
     bool trunc = style == LogicalTruncating;
-    int ashift = (shift > 0) ? shift : -1 * shift;
+    unsigned ashift = (shift > 0) ? shift : -1 * shift;
     if (a->getScalarSizeInBits() < ashift)
         throw InvalidArgument("Cannot shift more than the width of the type!");
 
@@ -101,12 +101,12 @@ ConstShift::ConstShift(llvm::Type* a, int shift, Style style)  :
 {
 }
 
-llvm::Type* Shift::InType(llvm::Type* a, Direction dir, Style Style) {
+llvm::Type* Shift::InType(llvm::Type* a, Direction, Style) {
     return llvm::StructType::get(a->getContext(), vector<llvm::Type*>(
         {a, llvm::Type::getIntNTy(a->getContext(), idxwidth(bitwidth(a)))}));
 }
 
-llvm::Type* Shift::OutType(llvm::Type* a, Direction dir, Style Style) {
+llvm::Type* Shift::OutType(llvm::Type* a, Direction, Style) {
     if (!a->isIntegerTy())
         throw InvalidArgument("All inputs to IntAddition must be ints!");
     return a;
@@ -119,7 +119,7 @@ Shift::Shift(llvm::Type* a, Direction dir, Style style) :
 {
 }
 
-llvm::Type* IntTruncate::InType(unsigned N, llvm::Type* t) {
+llvm::Type* IntTruncate::InType(unsigned, llvm::Type* t) {
     if (!t->isIntegerTy())
         throw InvalidArgument("Input to IntTruncate must be int!");
     return t;
@@ -147,7 +147,7 @@ IntTruncate::IntTruncate(llvm::Type* a, llvm::Type* b) :
         throw InvalidArgument("Input to IntTrunc must be wider than output!");
 }
 
-llvm::Type* IntExtend::InType(unsigned N, llvm::Type* t) {
+llvm::Type* IntExtend::InType(unsigned, llvm::Type* t) {
     if (!t->isIntegerTy())
         throw InvalidArgument("Input to IntExtend must be int!");
     return t;
@@ -186,11 +186,11 @@ IntMultiply::IntMultiply(std::vector<llvm::Type*> t) :
 {
 }
 
-llvm::Type* IntDivide::InType(llvm::Type* a, llvm::Type* b, bool isSigned) {
+llvm::Type* IntDivide::InType(llvm::Type* a, llvm::Type* b, bool) {
     return IntAddition::InType({a, b});
 }
 
-llvm::Type* IntDivide::OutType(llvm::Type* a, llvm::Type* b, bool isSigned) {
+llvm::Type* IntDivide::OutType(llvm::Type* a, llvm::Type* b, bool) {
     if (!a->isIntegerTy() || !b->isIntegerTy())
         throw InvalidArgument("All inputs to IntDivide must be ints!");
     return a;
@@ -202,11 +202,11 @@ IntDivide::IntDivide(llvm::Type* a, llvm::Type* b, bool isSigned) :
 {
 }
 
-llvm::Type* IntRemainder::InType(llvm::Type* a, llvm::Type* b, bool isSigned) {
+llvm::Type* IntRemainder::InType(llvm::Type* a, llvm::Type* b, bool) {
     return IntAddition::InType({a, b});
 }
 
-llvm::Type* IntRemainder::OutType(llvm::Type* a, llvm::Type* b, bool isSigned) {
+llvm::Type* IntRemainder::OutType(llvm::Type* a, llvm::Type* b, bool) {
     if (!a->isIntegerTy() || !b->isIntegerTy())
         throw InvalidArgument("All inputs to IntDivide must be ints!");
     return b;
@@ -244,13 +244,12 @@ Bitwise::Bitwise(unsigned N, llvm::Type* t, Op op) :
 }
 
 llvm::Type* IntCompare::InType(llvm::Type* a, llvm::Type* b,
-                               Cmp op, bool isSigned)
+                               Cmp, bool)
 {
     return IntAddition::InType({a, b});
 }
 
-llvm::Type* IntCompare::OutType(llvm::Type* a, llvm::Type* b,
-                                   Cmp op, bool isSigned)
+llvm::Type* IntCompare::OutType(llvm::Type* a, llvm::Type*, Cmp, bool)
 {
     return Type::getInt1Ty(a->getContext());
 }

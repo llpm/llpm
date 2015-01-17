@@ -190,7 +190,7 @@ public:
         return f->second;
     }
 
-    virtual Interface* mem(llvm::Value* v) const {
+    virtual Interface* mem(llvm::Value*) const {
         return NULL;
     }
 };

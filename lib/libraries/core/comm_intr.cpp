@@ -23,9 +23,9 @@ Wait::Wait(llvm::Type* type) :
 { }
 
 Wait::~Wait() {
-    for (auto ip: _controls) {
+    // for (auto ip: _controls) {
         // delete ip;
-    }
+    // }
 }
 
 InputPort* Wait::newControl(llvm::Type* t) {

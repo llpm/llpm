@@ -21,7 +21,7 @@ public:
 
 // Constant value. Should probably be treated specially by backends
 // and optimizers.
-class Constant : public Block {
+class Constant : public virtual Block {
     llvm::Constant* _value;
     OutputPort   _dout;
 public:
@@ -69,7 +69,7 @@ public:
 
 // A data source which never produces tokens. Basically the opposite
 // of a constant.
-class Never: public Block {
+class Never: public virtual Block {
     OutputPort   _dout;
 public:
     Never(llvm::Type* t) :

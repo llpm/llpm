@@ -6,7 +6,7 @@ using namespace std;
 
 namespace llpm {
 
-bool BlockRefiner::refine(Block* c) const {
+bool BlockRefiner::refine(Block*) const {
     assert(false && "Not yet implemented");
 }
 
@@ -24,7 +24,7 @@ unsigned Refinery::refine(std::vector<Block*> crude,
                           ConnectionDB& conns,
                           int depth,
                           StopCondition* sc) {
-    unsigned passes = 0;
+    long passes = 0;
     bool foundRefinement;
     do {
         set<Block*> refinedBlocks;

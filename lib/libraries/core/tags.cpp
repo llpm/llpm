@@ -22,13 +22,13 @@ Tagger::Tagger(llvm::Type* serverReq,
 }
 
 llvm::Type* Tagger::GetServerInput(
-    llvm::Type* serverReq, llvm::Type* serverResp, llvm::Type* tag) {
+    llvm::Type* serverReq, llvm::Type*, llvm::Type* tag) {
     return llvm::StructType::get(tag->getContext(), 
                                  vector<llvm::Type*>({tag, serverReq}));
 }
 
 llvm::Type* Tagger::GetServerOutput(
-    llvm::Type* serverReq, llvm::Type* serverResp, llvm::Type* tag) {
+    llvm::Type*, llvm::Type* serverResp, llvm::Type* tag) {
     return llvm::StructType::get(tag->getContext(),
                                  vector<llvm::Type*>({tag, serverResp}));
 }

@@ -1068,7 +1068,7 @@ struct ModuleAttr: public AttributePrinter {
     std::string name(Module* m) {
         return m->name();
     }
-    void operator()(VerilogSynthesizer::Context& ctxt, Block* b) { }
+    void operator()(VerilogSynthesizer::Context&, Block*) { }
 };
 
 struct PipelineRegAttr: public AttributePrinter {
