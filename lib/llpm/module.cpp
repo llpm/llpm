@@ -254,6 +254,9 @@ void Module::createSWModule(llvm::Module* M) {
         
         this->_swModule.reset(
             CloneModule(M, VMap));
+        while (_swModule->getNamedMDList().size() > 0) {
+            (*_swModule->getNamedMDList().begin()).eraseFromParent();
+        }
     }
 }
 
