@@ -11,14 +11,18 @@
 
 #include <frontends/llvm/library.hpp>
 
+using namespace std;
+
 namespace llpm {
 
 LLVMTranslator::LLVMTranslator(Design& design) :
-    _design(design) {
-    design.refinery().appendLibrary(new LLVMBaseLibrary());
+    _design(design),
+    _pm(NULL) {
+    design.refinery().appendLibrary(make_shared<LLVMBaseLibrary>());
 }
 
 LLVMTranslator::~LLVMTranslator() {
+    DEL_IF(_pm);
 }
 
 void LLVMTranslator::readBitcode(std::string fileName) {

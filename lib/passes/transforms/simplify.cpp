@@ -397,7 +397,9 @@ void SimplifyWaits::collectControls(
     GraphSearch<SimplifyWaitsVisitor, DFS> search(t.conns(), visitor);
     search.go(vector<InputPort*>({wait->din()}));
     visitor.pass = 2;
-    search.go(vector<InputPort*>(wait->controls()));
+    vector<InputPort*> init;
+    wait->controls(init);
+    search.go(init);
 
     if (visitor.initPoints.empty()) {
         auto driver = t.conns()->findSource(wait->din());

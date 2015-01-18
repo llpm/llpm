@@ -6,6 +6,8 @@
 
 #include <llvm/IR/Constants.h>
 
+using namespace std;
+
 namespace llpm {
 namespace cpphdl {
 
@@ -53,9 +55,10 @@ class GetElementPtrRefiner : public BlockRefiner {
     }
 };
 
-std::vector<Refinery::Refiner*> CPPHDLBaseLibrary::BuildCollection() {
+std::vector<std::shared_ptr<Refinery::Refiner>>
+    CPPHDLBaseLibrary::BuildCollection() {
     return {
-        new GetElementPtrRefiner(),
+        make_shared<GetElementPtrRefiner>(),
     };
 }
 

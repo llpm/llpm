@@ -76,7 +76,7 @@ public:
 class InterfaceMultiplexer : public Block {
     Interface _client;
 
-    std::vector<Interface*> _servers;
+    std::vector<std::unique_ptr<Interface>> _servers;
     std::vector<InputPort*> _clientDinArr;
 
 public:
@@ -93,7 +93,7 @@ public:
     }
 
     DEF_GET(client);
-    DEF_ARRAY_GET(servers);
+    DEF_UNIQ_ARRAY_GET(servers);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
         assert(std::find(outputs().begin(), outputs().end(), op)
@@ -125,7 +125,7 @@ public:
                           _client.respType(), 
                           true,
                           iname);
-        _servers.push_back(i);
+        _servers.emplace_back(i);
         return i;
     }
 

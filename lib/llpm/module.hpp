@@ -22,7 +22,7 @@ protected:
     Design& _design;
 
     llvm::ValueToValueMapTy VMap;
-    std::unique_ptr<llvm::Module> _swModule;
+    llvm::Module* _swModule;
 
     // A type which represents this module in the S/W version of this
     // module
@@ -44,7 +44,8 @@ protected:
 
 public:
     Module(Design& design, std::string name) :
-        _design(design)
+        _design(design),
+        _swModule(NULL)
     {
         this->name(name);
     }
@@ -52,7 +53,7 @@ public:
 
     DEF_GET_NP(design);
     llvm::Module* swModule() {
-        return _swModule.get();
+        return _swModule;
     }
     virtual void swModule(llvm::Module* mod);
     void createSWModule(llvm::Module*);
@@ -203,6 +204,8 @@ protected:
     // port on the corresponding pass through block.
     std::map<InputPort*, boost::intrusive_ptr<DummyBlock>> _inputMap;
     std::map<OutputPort*, boost::intrusive_ptr<DummyBlock>> _outputMap;
+    std::set<Interface*> _ownedInterfaces;
+    std::set<Port*>      _ownedPorts;
 
     InputPort* addInputPort(InputPort* ip, std::string name = "");
     void removeInputPort(InputPort* ip);

@@ -20,7 +20,7 @@ bool InterfaceMultiplexer::refine(ConnectionDB& conns) const {
         conns.remap(_client.din(), respI->din());
 
         if (_servers.size() > 0) {
-            Interface* serv = _servers[0];
+            Interface* serv = _servers[0].get();
             conns.remap(serv->din(), reqI->din());
             conns.remap(serv->dout(), respI->dout());
         }

@@ -8,7 +8,7 @@ namespace llpm {
 namespace cpphdl {
     
 class CPPHDLBaseLibrary : public Refinery::Library {
-    static std::vector<Refinery::Refiner*> BuildCollection();
+    static std::vector<std::shared_ptr<Refinery::Refiner>> BuildCollection();
 public:
     CPPHDLBaseLibrary() :
         Refinery::Library(BuildCollection())

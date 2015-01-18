@@ -21,13 +21,13 @@ public:
 template<typename V>
 class Library {
 protected:
-    std::vector<V*> _collection;
-    Library(std::vector<V*> collection) :
+    std::vector<std::shared_ptr<V>> _collection;
+    Library(std::vector<std::shared_ptr<V>> collection) :
         _collection(collection)
     { }
 
 public:
-    const std::vector<V*>& collection() {
+    const std::vector<std::shared_ptr<V>>& collection() {
         return _collection;
     }
 
@@ -50,21 +50,20 @@ public:
 #endif
 
 private:
-    std::vector<V*> _entries;
+    std::vector<std::shared_ptr<V>> _entries;
     std::unordered_map<std::type_index, std::vector<V*> > _cache;
-    std::vector< Library<V>* > _libraries;
+    std::vector< std::shared_ptr<Library<V>> > _libraries;
 
 public:
     PriorityCollection() { }
     PriorityCollection(const std::vector<V*>& entries) {
         this->setEntries(entries);
     }
-    ~PriorityCollection() { }
 
     const std::vector<V*>& entries() const {
         return entries;
     }
-    void setEntries(const std::vector<V*>& entries) {
+    void setEntries(const std::vector<std::shared_ptr<V>>& entries) {
         _entries = entries;
         _cache.clear();
     }
@@ -74,27 +73,27 @@ public:
         _cache.clear();
     }
 
-    void prependEntries(const std::vector<V*>& entries) {
+    void prependEntries(const std::vector<std::shared_ptr<V>>& entries) {
         _entries.insert(_entries.begin(), entries.begin(), entries.end());
         _cache.clear();
     }
 
-    void appendEntry(V* entry) {
+    void appendEntry(std::shared_ptr<V> entry) {
         _entries.push_back(entry);
         _cache.clear();
     }
 
-    void appendEntries(const std::vector<V*>& entries) {
+    void appendEntries(const std::vector<std::shared_ptr<V>>& entries) {
         _entries.insert(_entries.end(), entries.begin(), entries.end());
         _cache.clear();
     }
 
-    void appendLibrary(Library<V>* lib) {
+    void appendLibrary(std::shared_ptr<Library<V>> lib) {
         _libraries.push_back(lib);
         appendEntries(lib->collection());
     }
 
-    void prependLibrary(Library<V>* lib) {
+    void prependLibrary(std::shared_ptr<Library<V>> lib) {
         _libraries.insert(_libraries.begin(), lib);
         prependEntries(lib->collection());
     }
@@ -107,7 +106,7 @@ public:
             std::vector<V*>& vvec = _cache[ti];
             for(auto&& v: _entries) {
                 if (v->handles(k)) {
-                    vvec.push_back(v);
+                    vvec.push_back(v.get());
                 }
             }
             return vvec;

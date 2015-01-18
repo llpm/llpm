@@ -23,16 +23,10 @@ Wait::Wait(llvm::Type* type) :
     _dout(this, type, "dout")
 { }
 
-Wait::~Wait() {
-    // for (auto ip: _controls) {
-        // delete ip;
-    // }
-}
-
 InputPort* Wait::newControl(llvm::Type* t) {
     auto name = str(boost::format("control%1%") % _controls.size());
     auto ip = new InputPort(this, t, name);
-    _controls.push_back(ip);
+    _controls.emplace_back(ip);
     return ip;
 }
 
@@ -56,7 +50,7 @@ Join::Join(const vector<llvm::Type*>& inputs) :
     _dout(this, StructType::get(inputs[0]->getContext(), inputs))
 {
     for(auto input: inputs) {
-        _din.push_back(new InputPort(this, input));
+        _din.emplace_back(new InputPort(this, input));
     }
 }
 
@@ -69,7 +63,7 @@ Join::Join(llvm::Type* output) :
     
     unsigned numTypes = numContainedTypes(ct);
     for (unsigned idx=0; idx<numTypes; idx++) {
-        _din.push_back(new InputPort(this, ct->getTypeAtIndex(idx)));
+        _din.emplace_back(new InputPort(this, ct->getTypeAtIndex(idx)));
     }
 }
 
@@ -77,7 +71,7 @@ Select::Select(unsigned N, llvm::Type* type) :
     _dout(this, type)
 {
     for (unsigned i = 0; i<N; i++) {
-        _din.push_back(new InputPort(this, type));
+        _din.emplace_back(new InputPort(this, type));
     }
 }
 
@@ -85,7 +79,7 @@ Split::Split(const vector<llvm::Type*>& outputs) :
     _din(this, StructType::get(outputs[0]->getContext(), outputs))
 {
     for(auto output: outputs) {
-        _dout.push_back(new OutputPort(this, output));
+        _dout.emplace_back(new OutputPort(this, output));
     }
 }
 
@@ -98,7 +92,7 @@ Split::Split(llvm::Type* input) :
     
     unsigned numTypes = numContainedTypes(ct);
     for (unsigned idx=0; idx<numTypes; idx++) {
-        _dout.push_back(new OutputPort(this, ct->getTypeAtIndex(idx)));
+        _dout.emplace_back(new OutputPort(this, ct->getTypeAtIndex(idx)));
     }
 }
 
@@ -108,7 +102,7 @@ bool Split::refineToExtracts(ConnectionDB& conns) const {
     for (unsigned i=0; i<_dout.size(); i++) {
         auto e = new Extract(din()->type(), {i});
         einputs.push_back(e->din());
-        conns.remap(_dout[i], e->dout());
+        conns.remap(_dout[i].get(), e->dout());
     }
     conns.remap(din(), einputs);
     return true;
@@ -153,7 +147,7 @@ Router::Router(unsigned N, llvm::Type* type) :
     _din(this, GetInput(N, type))
 {
     for (unsigned i = 0; i<N; i++) {
-        _dout.push_back(new OutputPort(this, type));
+        _dout.emplace_back(new OutputPort(this, type));
     }
 }
 

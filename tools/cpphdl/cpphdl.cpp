@@ -35,8 +35,8 @@ int main(int argc, const char** argv) {
 
         string dirName = argv[2];
         Design d(dirName, true);
-        VerilogSynthesizer vs(d);
-        d.backend(&vs);
+        VerilogSynthesizer* vs = new VerilogSynthesizer(d);
+        d.backend(vs);
 
         {
             CPPHDLTranslator trans(d);
@@ -74,7 +74,7 @@ int main(int argc, const char** argv) {
 
         FileSet* fs = d.workingDir();
         GraphvizOutput gv(d);
-        VerilatorWedge vw(&vs);
+        VerilatorWedge vw(vs);
  
         // printf("Writing graphviz output...\n");
         // for (Module* mod: d.modules()) {

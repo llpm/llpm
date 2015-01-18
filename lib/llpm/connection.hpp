@@ -67,8 +67,6 @@ class ConnectionDB {
     std::set<BlockP> _blacklist;
     std::map<BlockP, uint64_t> _blockUseCounts;
     std::set<BlockP> _newBlocks;
-    std::map<const InputPort*, std::vector<InputPort*> > _inputRewrites;
-    std::map<const OutputPort*, OutputPort*> _outputRewrites;
 
     void registerBlock(BlockP block);
     void deregisterBlock(BlockP block) {
@@ -76,6 +74,7 @@ class ConnectionDB {
         assert(count >= 1);
         count -= 1;
     }
+
 
 public:
     ConnectionDB(Module* m) :

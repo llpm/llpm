@@ -1170,41 +1170,42 @@ struct BlockRAMAttr: public AttributePrinter {
 };
 
 void VerilogSynthesizer::addDefaultPrinters() {
-    _printers.appendEntry(new BinaryOpPrinter<IntAddition>("+"));
-    _printers.appendEntry(new BinaryOpPrinter<IntSubtraction>("-"));
-    _printers.appendEntry(new BinaryOpPrinter<IntMultiply>("*"));
-    _printers.appendEntry(new BinaryOpPrinter<IntDivide>("/"));
-    _printers.appendEntry(new BinaryOpPrinter<IntRemainder>("%"));
+    _printers.appendEntry(make_shared<BinaryOpPrinter<IntAddition>>("+"));
+    _printers.appendEntry(make_shared<BinaryOpPrinter<IntSubtraction>>("-"));
+    _printers.appendEntry(make_shared<BinaryOpPrinter<IntMultiply>>("*"));
+    _printers.appendEntry(make_shared<BinaryOpPrinter<IntDivide>>("/"));
+    _printers.appendEntry(make_shared<BinaryOpPrinter<IntRemainder>>("%"));
 
-    _printers.appendEntry(new CompareOpPrinter());
-    _printers.appendEntry(new BitwiseOpPrinter());
-    _printers.appendEntry(new ShiftPrinter());
+    _printers.appendEntry(make_shared<CompareOpPrinter>());
+    _printers.appendEntry(make_shared<BitwiseOpPrinter>());
+    _printers.appendEntry(make_shared<ShiftPrinter>());
 
-    _printers.appendEntry(new IntTruncatePrinter());
-    _printers.appendEntry(new IntExtendPrinter());
+    _printers.appendEntry(make_shared<IntTruncatePrinter>());
+    _printers.appendEntry(make_shared<IntExtendPrinter>());
 
-    _printers.appendEntry(new IdentityOpPrinter<Identity>());
-    _printers.appendEntry(new IdentityOpPrinter<Cast>());
-    _printers.appendEntry(new IdentityOpPrinter<Wait>());
+    _printers.appendEntry(make_shared<IdentityOpPrinter<Identity>>());
+    _printers.appendEntry(make_shared<IdentityOpPrinter<Cast>>());
+    _printers.appendEntry(make_shared<IdentityOpPrinter<Wait>>());
 
-    _printers.appendEntry(new ConstantPrinter());
-    _printers.appendEntry(new NeverPrinter());
+    _printers.appendEntry(make_shared<ConstantPrinter>());
+    _printers.appendEntry(make_shared<NeverPrinter>());
 
-    _printers.appendEntry(new JoinPrinter());
-    _printers.appendEntry(new SelectPrinter());
-    _printers.appendEntry(new SplitPrinter());
-    _printers.appendEntry(new ExtractPrinter());
-    _printers.appendEntry(new ForkPrinter());
+    _printers.appendEntry(make_shared<JoinPrinter>());
+    _printers.appendEntry(make_shared<SelectPrinter>());
+    _printers.appendEntry(make_shared<SplitPrinter>());
+    _printers.appendEntry(make_shared<ExtractPrinter>());
+    _printers.appendEntry(make_shared<ForkPrinter>());
 
-    _printers.appendEntry(new MultiplexerPrinter());
-    _printers.appendEntry(new RouterPrinter());
+    _printers.appendEntry(make_shared<MultiplexerPrinter>());
+    _printers.appendEntry(make_shared<RouterPrinter>());
 
-    _printers.appendEntry(new RTLRegPrinter());
-    _printers.appendEntry(new VModulePrinter<PipelineRegister,
-                                             PipelineRegAttr>());
-    _printers.appendEntry(new VModulePrinter<BlockRAM, BlockRAMAttr>());
-    _printers.appendEntry(new VModulePrinter<Latch, LatchAttr>());
-    _printers.appendEntry(new VModulePrinter<Module, ModuleAttr>());
+    _printers.appendEntry(make_shared<RTLRegPrinter>());
+    _printers.appendEntry(make_shared<VModulePrinter<PipelineRegister,
+                                                     PipelineRegAttr>>());
+    _printers.appendEntry(make_shared<VModulePrinter<BlockRAM,
+                                                     BlockRAMAttr>>());
+    _printers.appendEntry(make_shared<VModulePrinter<Latch, LatchAttr>>());
+    _printers.appendEntry(make_shared<VModulePrinter<Module, ModuleAttr>>());
 }
 
 bool VerilogSynthesizer::blockIsPrimitive(Block* b) {

@@ -14,9 +14,22 @@ using namespace std;
 
 namespace llpm {
 
-llvm::LLVMContext& Design::Default_LLVMContext = llvm::getGlobalContext();
-static const unsigned MaxPasses = 100;
+Design::~Design() {
+    for (auto m: _modules) {
+        delete m;
+    }
+    DEL_IF(_refinery);
+    DEL_IF(_namer);
+    DEL_IF(_backend);
+    DEL_IF(_gvOutput);
 
+    for (auto m: _llvmModules) {
+        delete m;
+    }
+    DEL_IF(_passReg);
+}
+
+static const unsigned MaxPasses = 100;
 
 class SetFrontendHistory: public ModulePass {
 protected:
@@ -112,16 +125,18 @@ void Design::optimize(bool debug) {
 
 
 llvm::Module* Design::readBitcode(std::string fnName) {
-    llvm::PassRegistry *Registry = llvm::PassRegistry::getPassRegistry();
-    initializeCore(*Registry);
-    initializeAnalysis(*Registry);
-    // initializeBasicCallGraphPass(*Registry);
-    initializeScalarOpts(*Registry);
+    if (_passReg == NULL) {
+        _passReg = llvm::PassRegistry::getPassRegistry();
+        initializeCore(*_passReg);
+        initializeAnalysis(*_passReg);
+        // initializeBasicCallGraphPass(*_passReg);
+        initializeScalarOpts(*_passReg);
+    }
 
     llvm::SMDiagnostic Err;
     llvm::Module *mod = 
         llvm::ParseIRFile(fnName, Err, context());
-    _llvmModules.emplace_back(mod);
+    _llvmModules.insert(mod);
     
     if (mod == NULL) {
             Err.print("LLVMTranslator::readBitcode", llvm::errs());

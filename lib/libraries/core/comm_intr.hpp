@@ -3,6 +3,8 @@
 
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
+#include <util/macros.hpp>
+#include <memory>
 
 /*********
  * Communication intrinsics govern the flow of information in an
@@ -34,15 +36,15 @@ public:
 class Wait: public CommunicationIntrinsic {
     InputPort _din;
     OutputPort _dout;
-    std::vector<InputPort*> _controls;
+    std::vector<std::unique_ptr<InputPort>> _controls;
 
 public:
     Wait(llvm::Type*);
-    virtual ~Wait();
+    virtual ~Wait() { }
 
     DEF_GET(din);
     DEF_GET(dout);
-    DEF_ARRAY_GET(controls);
+    DEF_UNIQ_ARRAY_GET(controls);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
         assert(op == &_dout);
@@ -78,14 +80,14 @@ public:
 
 // Takes N inputs and concatenates them into one output
 class Join : public CommunicationIntrinsic {
-    std::vector<InputPort*> _din;
+    std::vector<std::unique_ptr<InputPort>> _din;
     OutputPort _dout;
 public:
     Join(const std::vector<llvm::Type*>& inputs);
     Join(llvm::Type* output);
     virtual ~Join() { }
 
-    DEF_ARRAY_GET(din);
+    DEF_UNIQ_ARRAY_GET(din);
     DEF_GET(dout);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
@@ -104,13 +106,13 @@ public:
 // Takes N inputs of the same type and outputs them in 
 // the order in which they arrive
 class Select : public CommunicationIntrinsic {
-    std::vector<InputPort*> _din;
+    std::vector<std::unique_ptr<InputPort>> _din;
     OutputPort _dout;
 public:
     Select(unsigned N, llvm::Type* type);
     virtual ~Select() { }
 
-    DEF_ARRAY_GET(din);
+    DEF_UNIQ_ARRAY_GET(din);
     DEF_GET(dout);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
@@ -129,14 +131,14 @@ public:
 // Takes N inputs of different types and outputs them
 // in the order in which they arrive
 class SelectUnion : public CommunicationIntrinsic {
-    std::vector<InputPort*> _din;
+    std::vector<std::unique_ptr<InputPort>> _din;
     OutputPort _dout;
 public:
     SelectUnion(const std::vector<llvm::Type*>& inputs);
     // Note: unimplemented for now since LLVM lacks a union type!
     virtual ~SelectUnion() { }
 
-    DEF_ARRAY_GET(din);
+    DEF_UNIQ_ARRAY_GET(din);
     DEF_GET(dout);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
@@ -155,7 +157,7 @@ public:
 // Splits a single input into N constituent parts
 class Split : public CommunicationIntrinsic {
     InputPort _din;
-    std::vector<OutputPort*> _dout;
+    std::vector<std::unique_ptr<OutputPort>> _dout;
 
 public:
     Split(const std::vector<llvm::Type*>& outputs);
@@ -163,17 +165,19 @@ public:
     virtual ~Split() { }
 
     DEF_GET(din);
-    DEF_ARRAY_GET(dout);
+    DEF_UNIQ_ARRAY_GET(dout);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
-        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        assert(std::find_if(_dout.begin(), _dout.end(),
+                         RawEqualTo<const OutputPort>(op)) != _dout.end());
         return DependenceRule(DependenceRule::AND,
                               DependenceRule::Always);
     }
 
     virtual const std::vector<InputPort*>&
             deps(const OutputPort* op) const {
-        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        assert(std::find_if(_dout.begin(), _dout.end(),
+                         RawEqualTo<const OutputPort>(op)) != _dout.end());
         return inputs();
     }
 
@@ -226,17 +230,18 @@ public:
 class Router : public CommunicationIntrinsic {
     static llvm::Type* GetInput(unsigned N, llvm::Type* type);
     InputPort _din;
-    std::vector<OutputPort*> _dout;
+    std::vector<std::unique_ptr<OutputPort>> _dout;
 
 public:
     Router(unsigned N, llvm::Type* type);
     virtual ~Router() { }
 
     DEF_GET(din);
-    DEF_ARRAY_GET(dout);
+    DEF_UNIQ_ARRAY_GET(dout);
 
     virtual DependenceRule depRule(const OutputPort* op) const {
-        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        assert(std::find_if(_dout.begin(), _dout.end(),
+                         RawEqualTo<const OutputPort>(op)) != _dout.end());
         return DependenceRule(DependenceRule::AND,
                               DependenceRule::Maybe);
     }
@@ -247,7 +252,8 @@ public:
 
     virtual const std::vector<InputPort*>&
             deps(const OutputPort* op) const {
-        assert(std::find(_dout.begin(), _dout.end(), op) != _dout.end());
+        assert(std::find_if(_dout.begin(), _dout.end(),
+                         RawEqualTo<const OutputPort>(op)) != _dout.end());
         return inputs();
     }
 };

@@ -1,9 +1,27 @@
 #ifndef __LLPM_MACROS_HPP__
 #define __LLPM_MACROS_HPP__
 
+#include <memory>
+
 template< class T > struct add_const_if_ref      {typedef T type;};
 template< class T > struct add_const_if_ref<T&>  {typedef const T& type;};
 template< class T > struct add_const_if_ref<T&&> {typedef const T&& type;};
+
+template <typename T>
+struct RawEqualTo
+{
+    RawEqualTo(T const* raw) : raw(raw) {}
+
+    bool operator()(T const* p) const  
+        { return raw == p; }
+
+    template <typename T1, typename D1>
+    bool operator()(const std::unique_ptr<T1, D1>& up) const  
+        { return raw == up.get(); }
+
+  private:
+    T const* raw;
+};
 
 /***********
  * Methods to create setters and getters
@@ -24,7 +42,27 @@ template< class T > struct add_const_if_ref<T&&> {typedef const T&& type;};
 #define DEF_ARRAY_GET(F) \
     auto F() const -> const decltype(_##F)& { return _##F; } \
     unsigned F##_size() const { return _##F.size(); } \
-    auto F(unsigned i) const -> const decltype(_##F)::value_type& { return _##F[i]; }
+    auto F(unsigned i) const -> const decltype(_##F)::value_type& { \
+        return _##F[i]; }
 
+#define DEF_UNIQ_ARRAY_GET(F) \
+    void F(std::vector<const decltype(_##F):: \
+                       value_type::element_type*>& ret) const { \
+        for (auto&& up: _##F) ret.push_back(up.get()); \
+    } \
+    void F(std::vector<decltype(_##F):: \
+                       value_type::element_type*>& ret) { \
+        for (auto&& up: _##F) ret.push_back(up.get()); \
+    } \
+    unsigned F##_size() const { return _##F.size(); } \
+    auto F(unsigned i) const -> \
+        decltype(_##F)::value_type::element_type* { \
+        return _##F[i].get(); }
+
+#define DEL_IF(A) \
+    if ((A) != NULL) delete (A);
+
+#define DEL_ARRAY(A) \
+    { for (auto a: A) { delete a; } }
 
 #endif // __LLPM_MACROS_HPP__

@@ -27,6 +27,12 @@ unsigned inline idxwidth(uint64_t N) {
     return shifts;
 }
 
+#define DEL_IF(A) \
+    if ((A) != NULL) delete (A);
+
+#define DEL_ARRAY(A) \
+    { for (auto a: A) { delete a; } }
+
 };
 
 #endif //__LLPM_UTIL_MISC_HPP__

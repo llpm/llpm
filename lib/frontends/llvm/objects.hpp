@@ -245,7 +245,7 @@ class LLVMImpureBasicBlock: public LLVMBasicBlock {
     OutputPort _dout;
 
     // Memory load request ports
-    std::map<llvm::Value*, Interface*> _mem;
+    std::map<llvm::Value*, std::unique_ptr<Interface>> _mem;
 
     LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb);
 
@@ -280,7 +280,7 @@ public:
         auto f = _mem.find(v);
         if (f == _mem.end())
             return NULL; 
-        return f->second;
+        return f->second.get();
     }
 
     virtual DependenceRule depRule(const OutputPort* op) const;
@@ -307,7 +307,10 @@ class LLVMControl: public Block {
     LLVMControl(LLVMFunction* func, LLVMBasicBlock* basicBlock);
 
 public:
-    virtual ~LLVMControl() { }
+    virtual ~LLVMControl() { 
+        DEL_ARRAY(_predecessors);
+        DEL_ARRAY(_successors);
+    }
 
     DEF_GET_NP(function);
     DEF_GET_NP(basicBlock);

@@ -8,6 +8,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <unordered_set>
+#include <memory>
 
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
@@ -69,11 +70,11 @@ public:
         return _refiners;
     }
 
-    void appendLibrary(Library* lib) {
+    void appendLibrary(std::shared_ptr<Library> lib) {
         refiners().appendLibrary(lib);
     }
 
-    void prependLibrary(Library* lib) {
+    void prependLibrary(std::shared_ptr<Library> lib) {
         refiners().prependLibrary(lib);
     }
 

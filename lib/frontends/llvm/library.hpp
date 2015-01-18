@@ -7,7 +7,7 @@
 namespace llpm {
 
 class LLVMBaseLibrary : public Refinery::Library {
-    static std::vector<Refinery::Refiner*> BuildCollection();
+    static std::vector<std::shared_ptr<Refinery::Refiner>> BuildCollection();
 public:
     LLVMBaseLibrary() :
         Refinery::Library(BuildCollection())

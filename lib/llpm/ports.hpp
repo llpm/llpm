@@ -27,10 +27,9 @@ protected:
     Port(Block* owner,
          llvm::Type* type,
          std::string name);
-
-    virtual ~Port() { }
-
 public:
+    virtual ~Port();
+
     llvm::Type* type() const {
         return _type;
     }

@@ -8,10 +8,11 @@ namespace llpm {
 
 class Backend {
 protected:
-    Backend() {
-    }
+    Backend() { }
 
 public:
+    virtual ~Backend() { }
+
     virtual bool blockIsPrimitive(Block* b) = 0;
     virtual Refinery::StopCondition* primitiveStops() = 0;
 };

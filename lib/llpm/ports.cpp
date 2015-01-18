@@ -2,6 +2,7 @@
 
 #include <llpm/block.hpp>
 #include <llpm/connection.hpp>
+#include <llpm/module.hpp>
 #include <libraries/core/comm_intr.hpp>
 
 namespace llpm {
@@ -13,6 +14,8 @@ Port::Port(Block* owner,
     _type(type),
     _name(name)
 { }
+
+Port::~Port() { }
 
 BlockP Port::ownerP() const {
     return _owner->getptr();

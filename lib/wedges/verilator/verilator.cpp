@@ -164,12 +164,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     string errMsg;
     for (auto f: objFiles) {
         llvm::SMDiagnostic Err;
-        llvm::Module* m = llvm::ParseIRFile(
-            f->name(), Err, mod->design().context());
-        if (m == NULL) {
-            Err.print("", llvm::errs());
-            assert(false);
-        }
+        llvm::Module* m = mod->design().readBitcode(f->name());
 
         if (merged == NULL) {
             merged = m;
@@ -180,18 +175,21 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
                 printf("Error linking: %s\n", errMsg.c_str());
                 assert(false);
             }
+            mod->design().deleteModule(m);
         }
     }
 
     // Link in the existing shit
-    llvm::Linker L(merged, false);
-    if (mod->swModule() != NULL) {
-        if (L.linkInModule(mod->swModule(), &errMsg)) {
-            printf("Error linking: %s\n", errMsg.c_str());
-            assert(false);
+    if (merged != NULL) {
+        llvm::Linker L(merged, false);
+        if (mod->swModule() != NULL) {
+            if (L.linkInModule(mod->swModule(), &errMsg)) {
+                printf("Error linking: %s\n", errMsg.c_str());
+                assert(false);
+            }
         }
+        mod->swModule(merged);
     }
-    mod->swModule(merged);
 
     // Some of the functions are implemented directly in IR
     writeBodies(mod);
@@ -893,7 +891,8 @@ void VerilatorWedge::writeBodies(Module* mod) {
     for (auto p: stubs) {
         llvm::Function* testThunk = p.second;
         llvm::Function* ifaceFunc = interfaceMap[p.first];
-        assert(ifaceFunc != NULL);
+        if (ifaceFunc == NULL)
+            continue;
         auto& ctxt = mod->design().context();
         auto bb = llvm::BasicBlock::Create(ctxt, "thunk", testThunk);
         vector<llvm::Value*> args;
@@ -1060,7 +1059,7 @@ void VerilatorWedge::addAssertToTest(Module* mod,
         ctxt,
         llvm::ConstantInt::getFalse(ctxt),
         elseTerm);
-    elseTerm->removeFromParent();
+    elseTerm->eraseFromParent();
 }
 
 } // namespace llpm

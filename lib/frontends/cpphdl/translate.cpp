@@ -13,7 +13,7 @@ namespace cpphdl {
 CPPHDLTranslator::CPPHDLTranslator(Design& design) :
     _design(design),
     _llvmTranslator(design) {
-    design.refinery().appendLibrary(new CPPHDLBaseLibrary());
+    design.refinery().appendLibrary(make_shared<CPPHDLBaseLibrary>());
 }
 
 CPPHDLTranslator::~CPPHDLTranslator() {

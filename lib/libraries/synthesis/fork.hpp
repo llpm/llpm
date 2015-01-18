@@ -11,7 +11,7 @@ class Fork : public Block {
     // metadata combinatorially. Whomever is synthesizing forks has to
     // ensure that the fork can validly be combinatorial.
     bool _virt;
-    std::vector<OutputPort*> _dout;
+    std::vector<std::unique_ptr<OutputPort>> _dout;
 
 public:
     Fork(llvm::Type* ty, bool virt) :
@@ -21,7 +21,7 @@ public:
 
     DEF_GET(din);
     DEF_GET_NP(virt);
-    DEF_ARRAY_GET(dout);
+    DEF_UNIQ_ARRAY_GET(dout);
 
     OutputPort* createOutput();
 

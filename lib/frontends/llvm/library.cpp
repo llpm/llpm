@@ -253,10 +253,11 @@ public:
     }
 };
 
-std::vector<Refinery::Refiner*> LLVMBaseLibrary::BuildCollection() {
+std::vector<std::shared_ptr<Refinery::Refiner>>
+LLVMBaseLibrary::BuildCollection() {
     return {
-        new LLVMControlRefiner(),
-        new LLVMBasicBlockRefiner(),
+        make_shared<LLVMControlRefiner>(),
+        make_shared<LLVMBasicBlockRefiner>(),
     };
 }
 

@@ -10,7 +10,7 @@ namespace llpm {
 class RTLReg : public Block {
     llvm::Type* _type;
     Interface _write;
-    std::vector<Interface*> _read;
+    std::vector<std::unique_ptr<Interface>> _read;
     std::vector<InputPort*> _writeRespDeps = {_write.din()};
 
 public:
@@ -18,7 +18,7 @@ public:
 
     DEF_GET_NP(type);
     DEF_GET(write);
-    DEF_ARRAY_GET(read);
+    DEF_UNIQ_ARRAY_GET(read);
 
     virtual bool hasState() const {
         return true;
@@ -57,7 +57,7 @@ public:
 class BlockRAM : public Block {
     llvm::Type* _type;
     unsigned _depth;
-    std::vector<Interface*> _ports;
+    std::vector<std::unique_ptr<Interface>> _ports;
     std::map<const OutputPort*, std::vector<InputPort*> > _deps;
 
 public:
@@ -65,7 +65,7 @@ public:
 
     DEF_GET_NP(type);
     DEF_GET_NP(depth);
-    DEF_ARRAY_GET(ports);
+    DEF_UNIQ_ARRAY_GET(ports);
 
     virtual bool hasState() const {
         return true;

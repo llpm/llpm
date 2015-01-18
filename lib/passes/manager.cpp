@@ -28,13 +28,13 @@ void PassManager::debug(Pass* p, Module* mod) {
 
 bool PassManager::run(bool debug) {
     bool ret = false;
-    for (Pass* p: _passes) {
+    for (auto&& p: _passes) {
         printf("== Pass: %s\n", cpp_demangle(typeid(*p).name()).c_str());
         if(p->run()) {
             ret = true;
             if (debug)
                 for (Module* mod: _design.modules())
-                    this->debug(p, mod);
+                    this->debug(p.get(), mod);
         }
     }
     return ret;
@@ -42,9 +42,9 @@ bool PassManager::run(bool debug) {
 
 bool PassManager::run(Module* mod, bool debug) {
     bool ret = false;
-    for (Pass* p: _passes) {
+    for (auto&& p: _passes) {
         printf("== Pass: %s\n", cpp_demangle(typeid(*p).name()).c_str());
-        ModulePass* mp = dynamic_cast<ModulePass*>(p);
+        ModulePass* mp = dynamic_cast<ModulePass*>(p.get());
         if (mp)
             if (mp->run(mod))
                 ret = true;
@@ -64,7 +64,7 @@ bool PassManager::run(Module* mod, bool debug) {
         historypass.run(mod);
 
         if (ret && debug)
-            this->debug(p, mod);
+            this->debug(p.get(), mod);
     }
     mod->validityCheck();
     return ret;

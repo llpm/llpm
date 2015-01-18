@@ -10,7 +10,7 @@ OutputPort* Fork::createOutput() {
     string name = str(boost::format("out%1%")
                       % _dout.size());
     auto op = new OutputPort(this, _din.type(), name);
-    _dout.push_back(op);
+    _dout.emplace_back(op);
     return op;
 }
 

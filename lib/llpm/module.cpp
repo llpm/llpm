@@ -23,6 +23,12 @@ void Module::internalDrivers(std::vector<OutputPort*>& drivers) const {
 }
 
 ContainerModule::~ContainerModule() {
+    for (auto p: _ownedPorts) {
+        delete p;
+    }
+    for (auto i: _ownedInterfaces) {
+        delete i;
+    }
 }
 
 InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
@@ -39,6 +45,7 @@ InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
         }
     }
     InputPort* extIp = new InputPort(this, ip->type(), name);
+    _ownedPorts.insert(extIp);
     boost::intrusive_ptr<DummyBlock> dummy( new DummyBlock(extIp) );
     _inputMap.insert(make_pair(extIp, dummy));
     dummy->name(name + "_dummy");
@@ -55,7 +62,8 @@ void ContainerModule::removeInputPort(InputPort* ip) {
     auto vecLoc = find(_inputs.begin(), _inputs.end(), ip);
     assert(vecLoc != _inputs.end());
     _inputs.erase(vecLoc);
-    // delete ip;
+    _ownedPorts.erase(ip);
+    delete ip;
 }
 
 OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
@@ -73,6 +81,7 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
     }
 
     OutputPort* extOp = new OutputPort(this, op->type(), name);
+    _ownedPorts.insert(extOp);
     boost::intrusive_ptr<DummyBlock> dummy( new DummyBlock(extOp) );
     _outputMap.insert(make_pair(extOp, dummy));
     dummy->name(name + "_dummy");
@@ -92,12 +101,14 @@ void ContainerModule::removeOutputPort(OutputPort* op) {
     _outputMap.erase(f);
     auto vecLoc = find(_outputs.begin(), _outputs.end(), op);
     _outputs.erase(vecLoc);
-    // delete op;
+    _ownedPorts.erase(op);
+    delete op;
 }
 
 Interface* ContainerModule::addClientInterface(
         OutputPort* req, InputPort* resp, std::string name) {
     auto iface = new Interface(this, resp->type(), req->type(), false, name);
+    _ownedInterfaces.insert(iface);
 
     boost::intrusive_ptr<DummyBlock> opdummy ( new DummyBlock(iface->dout()) );
     _outputMap.emplace(iface->dout(), opdummy);
@@ -117,6 +128,7 @@ Interface* ContainerModule::addClientInterface(
 Interface* ContainerModule::addServerInterface(
         InputPort* req, OutputPort* resp, std::string name) {
     auto iface = new Interface(this, req->type(), resp->type(), true, name);
+    _ownedInterfaces.insert(iface);
 
     boost::intrusive_ptr<DummyBlock> opdummy ( new DummyBlock(iface->dout()) );
     _outputMap.emplace(iface->dout(), opdummy);
@@ -252,8 +264,8 @@ void Module::createSWModule(llvm::Module* M) {
         _ifaceType = llvm::StructType::create(
             _design.context(), "class." + name());
         
-        this->_swModule.reset(
-            CloneModule(M, VMap));
+        this->_swModule = CloneModule(M, VMap);
+        _design.assumeOwnership(this->_swModule);
         while (_swModule->getNamedMDList().size() > 0) {
             (*_swModule->getNamedMDList().begin()).eraseFromParent();
         }
@@ -295,8 +307,7 @@ void Module::swModule(llvm::Module* mod) {
     _ifaceType = mod->getTypeByName("class." + name());
     _swType    = mod->getTypeByName("class." + name() + "_sw");
 
-
-    _swModule.reset(mod);
+    _swModule = mod;
 }
 
 llvm::Function* Module::cloneFunc(

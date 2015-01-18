@@ -20,7 +20,7 @@ Interface* RTLReg::newRead() {
                     _type,
                     true,
                     str(boost::format("read%1%") % _read.size()));
-    _read.push_back(iface);
+    _read.emplace_back(iface);
     return iface;
 }
 
@@ -39,7 +39,7 @@ BlockRAM::BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts) :
     for (unsigned i=0; i<numPorts; i++) {
         auto iface = new Interface(this, reqType, respType, true,
                                    str(boost::format("port%1%") % i));
-        _ports.push_back(iface);
+        _ports.emplace_back(iface);
         _deps[iface->dout()] = {iface->din()};
     }
 }

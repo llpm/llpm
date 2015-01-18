@@ -319,13 +319,13 @@ void LLVMImpureBasicBlock::buildIO() {
 
         if (ins.mayReadOrWriteMemory() &&
             !LLVMLoadInstruction::isByvalLoad(&ins)) {
-            auto iface = new Interface(this,
-                                       LLVMInstruction::GetOutput(&ins),
-                                       LLVMInstruction::GetInput(&ins),
-                                       false,
-                                       llpm::name(&ins) + "_mem");
-            _mem[&ins] = iface;
-            _function->regBBMemPort(&ins, iface);
+            _mem.emplace(&ins, make_unique<Interface>(
+                                   this,
+                                   LLVMInstruction::GetOutput(&ins),
+                                   LLVMInstruction::GetInput(&ins),
+                                   false,
+                                   llpm::name(&ins) + "_mem"));
+            _function->regBBMemPort(&ins, _mem[&ins].get());
         }
     }
 }

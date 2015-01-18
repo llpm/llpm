@@ -102,12 +102,6 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
                         " OP: " + typestr(o->type()) +
                         " IP: " + typestr(i->type()));
 
-    if (_outputRewrites.find(o) != _outputRewrites.end())
-        throw InvalidArgument("The output port being connected has been rewritten!");
-
-    if (_inputRewrites.find(i) != _inputRewrites.end())
-        throw InvalidArgument("The input port being connected has been rewritten!");
-
     registerBlock(o->ownerP());
     registerBlock(i->ownerP());
 
@@ -179,7 +173,6 @@ void ConnectionDB::disconnect(Interface* a, Interface* b) {
 }
 
 void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& newPorts) {
-    _inputRewrites[origPort] = newPorts;
     _changeCounter++;
 
     Connection c;
@@ -192,7 +185,6 @@ void ConnectionDB::remap(const InputPort* origPort, const vector<InputPort*>& ne
 }
 
 void ConnectionDB::remap(const OutputPort* origPort, OutputPort* newPort) {
-    _outputRewrites[origPort] = newPort;
     _changeCounter++;
 
     std::vector<Connection> conns;

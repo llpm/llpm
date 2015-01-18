@@ -10,7 +10,13 @@
 #include <util/macros.hpp>
 #include <util/files.hpp>
 #include <passes/manager.hpp>
+
+#include <memory>
 #include <vector>
+
+namespace llvm {
+    class PassRegistry;
+};
 
 namespace llpm {
 
@@ -19,7 +25,8 @@ class Module;
 class GraphvizOutput;
 
 class Design {
-    llvm::LLVMContext& _context;
+    std::shared_ptr<llvm::LLVMContext> _context;
+    llvm::PassRegistry* _passReg;
     Refinery* _refinery;
     std::vector<Module*> _modules;
     ObjectNamer* _namer;
@@ -30,15 +37,13 @@ class Design {
     PassManager _elaborations;
     PassManager _optimizations;
 
-    std::deque<std::unique_ptr<llvm::Module>> _llvmModules;
+    std::set<llvm::Module*> _llvmModules;
 
 public:
-    static llvm::LLVMContext& Default_LLVMContext;
-
     Design(std::string workingDir,
            bool keepTemps = false,
-           llvm::LLVMContext& ctxt = Default_LLVMContext) :
-        _context(ctxt),
+           std::shared_ptr<llvm::LLVMContext> ctxt = NULL) :
+        _passReg(NULL),
         _refinery(new Refinery()),
         _namer(NULL),
         _backend(NULL),
@@ -47,8 +52,14 @@ public:
         _elaborations(*this, "elab"),
         _optimizations(*this, "opt")
     {
-        _refinery->refiners().appendEntry(new BlockDefaultRefiner());
+        if (ctxt == NULL)
+            ctxt = std::make_shared<llvm::LLVMContext>();
+        _context = ctxt;
+        _refinery->refiners().appendEntry(
+            std::make_shared<BlockDefaultRefiner>());
     }
+
+    ~Design();
 
     Refinery& refinery() {
         return *_refinery;
@@ -76,7 +87,7 @@ public:
     }
 
     llvm::LLVMContext& context() const {
-        return _context;
+        return *_context;
     }
 
     ObjectNamer& namer() {
@@ -89,6 +100,13 @@ public:
     // Reads in some bitcode, creating an LLVM module. Retains
     // ownership of said module since things may depend on it.
     llvm::Module* readBitcode(std::string fnName);
+    void assumeOwnership(llvm::Module* mod) {
+        _llvmModules.insert(mod);
+    }
+    void deleteModule(llvm::Module* mod) {
+        _llvmModules.erase(mod);
+        delete mod;
+    }
 };
 
 } // namespace llpm
