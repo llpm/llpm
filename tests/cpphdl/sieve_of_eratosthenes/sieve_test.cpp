@@ -21,6 +21,11 @@ int main() {
         printf("TEST PASS!\n");
     }
 
+    printf("Running again and timing...\n");
+    auto start = sa->cycles();
+    sa->findPrimes();
+    printf("    cycles: %lu\n", sa->cycles() - start); 
+
     sa->run(5);
     delete sa;
     return 0;

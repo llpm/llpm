@@ -22,8 +22,8 @@ void SieveAccel::findPrimes() {
 long SieveAccel::nextPrime() {
     while (pos < CAPACITY && vals[pos] == false)
         pos++;
-    if (pos == CAPACITY)
+    if (pos >= CAPACITY)
         return -1;
-    return pos;
+    return pos++;
 }
 
