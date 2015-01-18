@@ -2,6 +2,7 @@
 #define __LLPM_CONNECTION_HPP__
 
 #include <llpm/ports.hpp>
+#include <llpm/block.hpp>
 #include <llpm/exceptions.hpp>
 #include <util/macros.hpp>
 
@@ -63,14 +64,14 @@ class ConnectionDB {
     SinkIdx   _sinkIdx;
     SourceIdx _sourceIdx;
 
-    std::set<Block*> _blacklist;
-    std::unordered_map<Block*, uint64_t> _blockUseCounts;
-    std::set<Block*> _newBlocks;
+    std::set<BlockP> _blacklist;
+    std::map<BlockP, uint64_t> _blockUseCounts;
+    std::set<BlockP> _newBlocks;
     std::map<const InputPort*, std::vector<InputPort*> > _inputRewrites;
     std::map<const OutputPort*, OutputPort*> _outputRewrites;
 
-    void registerBlock(Block* block);
-    void deregisterBlock(Block* block) {
+    void registerBlock(BlockP block);
+    void deregisterBlock(BlockP block) {
         uint64_t& count = _blockUseCounts[block];
         assert(count >= 1);
         count -= 1;
@@ -113,25 +114,29 @@ public:
         return ConstIterator(_sourceIdx.end());
     };
 
-    void blacklist(Block* b) {
+    void blacklist(BlockP b) {
         _blacklist.insert(b);
         _changeCounter++;
     }
 
-    void deblacklist(Block* b) {
+    void deblacklist(BlockP b) {
         _blacklist.erase(b);
         _changeCounter++;
     }
 
-    bool isblacklisted(Block* b) const {
+    bool isblacklisted(BlockP b) const {
         return _blacklist.count(b) > 0;
     }
 
-    bool isInternalDriver(OutputPort* op) const {
-        return _blacklist.count(op->owner()) > 0;
+    bool isblacklisted(Block* b) const {
+        return _blacklist.count(b->getptr()) > 0;
     }
 
-    void readAndClearNewBlocks(std::set<Block*>& nb) {
+    bool isInternalDriver(OutputPort* op) const {
+        return _blacklist.count(op->ownerP()) > 0;
+    }
+
+    void readAndClearNewBlocks(std::set<BlockP>& nb) {
         nb.clear();
         nb.swap(_newBlocks);
         assert(_newBlocks.size() == 0);
@@ -144,7 +149,7 @@ public:
     void findAllBlocks(std::set<Block*>& blocks) const {
         for (auto pr: _blockUseCounts) {
             if (pr.second >= 1 && _blacklist.count(pr.first) == 0)
-                blocks.insert(pr.first);
+                blocks.insert(pr.first.get());
         }
     }
 
@@ -165,7 +170,7 @@ public:
     bool createsCycle(Connection c) const;
 
     bool isUsed(Block* b) const {
-        auto f = _blockUseCounts.find(b);
+        auto f = _blockUseCounts.find(b->getptr());
         if (f == _blockUseCounts.end())
             return false;
         return f->second >= 1;

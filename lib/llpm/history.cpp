@@ -30,8 +30,9 @@ void BlockHistory::print(unsigned tabs) const {
     }
     printTabs(tabs); printf("Source: %s %s\n",
                             source, _meta.c_str());
-    for (Block* b: _srcBlocks) {
-        auto name = b->module()->design().namer().getName(b, b->module());
+    for (BlockP b: _srcBlocks) {
+        auto name = b->module()->design().namer().getName(b.get(),
+                                                          b->module());
         printTabs(tabs); printf("%s (%s)",
                                 name.c_str(),
                                 cpp_demangle(typeid(*b).name()).c_str());

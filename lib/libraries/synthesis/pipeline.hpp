@@ -40,7 +40,7 @@ public:
         auto ownerName = _source->owner()->name();
         if (ownerName != "")
             this->name(ownerName + "_reg");
-        this->history().setOptimization(src->owner());
+        this->history().setOptimization(src->ownerP());
     }
 
     virtual bool hasState() const {
@@ -78,7 +78,7 @@ public:
         auto ownerName = _source->owner()->name();
         if (ownerName != "")
             this->name(ownerName + "_latch");
-        this->history().setOptimization(src->owner());
+        this->history().setOptimization(src->ownerP());
     }
 
     virtual bool hasState() const {

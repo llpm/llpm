@@ -2,6 +2,7 @@
 
 #include <util/misc.hpp>
 #include <util/llvm_type.hpp>
+#include <llpm/connection.hpp>
 
 #include <boost/format.hpp>
 #include <llvm/IR/DerivedTypes.h>

@@ -4,14 +4,17 @@
 #include <llpm/llpm.hpp>
 #include <llpm/history.hpp>
 #include <vector>
+#include <llpm/ports.hpp>
+#include <llpm/exceptions.hpp>
+#include <util/macros.hpp>
+
 #include <map>
 #include <set>
 #include <algorithm>
-#include <llpm/ports.hpp>
-#include <llpm/exceptions.hpp>
-#include <llpm/connection.hpp>
-#include <util/macros.hpp>
-#include <boost/foreach.hpp>
+
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ref_counter.hpp>
+
 
 namespace llpm {
 
@@ -19,6 +22,10 @@ namespace llpm {
 class Function;
 class Module;
 class Interface;
+class ConnectionDB;
+
+class Block;
+typedef boost::intrusive_ptr<Block> BlockP;
 
 /*******
  * Block is the basic unit in LLPM.
@@ -29,7 +36,10 @@ class Interface;
  * Can sometimes be refined into smaller, more granular functions
  * via "refine" method.
  */
-class Block {
+class Block :
+    public boost::intrusive_ref_counter<Block,
+                                        boost::thread_unsafe_counter>
+{
 protected:
     Module* _module;
     std::string _name;
@@ -66,6 +76,15 @@ protected:
 
 public:
     virtual ~Block() { }
+
+    BlockP getptr() {
+        return boost::intrusive_ptr<Block>(this);
+    }
+
+    template<typename T, typename ... Args>
+    static std::shared_ptr<T> Create(Args ... args) {
+        return std::shared_ptr<T>(new T(args...));
+    }
 
     Module* module() const {
         return _module;

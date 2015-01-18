@@ -1,12 +1,17 @@
 #ifndef __LLPM_PORTS_HPP__
 #define __LLPM_PORTS_HPP__
 
-#include <llvm/IR/Type.h>
 #include <util/macros.hpp>
+#include <llpm/exceptions.hpp>
+
+#include <boost/intrusive_ptr.hpp>
+#include <llvm/IR/Type.h>
 
 namespace llpm {
 
 class Block;
+typedef boost::intrusive_ptr<Block> BlockP;
+
 class OutputPort;
 class InputPort;
 class Join;
@@ -21,11 +26,7 @@ protected:
 
     Port(Block* owner,
          llvm::Type* type,
-         std::string name) :
-        _owner(owner),
-        _type(type),
-        _name(name)
-    { }
+         std::string name);
 
     virtual ~Port() { }
 
@@ -33,6 +34,8 @@ public:
     llvm::Type* type() const {
         return _type;
     }
+
+    BlockP ownerP() const;
 
     Block* owner() const {
         return _owner;

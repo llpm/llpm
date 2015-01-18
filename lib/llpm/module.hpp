@@ -201,8 +201,8 @@ protected:
     // Each container module input and output port have a pass
     // through block and a mapping to the internal output and input
     // port on the corresponding pass through block.
-    std::map<InputPort*, DummyBlock*> _inputMap;
-    std::map<OutputPort*, DummyBlock*> _outputMap;
+    std::map<InputPort*, boost::intrusive_ptr<DummyBlock>> _inputMap;
+    std::map<OutputPort*, boost::intrusive_ptr<DummyBlock>> _outputMap;
 
     InputPort* addInputPort(InputPort* ip, std::string name = "");
     void removeInputPort(InputPort* ip);

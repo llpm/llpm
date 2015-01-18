@@ -7,10 +7,13 @@
 #include <util/macros.hpp>
 #include <llpm/exceptions.hpp>
 
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+
 namespace llpm {
 
 // Hey, C++: The 60's want their fwd. decl. back!
 class Block;
+typedef boost::intrusive_ptr<Block> BlockP;
 
 class BlockHistory {
 public:
@@ -24,16 +27,16 @@ public:
 
 private:
     Source _src;
-    std::list<Block*> _srcBlocks;
+    std::list<BlockP> _srcBlocks;
     std::string _meta;
 
-    BlockHistory(Source s, Block* sb) :
+    BlockHistory(Source s, BlockP sb) :
         _src(s)
     {
         _srcBlocks.push_back(sb);
     }
 
-    BlockHistory(Source s, std::list<Block*> sb) :
+    BlockHistory(Source s, std::list<BlockP> sb) :
         _src(s),
         _srcBlocks(sb)
     { }
@@ -59,12 +62,12 @@ public:
         _meta = meta;
     }
 
-    void setRefinement(Block* src) {
+    void setRefinement(BlockP src) {
         _src = Refinement;
         _srcBlocks = {src};
     }
 
-    void setOptimization(Block* src) {
+    void setOptimization(BlockP src) {
         _src = Optimization;
         if (src == NULL)
             _srcBlocks = {};
@@ -72,14 +75,14 @@ public:
             _srcBlocks = {src};
     }
 
-    const std::list<Block*>& srcBlocks() const {
+    const std::list<BlockP>& srcBlocks() const {
         return _srcBlocks;
     }
 
     Block* srcBlock() const {
         if (_srcBlocks.size() != 1)
             throw InvalidCall("Can only retrieve single src block when there is only one src block!");
-        return _srcBlocks.front();
+        return _srcBlocks.front().get();
     }
 
     Source src() const {

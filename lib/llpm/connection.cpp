@@ -9,7 +9,7 @@ using namespace std;
 
 namespace llpm {
 
-void ConnectionDB::registerBlock(Block* block) {
+void ConnectionDB::registerBlock(BlockP block) {
     if (_blockUseCounts.find(block) == _blockUseCounts.end()) {
         _newBlocks.insert(block);
     }
@@ -108,6 +108,9 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     if (_inputRewrites.find(i) != _inputRewrites.end())
         throw InvalidArgument("The input port being connected has been rewritten!");
 
+    registerBlock(o->ownerP());
+    registerBlock(i->ownerP());
+
 #ifndef LLPM_NO_DEBUG
     {
         assert(findSource(i) == NULL);
@@ -117,8 +120,6 @@ void ConnectionDB::connect(OutputPort* o, InputPort* i) {
     _sourceIdx.emplace(i, o);
     _sinkIdx[o].insert(i);
     _changeCounter++;
-    registerBlock(o->owner());
-    registerBlock(i->owner());
 
 #ifndef LLPM_NO_DEBUG
     {
@@ -160,8 +161,8 @@ void ConnectionDB::disconnect(OutputPort* o, InputPort* i) {
     }
 
     _changeCounter++;
-    deregisterBlock(o->owner());
-    deregisterBlock(i->owner());
+    deregisterBlock(o->ownerP());
+    deregisterBlock(i->ownerP());
 
 #ifndef LLPM_NO_DEBUG
     {
@@ -217,8 +218,8 @@ void ConnectionDB::removeBlock(Block* b) {
 
 void ConnectionDB::update(const ConnectionDB& newdb) {
     for (const auto& c: newdb._sourceIdx) {
-        if (newdb.isblacklisted(c.first->owner()) ||
-            newdb.isblacklisted(c.second->owner()))
+        if (newdb.isblacklisted(c.first->ownerP()) ||
+            newdb.isblacklisted(c.second->ownerP()))
             continue;
         connect(c.first, c.second);
     }

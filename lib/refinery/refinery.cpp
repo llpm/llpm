@@ -29,6 +29,7 @@ unsigned Refinery::refine(std::vector<Block*> crude,
     do {
         set<Block*> refinedBlocks;
         for(Block*& c: crude) {
+            BlockP cShared = c->getptr();
             if (sc && sc->stopRefine(c))
                 continue;
 
@@ -41,20 +42,20 @@ unsigned Refinery::refine(std::vector<Block*> crude,
                     // This refiner did the job!
                     refinedBlocks.insert(c);
                     assert(conns.isUsed(c) == false);
-                    std::set<Block*> newBlocks;
+                    std::set<BlockP> newBlocks;
                     conns.readAndClearNewBlocks(newBlocks);
-                    for (Block* nb: newBlocks) {
-                        assert(nb != c);
-                        assert(conns.isUsed(nb));
+                    for (BlockP nb: newBlocks) {
+                        assert(nb.get() != c);
+                        assert(conns.isUsed(nb.get()));
                         if (nb->history().src() == BlockHistory::Unset)
-                            nb->history().setRefinement(c);
+                            nb->history().setRefinement(cShared);
                     }
                     break;
                 } else {
                     // If the refiner didn't work, make sure it didn't
                     // touch anything! (Sanity check)
                     assert(changeCounter == conns.changeCounter());
-                    set<Block*> newBlocks;
+                    set<BlockP> newBlocks;
                     conns.readAndClearNewBlocks(newBlocks);
                     assert(newBlocks.size() == 0); // Should be redundant
                 }
