@@ -35,7 +35,7 @@ struct Visitor {
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
-                    const PathTy& path) {
+                    const PathTy&) {
         return Continue;
     }
 

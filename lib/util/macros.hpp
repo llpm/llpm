@@ -24,7 +24,7 @@ template< class T > struct add_const_if_ref<T&&> {typedef const T&& type;};
 #define DEF_ARRAY_GET(F) \
     auto F() const -> const decltype(_##F)& { return _##F; } \
     unsigned F##_size() const { return _##F.size(); } \
-    auto F(unsigned i) const -> const decltype(_##F)::value_type { return _##F[i]; }
+    auto F(unsigned i) const -> const decltype(_##F)::value_type& { return _##F[i]; }
 
 
 #endif // __LLPM_MACROS_HPP__
