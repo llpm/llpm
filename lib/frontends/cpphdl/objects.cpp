@@ -238,6 +238,9 @@ void CPPHDLClass::getGEPChainAsVector(llvm::Value* ptr,
         }
         return;
     }
+    case llvm::Instruction::BitCast:
+        // chain.push_back(ins);
+        return getGEPChainAsVector(ins->getOperand(0), chain);
     case llvm::Instruction::PHI: {
         llvm::PHINode* phi = llvm::dyn_cast_or_null<llvm::PHINode>(ptr);
         assert(phi != NULL);
