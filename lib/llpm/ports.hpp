@@ -18,6 +18,11 @@ class Join;
 class Split;
 class ConnectionDB;
 
+/**
+ * Ports define the I/O channels of blocks. Each block contains one or
+ * more output port and potentially some input channels. Input ports
+ * can be connected to output ports and vise versa.
+ */
 class Port {
 protected:
     Block* _owner;
@@ -56,9 +61,14 @@ public:
     unsigned num() const;
 };
 
+/**
+ * InputPorts accept tokens from OutputPorts
+ */
 class InputPort : public Port {
-    // Functions often need to join the input. Make codegen prog. code
-    // mildly easier by creating it on request.
+    /**
+     * Functions often need to join the input. Make codegen prog. code
+     * mildly easier by creating it on request.
+     */
     Join* _join;
 
 public:
@@ -69,11 +79,18 @@ public:
     InputPort(const InputPort&) = delete;
     InputPort* operator=(const InputPort&) = delete;
 
+    /**
+     * Get a join block whose output is connected to this input.
+     * This is a convenience function since lots of stuff ends up
+     * driving a join which drives a block.
+     */
     Join* join(ConnectionDB& conns);
     InputPort* join(ConnectionDB& conns, unsigned idx);
 };
 
-// Describes internal relationship of outputs to inputs.
+/**
+ * Describes internal relationship of outputs to inputs.
+ */
 struct DependenceRule {
     friend class OutputPort;
 public:
@@ -132,9 +149,14 @@ public:
     }
 };
 
+/**
+ * Outputs tokens. Can output them to multiple input ports.
+ */
 class OutputPort : public Port {
-    // Functions often need to split the input. Make codegen prog. code
-    // mildly easier by creating it on request.
+    /**
+     * Functions often need to split the input. Make codegen prog.
+     * code mildly easier by creating it on request.
+     */
     Split* _split;
 
 public:
@@ -149,6 +171,11 @@ public:
     DependenceRule depRule() const;
     const std::vector<InputPort*>& deps() const;
 
+    /**
+     * Things receiving data often need only one component of said
+     * data. This convenience function splits the data coming from
+     * this output port.
+     */
     Split* split(ConnectionDB& conns);
     OutputPort* split(ConnectionDB& conns, unsigned idx);
 };

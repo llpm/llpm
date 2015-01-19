@@ -10,7 +10,9 @@ inline std::string cpp_demangle(const std::string& name) {
     return cpp_demangle(name.c_str());
 }
 
-/* How many bits does it take to store an index into N things? */
+/**
+ * How many bits does it take to store an index into N things?
+ */
 unsigned inline idxwidth(uint64_t N) {
     if (N == 0)
         return 0;
@@ -26,12 +28,6 @@ unsigned inline idxwidth(uint64_t N) {
     }
     return shifts;
 }
-
-#define DEL_IF(A) \
-    if ((A) != NULL) delete (A);
-
-#define DEL_ARRAY(A) \
-    { for (auto a: A) { delete a; } }
 
 };
 

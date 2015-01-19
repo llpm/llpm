@@ -27,7 +27,7 @@ class ConnectionDB;
 class Block;
 typedef boost::intrusive_ptr<Block> BlockP;
 
-/*******
+/**
  * Block is the basic unit in LLPM.
  * It can do computation, store state, read inputs, and write
  * outputs. The granularity of a block is not defined -- a block can
@@ -115,40 +115,56 @@ public:
 
     std::string globalName() const;
 
-    // Upon what conditions does a block accept inputs and execute?
-    // This routine only works properly when all the outputs have the same
-    // dependence rules. If not, it returns "Custom"
+    /**
+     * Upon what conditions does a block accept inputs and execute?
+     * This routine only works properly when all the outputs have the
+     * same dependence rules. If not, it returns "Custom"
+     */
     DependenceRule::InputType firing() const;
 
-    // When one output fires, do all of them them? If so, this method
-    // should answer yes.
+    /**
+     * When one output fires, do all of them them? If so, this method
+     * should answer yes.
+     */
     virtual bool outputsTied() const;
 
-    // True iff one of the two conditions holds:
-    //   - A single block firing results in one output token on one
-    //   output port
-    //   - The output ports are buffered and deal with backpressure
-    //   independently from each other.
+    /**
+     * True iff one of the two conditions holds:
+     *    - A single block firing results in one output token on one
+     *    output port
+     *    - The output ports are buffered and deal with backpressure
+     *    independently from each other.
+     */
     virtual bool outputsSeparate() const {
         // Nearly nobody does this, so default to no
         return false;
     }
 
-    // Find the dependence rule for an output port
+    /**
+     * Find the dependence rule for an output port 
+     */
     virtual DependenceRule depRule(const OutputPort*) const = 0;
-    // Find all of the inputs upon which an output depends.
+    /**
+     * Find all of the inputs upon which an output depends.
+     */
     virtual const std::vector<InputPort*>&
         deps(const OutputPort*) const = 0;
 
-    // Calls the above and inserts into a set
+    /**
+     * Calls the above and inserts into a set
+     */
     virtual void deps(const OutputPort*, std::set<InputPort*>&) const;
-    // Based on the above deps function, find all of the output ports
-    // which an input may affect
+    /**
+     * Based on the above deps function, find all of the output ports
+     * which an input may affect 
+     */
     virtual void deps(const InputPort*, std::set<OutputPort*>&) const;
 
-    // Does the logic in this block contain any cycles? Cycles mean that
-    // logic cannot be completely combinatorial and prevents static
-    // region formation
+    /**
+     * Does the logic in this block contain any cycles? Cycles mean
+     * that logic cannot be completely combinatorial and prevents
+     * static region formation
+     */
     virtual bool hasCycle() const {
         return false;
     }
@@ -174,8 +190,10 @@ public:
         oports.insert(oports.end(), _outputs.begin(), _outputs.end());
     }
 
-    // Can previous blocks re-order the fields of this input and obtain the
-    // same result from this block?
+    /**
+     * Can previous blocks re-order the fields of this input and
+     * obtain the / same result from this block?
+     */
     virtual bool inputCommutative(InputPort*) const {
         return false;
     }
@@ -196,9 +214,11 @@ public:
             return std::distance(_outputs.begin(), f);
     }
 
-    // Does this block contain architectural state? Answering false does
-    // not preclude microarchitectural state (like pipeline registers)
-    // from being added.
+    /**
+     * Does this block contain architectural state? Answering false
+     * does not preclude microarchitectural state (like pipeline
+     * registers) from being added. 
+    */
     virtual bool hasState() const = 0;
     bool isPure() const {
         return !hasState();
@@ -208,7 +228,8 @@ public:
         return false;
     }
 
-    /* Refines a block into smaller blocks. Usually a default
+    /**
+     * Refines a block into smaller blocks. Usually a default
      * refinement -- libraries may override it.
      *
      * @return Returns false if this block does not know how to
@@ -232,7 +253,7 @@ public:
     }
 };
 
-/*****
+/**
  * A purely functional block.
  * Takes one input and produces one output. No state
  */

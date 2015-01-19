@@ -5,8 +5,10 @@
 
 namespace llpm {
 
-// In RTL, a register has one write port and an output that continuously
-// outputs the value which the register contains.
+/**
+ * In RTL, a register has one write port and an output that
+ * continuously outputs the value which the register contains.
+ */
 class RTLReg : public Block {
     llvm::Type* _type;
     Interface _write;
@@ -50,12 +52,14 @@ public:
 };
 
 
-// Block RAM (BRAM) are assumed to have N true RW ports, zero R ports
-// and zero W ports.
-// Port req format:
-//   { isWrite : i1, data : *, idx : i* } -- for reads, data is garbage
-// Port resp format:
-//   { data : * } -- for writes, data is garbage
+/**
+ * Block RAM (BRAM) are assumed to have N true RW ports, zero R ports 
+ * and zero W ports. 
+ *   Port req format: 
+ *     { isWrite : i1, data : *, idx : i* } -- for reads, data is garbage
+ *   Port resp format:
+ *     { data : * } -- for writes, data is garbage
+ */
 class BlockRAM : public Block {
     llvm::Type* _type;
     unsigned _depth;

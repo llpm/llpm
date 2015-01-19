@@ -6,6 +6,19 @@
 
 namespace llpm {
 
+/**
+ * A ControlRegion is a group of blocks with the following properties:
+ *   - All of them have AND input firing rules
+ *   - All of them are "tied" outputs
+ *   - All of the outputs rely on all of the inputs
+ *
+ * This definition means that it is trivial to statically schedule the
+ * blocks contained by a CR. At a minimum, the control bits (valid and
+ * backpressure) can be amortized over all the blocks.
+ *
+ * Finally, the CR also unifies its output to create just one output.
+ * I did this for a reason, but can't remember what that reason was.
+ */
 class ControlRegion : public ContainerModule {
     MutableModule* _parent;
     bool _finalized;

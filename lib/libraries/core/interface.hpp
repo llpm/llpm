@@ -7,6 +7,14 @@
 
 namespace llpm {
 
+/**
+ * Interface defines an input/output port pair. If the interface is a
+ * "server" then the expectation is that one token is produced for
+ * every input token in response to it. If the interface is not a
+ * "server" and is therefore a "client" when the output port produces
+ * a token and expects to be given a response token on its input
+ * ports.
+ */
 class Interface {
     InputPort _din;
     OutputPort _dout;
@@ -73,6 +81,11 @@ public:
     }
 };
 
+/**
+ * The InterfaceMultiplexer allows multiple clients to share a single
+ * server interface. There a new of potential strategies to make this
+ * work properly and a pass is necessary to implement one of them.
+ */
 class InterfaceMultiplexer : public Block {
     Interface _client;
 

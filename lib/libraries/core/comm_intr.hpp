@@ -20,7 +20,10 @@ protected:
     }
 };
 
-// Identity function. Does nothing
+/**
+ * Identity function. Does nothing to the data but forward it on. Can
+ * always be safely removed.
+ */
 class Identity: public CommunicationIntrinsic, public Function {
 public:
     Identity(llvm::Type*);
@@ -31,8 +34,10 @@ public:
     }
 };
 
-// Waits for inputs to arrive on N control channels and one data
-// channel then passes through the data token.
+/**
+ * Waits for inputs to arrive on N control channels and one data
+ * channel then passes through the data token.
+ */
 class Wait: public CommunicationIntrinsic {
     InputPort _din;
     OutputPort _dout;
@@ -62,8 +67,10 @@ public:
     void newControl(ConnectionDB*, OutputPort*);
 };
 
-// Convert one data type to another. Usually compiles down to a
-// no-op
+/**
+ * Convert one data type to another. The two inputs must be of the
+ * same bit width. Usually compiles down to a no-op.
+ */
 class Cast : public CommunicationIntrinsic, public Function {
     llvm::CastInst* _cast;
 public:
@@ -78,7 +85,9 @@ public:
     }
 };
 
-// Takes N inputs and concatenates them into one output
+/**
+ * Takes N inputs and concatenates them into one output.
+ */
 class Join : public CommunicationIntrinsic {
     std::vector<std::unique_ptr<InputPort>> _din;
     OutputPort _dout;
@@ -103,8 +112,10 @@ public:
     }
 };
 
-// Takes N inputs of the same type and outputs them in 
-// the order in which they arrive
+/**
+ * Takes N inputs of the same type and outputs them one at a time. The
+ * order in which they are outputted is undefined.
+ */
 class Select : public CommunicationIntrinsic {
     std::vector<std::unique_ptr<InputPort>> _din;
     OutputPort _dout;
@@ -128,8 +139,10 @@ public:
     }
 };
 
-// Takes N inputs of different types and outputs them
-// in the order in which they arrive
+/**
+ * Takes N inputs of different types and outputs them in the order in
+ * which they arrive.
+ */
 class SelectUnion : public CommunicationIntrinsic {
     std::vector<std::unique_ptr<InputPort>> _din;
     OutputPort _dout;
@@ -154,7 +167,9 @@ public:
     }
 };
 
-// Splits a single input into N constituent parts
+/**
+ * Splits a single input into N constituent parts.
+ */
 class Split : public CommunicationIntrinsic {
     InputPort _din;
     std::vector<std::unique_ptr<OutputPort>> _dout;
@@ -192,7 +207,9 @@ public:
     virtual bool refineToExtracts(ConnectionDB& conns) const;
 };
 
-// Extract a single element from a message
+/**
+ * Extract a single element from a message.
+ */
 class Extract : public CommunicationIntrinsic, public Function {
     std::vector<unsigned> _path;
     llvm::Type* GetOutput(llvm::Type* t, std::vector<unsigned> path);
@@ -208,10 +225,12 @@ public:
     DEF_GET_NP(path);
 };
 
-// Selects one of N inputs and outputs it. Non-selected messages are
-// destroyed
-// Input data type:
-// { sel : Log2 (#  inputs), Input 1, Input 2, ... Input N }
+/**
+ * Selects one of N inputs and outputs it. Non-selected messages are
+ * destroyed.
+ * Input data type:
+ *   { sel : Log2 (#  inputs), Input 1, Input 2, ... Input N }
+ */
 class Multiplexer : public CommunicationIntrinsic, public Function {
     static llvm::Type* GetInput(unsigned N, llvm::Type* type);
 
@@ -224,9 +243,11 @@ public:
     }
 };
 
-// Sends a single input to one of N outputs
-// Input data type:
-// { sel: Log2 (# outputs), Input Data }
+/**
+ * Sends a single input to one of N outputs.
+ * Input data type:
+ *   { sel: Log2 (# outputs), Input Data }
+ */
 class Router : public CommunicationIntrinsic {
     static llvm::Type* GetInput(unsigned N, llvm::Type* type);
     InputPort _din;

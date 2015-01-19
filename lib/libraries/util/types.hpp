@@ -7,7 +7,10 @@
 
 namespace llpm {
 
-// Reorders the fields of a struct
+/**
+ * Reorders the fields of a struct with a statically determined
+ * mapping of input fields to output fields.
+ */
 class StructTwiddler : public Function {
     std::vector<unsigned> _mapping;
 
@@ -25,15 +28,24 @@ public:
     virtual bool refine(ConnectionDB& conns) const;
 };
 
+/**
+ * Analog to LLVM's insertvalue instruction. Replaces one field of a
+ * struct or vector with a replacement value. If a vector, the field
+ * can be dynamically selected. 
+ */
 class ReplaceElement : public Function {
     signed _idx;
 
     static llvm::Type* GetInput(llvm::Type* input, signed idx);
 
 public:
-    // Statically selected index
+    /**
+     * Create a replacement with a statically selected index
+     */
     ReplaceElement(llvm::Type* ty, signed idx);
-    // Dynamically selected index
+    /**
+     * Create a replacement with a dynamically selected index
+     */
     ReplaceElement(llvm::Type* ty);
 
     DEF_GET_NP(idx);

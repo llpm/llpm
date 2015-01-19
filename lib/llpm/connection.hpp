@@ -15,7 +15,11 @@ namespace llpm {
 
 // Fwd. defs. Silly rabbit, modern parsing is for kids!
 class Interface;
+class Module;
 
+/**
+ * Represents the connection between an output port and an input port.
+ */
 typedef std::pair<InputPort*, OutputPort*> ConnectionPair;
 class Connection : public ConnectionPair {
 public:
@@ -38,9 +42,11 @@ public:
         return source() != NULL && sink() != NULL;
     }
 
+    /// Get the output port driving this connection
     OutputPort* source() const {
         return second;
     }
+    /// Get the input port being driven by this connection
     InputPort* sink() const {
         return first;
     }
@@ -52,9 +58,17 @@ public:
     }
 };
 
-// I hate forward declarations
-class Module;
-
+/**
+ * Database of connections. Provides fast access to find out which
+ * input ports are driven by a particular output port and which output
+ * port drives a particular input port. Blocks contained by this DB
+ * are implicitly defined by the ports involved in connections, though
+ * the block list is cached.
+ *
+ * Also, ConnectionDB deals with ownership of the blocks. Internally,
+ * the list of blocks are 'intrusive_ptr's to the blocks so the blocks
+ * are can be free'd when they are no longer involved in connections.
+ */
 class ConnectionDB {
     Module* _module;
     uint64_t _changeCounter;
@@ -85,6 +99,13 @@ public:
 
     DEF_GET(module);
     DEF_GET_NP(changeCounter);
+
+    /**
+     * Returns a pointer to a counter which increments every time a
+     * change is made to the ConnectionDB. Can be used to as a version
+     * number for the DB. Especially useful is one wants to cache
+     * queries on the DB.
+     */
     const uint64_t* counterPtr() const {
         return &_changeCounter;
     }
@@ -114,24 +135,39 @@ public:
         return ConstIterator(_sourceIdx.end());
     };
 
+    /**
+     * Make this block invisible to clients
+     */
     void blacklist(BlockP b) {
         _blacklist.insert(b);
         _changeCounter++;
     }
 
+    /**
+     * Make this block visible to clients
+     */
     void deblacklist(BlockP b) {
         _blacklist.erase(b);
         _changeCounter++;
     }
 
+    /**
+     * Is thie block visible to clients?
+     */
     bool isblacklisted(BlockP b) const {
         return _blacklist.count(b) > 0;
     }
 
+    /**
+     * Is thie block visible to clients?
+     */
     bool isblacklisted(Block* b) const {
         return _blacklist.count(b->getptr()) > 0;
     }
 
+    /**
+     * Is thie block visible to clients?
+     */
     bool isInternalDriver(OutputPort* op) const {
         return _blacklist.count(op->ownerP()) > 0;
     }
@@ -153,8 +189,12 @@ public:
         }
     }
 
-    void filterBlocks(boost::function<bool(Block*)> ignoreBlock,
-                      std::set<Block*>& blocks);
+    /**
+     * Return the set of blocks contained by this DB, filtered by the
+     * function passed in.
+     */
+    void filterBlocks(boost::function<bool(Block*)>,
+                      std::set<Block*>&);
 
     void connect(OutputPort* o, InputPort* i);
     void connect(InputPort* i, OutputPort* o) {
@@ -170,6 +210,9 @@ public:
     }
     void disconnect(Interface* a, Interface* b);
 
+    /**
+     * Would adding this connection create a cycle?
+     */
     bool createsCycle(Connection c) const;
 
     bool isUsed(Block* b) const {
@@ -225,9 +268,13 @@ public:
 
     void removeBlock(Block* b);
 
+    /**
+     * Take the contents of the DB passed into this method and put
+     * them in this DB.
+     */
     void update(const ConnectionDB& newdb);
     
-    /*****
+    /**
      * Remaps an input port or output port to point to new
      * locations. If the input or output ports are unknown to this
      * connection database, the remaps are stored so they may be

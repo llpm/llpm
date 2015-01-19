@@ -114,6 +114,19 @@ public:
     virtual bool hasCycle() const = 0;
 };
 
+/**
+ * Each input and output ports owned by ContainerModule refers to the
+ * external ports of the module. Their internal counterparts need to
+ * below belong to something, but if they also belong to the
+ * ContainerModule, then it'll look like they're external to the
+ * module rather than internal since port->owner()->module() will
+ * return the module which contains the ContainerModule rather than
+ * returning the module itself.
+ *
+ * To get around this issue, we create a DummyBlock to each container
+ * input and output and use the block's appropriate port as the
+ * internal driver/sink. It's a bit of a hack, but it works.
+ */
 class DummyBlock: public Identity {
     Port* _modPort;
 public:
@@ -128,7 +141,9 @@ public:
     DEF_GET_NP(modPort);
 };
 
-// A module which a third party can edit
+/**
+ * A module which a third party can edit
+ */
 class MutableModule: public Module {
 public:
     MutableModule(Design& design, std::string name) :
@@ -189,7 +204,7 @@ public:
     }
 };
 
-/**********
+/**
  * This module simply contains blocks. It is likely to be the most
  * common module class and a good default module base class. Should
  * be sub-classed to define input and output ports.
@@ -269,31 +284,6 @@ public:
         return internalOPSink;
     }
 
-#if 0
-    void addBlock(Block* b) {
-        assert(b != NULL);
-
-        Module* m = b->module();
-        if (m != NULL && m != this)
-            throw InvalidArgument("Cannot add already owned block to module!");
-
-        if (Module* m = dynamic_cast<Module*>(b)) {
-            addSubmodule(m);
-        } else {
-            _blocks.insert(b);
-            b->module(this);
-        }
-    }
-#endif
-
-#if 0
-    void addSubmodule(Module* m) {
-        assert(m != NULL);
-        this->_modules.insert(m);
-        m->module(this);
-    }
-#endif
-
     void connect(InputPort* sink, OutputPort* source) {
         connect(source, sink);
     }
@@ -315,8 +305,10 @@ public:
         _conns.connect(source, sink);
     }
 
-    // If our outputs are tied, unify them into one join'ed output and
-    // add an extraction to each output
+    /**
+     * If our outputs are tied, unify them into one join'ed output and
+     * add an extraction to each output
+     */
     bool unifyOutput();
 
     virtual bool refine(ConnectionDB& conns) const;
