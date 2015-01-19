@@ -21,7 +21,7 @@ static T myrand() {
 
 int main() {
     GameOfLife* gol = new GameOfLife();
-    gol->trace("debug.vcd");
+    //gol->trace("debug.vcd");
     gol->reset();
     unsigned size = gol->size();
 

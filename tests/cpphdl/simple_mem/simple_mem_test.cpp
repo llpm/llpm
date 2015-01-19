@@ -9,7 +9,7 @@ int main() {
     uint64_t l;
 
     SimpleMem* mem = new SimpleMem();
-    mem->trace("debug.vcd");
+    //mem->trace("debug.vcd");
     mem->reset();
     uint64_t start = mem->cycles();
 

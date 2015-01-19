@@ -53,7 +53,7 @@ int main() {
 
     SHA256* sha = new SHA256();
     SHA256_SW* sw = new SHA256_SW();
-    sha->trace("debug.vcd");
+    //sha->trace("debug.vcd");
     sha->reset();
 
     if (!sha->test1()) {
