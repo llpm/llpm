@@ -160,9 +160,10 @@ void LLVMBasicBlock::addInput(llvm::Value* v) {
 
     // If we haven't seen this input, then we need to create an input
     // for it and request it from all predecessors.
-    unsigned inputNum = _numInputs++;
+    unsigned inputNum = _numInputs;
     _inputMap[v].insert(inputNum);
     _nonPhiInputMap[v] = inputNum;
+    _numInputs += 1;
     unsigned pred_count = 0;
     for(auto iter = llvm::pred_begin(_basicBlock);
         iter != llvm::pred_end(_basicBlock); iter++) {
@@ -196,19 +197,20 @@ void LLVMBasicBlock::buildRequests() {
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             inputTypes.push_back(LLVMInstruction::GetOutput(phi));
-            _phiInputMap[phi] = _numInputs;
+            unsigned inputNum = _numInputs;
+            _numInputs += 1;
+            _phiInputMap[phi] = inputNum;
             assert(phi->getNumIncomingValues() > 0);
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
                 llvm::Value* v = phi->getIncomingValue(i);
                 llvm::BasicBlock* pred = phi->getIncomingBlock(i);
                 _valueSources[v].insert(pred);
-                _inputMap[v].insert(_numInputs);
+                _inputMap[v].insert(inputNum);
 
                 auto predBlock = _function->blockMap(pred);
                 assert(predBlock);
                 predBlock->requestOutput(v);
             }
-            _numInputs += 1;
         } else {
             unsigned numOperands = ins.getNumOperands();
             for (unsigned i=0; i<numOperands; i++) {
@@ -271,6 +273,7 @@ void LLVMBasicBlock::buildIO() {
                 assert(inputs[idx] == GetHWType(value));
             } else {
                 inputs[idx] = GetHWType(value);
+                assert(inputs[idx] != NULL);
             }
         }
     }
