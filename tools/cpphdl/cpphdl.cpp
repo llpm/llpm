@@ -59,10 +59,10 @@ int main(int argc, const char** argv) {
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<FormControlRegionPass>();
         d.optimizations()->append<SimplifyPass>();
-        d.optimizations()->append<GVPrinterPass>();
         d.optimizations()->append<SynthesizeTagsPass>();
         d.optimizations()->append<SimplifyPass>();
         d.optimizations()->append<PipelineDependentsPass>();
+        d.optimizations()->append<GVPrinterPass>();
         d.optimizations()->append<PipelineCyclesPass>();
         d.optimizations()->append<LatchUntiedOutputs>();
         d.optimizations()->append<SynthesizeForksPass>();
