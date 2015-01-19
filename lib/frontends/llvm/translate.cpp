@@ -10,9 +10,11 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Vectorize.h>
+#include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/LinkAllIR.h>
 #include <llvm/ADT/Triple.h>
+#include <llvm/Support/raw_os_ostream.h>
 
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Target/TargetLibraryInfo.h>
@@ -82,7 +84,7 @@ void LLVMTranslator::setModule(llvm::Module* module) {
     MPM.add(createLoopUnswitchPass());
     MPM.add(createInstructionCombiningPass());
     MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
-    MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+    
     MPM.add(createLoopDeletionPass());          // Delete dead loops
     MPM.add(createSimpleLoopUnrollPass());      // Unroll small loops
     MPM.add(createMergedLoadStoreMotionPass()); // Merge load/stores in diamond
@@ -106,8 +108,6 @@ void LLVMTranslator::setModule(llvm::Module* module) {
     // BBVectorize may have significantly shortened a loop body; unroll again.
     MPM.add(createLoopUnrollPass());
 
-    MPM.add(createLoadCombinePass());
-
     MPM.add(createAggressiveDCEPass());         // Delete dead instructions
     MPM.add(createCFGSimplificationPass()); // Merge & remove BBs
     MPM.add(createInstructionCombiningPass());  // Clean up after everything.
@@ -129,12 +129,16 @@ void LLVMTranslator::setModule(llvm::Module* module) {
 
     MPM.add(createStripDeadPrototypesPass()); // Get rid of dead prototypes
     MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+// #endif
 
 
+    auto f = _design.workingDir()->create("postopt.ll");
+    raw_os_ostream rawStream(f->openStream());
+    MPM.add(createPrintModulePass(rawStream));
     MPM.add(llvm::createVerifierPass(true));
 
-
     MPM.run(*module);
+    f->close();
 
     this->_llvmModule = module;
 }
