@@ -247,11 +247,14 @@ struct CycleFindingVisitor: public Visitor<OIEdge> {
         Visitor<OIEdge>::next(conns, edge, deps);
         for (auto dep: deps) {
             if (stackSet.find(dep) != stackSet.end()) {
-                Connection c = edge.end();
-                auto f = find(stackVec.begin(), stackVec.end(), c);
-                cycle = vector<Connection>(f, stackVec.end());
+                auto stackIter = stackVec.begin();
+                while (stackIter->source() != dep &&
+                       stackIter != stackVec.end())
+                    stackIter++;
+                assert(stackIter != stackVec.end());
+                cycle = vector<Connection>(stackIter, stackVec.end());
                 return TerminateSearch;
-            } 
+            }
         }
         return Continue;
     }
