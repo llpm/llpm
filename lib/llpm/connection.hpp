@@ -6,6 +6,7 @@
 #include <llpm/exceptions.hpp>
 #include <util/macros.hpp>
 
+#include <boost/function.hpp>
 #include <set>
 #include <map>
 #include <unordered_map>
@@ -151,6 +152,9 @@ public:
                 blocks.insert(pr.first.get());
         }
     }
+
+    void filterBlocks(boost::function<bool(Block*)> ignoreBlock,
+                      std::set<Block*>& blocks);
 
     void connect(OutputPort* o, InputPort* i);
     void connect(InputPort* i, OutputPort* o) {

@@ -9,6 +9,18 @@ using namespace std;
 
 namespace llpm {
 
+void ConnectionDB::filterBlocks(boost::function<bool(Block*)> ignoreBlock,
+                                std::set<Block*>& blocks)
+{
+    for (auto p: _blockUseCounts) {
+        if (p.second >= 1 &&
+            _blacklist.count(p.first.get()) == 0 &&
+            ignoreBlock(p.first.get())) {
+            blocks.insert(p.first.get());
+        }
+    }
+}
+
 void ConnectionDB::registerBlock(BlockP block) {
     if (_blockUseCounts.find(block) == _blockUseCounts.end()) {
         _newBlocks.insert(block);

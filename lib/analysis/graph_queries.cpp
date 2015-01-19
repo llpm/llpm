@@ -278,6 +278,11 @@ bool FindCycle(Module* mod,
     GraphSearch<CycleFindingVisitor, DFS> search(conns, visitor);
     vector<OutputPort*> init;
     mod->internalDrivers(init);
+    set<Block*> ignoredBlocks;
+    conns->filterBlocks(ignoreBlock, ignoredBlocks);
+    for (auto ib: ignoredBlocks)
+        for (auto op: ib->outputs())
+            init.push_back(op);
     search.go(init);
     // printf("%u / %lu visits in %s\n", visitor.visits, conns->size(),
            // mod->name().c_str());
