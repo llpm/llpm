@@ -28,7 +28,7 @@ reg             valid;
 reg [Width-1:0] data;
 
 assign read = data;
-assign read_valid = valid;
+assign read_valid = 1'b1;
 
 assign write_req_bp = write_resp_bp;
 assign write_resp_valid = write_req_valid;

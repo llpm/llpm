@@ -11,6 +11,7 @@ class RTLReg : public Block {
     llvm::Type* _type;
     Interface _write;
     std::vector<std::unique_ptr<Interface>> _read;
+    std::map<const OutputPort*, std::vector<InputPort*>> _readRespDeps;
     std::vector<InputPort*> _writeRespDeps = {_write.din()};
 
 public:
@@ -39,7 +40,8 @@ public:
             const OutputPort* op) const {
         if (op == _write.dout())
             return _writeRespDeps;
-        return inputs();
+        return _readRespDeps.find(op)->second;
+        assert(false);
     }
 
     virtual bool outputsSeparate() const {

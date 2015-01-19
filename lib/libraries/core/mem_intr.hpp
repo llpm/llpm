@@ -34,16 +34,11 @@ public:
         return true;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
-        if (op == _write.dout())
-            return DependenceRule(DependenceRule::AND,
-                                  DependenceRule::Always);
-        else if (op == _read.dout())
-            return DependenceRule(DependenceRule::Custom,
-                                  DependenceRule::Maybe);
-        else
-            assert(false);
+    virtual DependenceRule depRule(const OutputPort*) const {
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
     }
+
     virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
         if (op == _write.dout())
             return _writeDeps;

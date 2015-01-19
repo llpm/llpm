@@ -21,6 +21,7 @@ Interface* RTLReg::newRead() {
                     true,
                     str(boost::format("read%1%") % _read.size()));
     _read.emplace_back(iface);
+    _readRespDeps[iface->dout()] = {iface->din()};
     return iface;
 }
 
