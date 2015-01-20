@@ -78,7 +78,7 @@ public:
     Cast(llvm::Type* from, llvm::Type* to);
     virtual ~Cast() { }
 
-    DEF_GET(cast);
+    DEF_GET_NP(cast);
 
     virtual bool hasState() const {
         return false;
