@@ -152,16 +152,13 @@ void LLVMBasicBlock::addInput(llvm::Value* v) {
     // desired. If it's already absorbed by a PHI, we need another
     // copy to pass around the original value.
     if (_nonPhiInputMap.find(v) != _nonPhiInputMap.end()) {
-        // Other code (the PHI input code, for example) insert into
-        // inputMap, but only we insert into nonPhiInputMap. If it
-        // ain't here, we haven't seen it.
+        // If the value ain't here, we haven't seen it.
         return;
     }
 
     // If we haven't seen this input, then we need to create an input
     // for it and request it from all predecessors.
     unsigned inputNum = _numInputs;
-    _inputMap[v].insert(inputNum);
     _nonPhiInputMap[v] = inputNum;
     _numInputs += 1;
     unsigned pred_count = 0;
@@ -205,7 +202,6 @@ void LLVMBasicBlock::buildRequests() {
                 llvm::Value* v = phi->getIncomingValue(i);
                 llvm::BasicBlock* pred = phi->getIncomingBlock(i);
                 _valueSources[v].insert(pred);
-                _inputMap[v].insert(inputNum);
 
                 auto predBlock = _function->blockMap(pred);
                 assert(predBlock);
@@ -266,16 +262,18 @@ void LLVMBasicBlock::buildIO() {
      */
     std::vector<llvm::Type*> inputs(_numInputs);
 
-    for (auto& pr: _inputMap) {
+    for (auto& pr: _nonPhiInputMap) {
         auto value = pr.first;
-        for (auto idx: pr.second) {
-            if (inputs[idx] != NULL) {
-                assert(inputs[idx] == GetHWType(value));
-            } else {
-                inputs[idx] = GetHWType(value);
-                assert(inputs[idx] != NULL);
-            }
-        }
+        auto idx = pr.second;
+        assert(inputs[idx] == NULL);
+        inputs[idx] = GetHWType(value);
+    }
+
+    for (auto& pr: _phiInputMap) {
+        auto value = pr.first;
+        auto idx = pr.second;
+        assert(inputs[idx] == NULL);
+        inputs[idx] = GetHWType(value);
     }
 
     for (unsigned i=0; i<inputs.size(); i++) {
@@ -398,24 +396,22 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Value*>& 
     inputData.clear();
     inputData.resize(_basicBlock->numInputs());
 
-    auto inputMap = _basicBlock->inputMap();
-    // printf("\n");
-    for (auto pr: inputMap) {
-        auto v = pr.first;
-        for (auto idx: pr.second) {
-            // printf("%u: %s\n", idx, v->getName().str().c_str());
+    const auto& npInputMap = _basicBlock->nonPhiInputMap();
+    const auto& pInputMap = _basicBlock->phiInputMap();
 
-            const std::set<llvm::BasicBlock*>& sources =
-                _basicBlock->valueSources(v);
-            assert(sources.size() > 0);
-            llvm::BasicBlock* predBB =
-                (pred == NULL) ?
-                    (NULL) :
-                    (pred->basicBlock()->basicBlock());
-            if (sources.count(predBB) > 0) {
-                inputData[idx] = v;
-            }
-        }
+    for (auto pr: npInputMap) {
+        auto v = pr.first;
+        auto idx = pr.second;
+        assert(idx < inputData.size());
+        inputData[idx] = v;
+    }
+
+    for (auto pr: pInputMap) {
+        auto phi = pr.first;
+        auto idx = pr.second;
+        assert(idx < inputData.size());
+        auto v = phi->getIncomingValueForBlock(pred->basicBlock()->basicBlock());
+        inputData[idx] = v;
     }
 
     for (unsigned i=0; i<inputData.size(); i++) {
