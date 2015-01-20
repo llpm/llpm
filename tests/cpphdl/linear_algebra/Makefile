@@ -10,7 +10,7 @@ LINK=../../../bin/llvm/bin/llvm-link
 NAME=linear_algebra
 ROOT=LinearAlg
 
-default: ${NAME}_test ${ROOT}_simple.pdf
+default: ${NAME}_test
 
 ${NAME}.bc: ${NAME}_accel.bc ${NAME}_accel_test.bc
 	${LINK} -o $@ $^
