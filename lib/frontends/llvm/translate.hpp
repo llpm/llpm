@@ -9,9 +9,6 @@
 // fwd def
 namespace llvm {
     class Module;
-    namespace legacy {
-        class FunctionPassManager;
-    }
 }
 
 namespace llpm {
@@ -19,24 +16,19 @@ namespace llpm {
 class LLVMTranslator {
     Design& _design;
     llvm::Module* _llvmModule;
-    llvm::legacy::FunctionPassManager* _pm;
 
 public:
     LLVMTranslator(Design& design);
     ~LLVMTranslator();
 
     void readBitcode(std::string fileName);
-    void setModule(llvm::Module* module) {
-        assert(module != NULL);
-        this->_llvmModule = module;
-    }
+    void setModule(llvm::Module* module);
     llvm::Module* getModule() {
         return _llvmModule;
     }
 
     LLVMFunction* translate(llvm::Function*);
     LLVMFunction* translate(std::string fnName);
-
 };
 
 } // namespace llpm

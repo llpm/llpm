@@ -4,7 +4,7 @@
 
 int main() {
     RegCounter* rc = new RegCounter();
-    rc->trace("debug.vcd");
+    //rc->trace("debug.vcd");
     rc->reset();
     uint64_t start = rc->cycles();
 

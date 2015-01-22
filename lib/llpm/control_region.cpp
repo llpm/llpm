@@ -33,8 +33,8 @@ void FormControlRegionPass::runInternal(Module* mod) {
     // Ports which are driven by const values. Can always be included
     // or even cloned
     set<Port*> constPorts;
-    set<Block*> constBlocks;
-    queries::FindConstants(mod, constPorts, constBlocks);
+    // set<Block*> constBlocks;
+    // queries::FindConstants(mod, constPorts, constBlocks);
 
     // Start with outputs
     for (OutputPort* op: cm->outputs()) {
@@ -181,7 +181,7 @@ bool ControlRegion::canGrow(Port* p) {
     throw InvalidArgument("What in the hell sort of port did you pass me?!");
 }
 
-bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
+bool ControlRegion::add(Block* b, const std::set<Port*>&) {
     ConnectionDB* pdb = _parent->conns();
 
     if (b->is<Module>() && b->isnot<ControlRegion>())
@@ -219,9 +219,8 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
                 oldSource->owner() == this &&
                 canGrow(oldSource))
                 internalizedOutputs[ip] = oldSource;
-            else if (constPorts.count(ip) == 0 &&
-                     (existingInputValues.find(oldSource) ==
-                         existingInputValues.end()) )
+            else if (existingInputValues.find(oldSource) ==
+                         existingInputValues.end())
                 createsInput = true;
         }
 
@@ -234,7 +233,7 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
                 if (ip->owner() == this &&
                     canGrow(ip))
                     internalizedInputs[op].insert(ip);
-                else if (constPorts.count(op) == 0)
+                else
                     createsOutput = true;
         }
 
@@ -245,14 +244,13 @@ bool ControlRegion::add(Block* b, const std::set<Port*>& constPorts) {
         bool foundAsDriver = internalizedInputs.size() > 0;
 
 #if 0
-        if (b->name() == "bb_finalized_input_join") {
-            printf("%s <- %s, crI: %u, crO: %u, iO: %lu, iI: %lu, "
-                   "fS: %u, fD: %u\n",
-                   b->name().c_str(), this->name().c_str(),
-                   createsInput, createsOutput, internalizedOutputs.size(),
-                   internalizedInputs.size(), foundAsSink, foundAsDriver);
-        }
+        printf("%s <- %s, crI: %u, crO: %u, iO: %lu, iI: %lu, "
+               "fS: %u, fD: %u\n",
+               b->globalName().c_str(), this->name().c_str(),
+               createsInput, createsOutput, internalizedOutputs.size(),
+               internalizedInputs.size(), foundAsSink, foundAsDriver);
 #endif
+
         /* Now check a bunch of conditions based on the above
          * analysis */
 
@@ -411,8 +409,6 @@ void ControlRegion::validityCheck() const {
 }
 
 void ControlRegion::finalize() {
-    this->unifyOutput();
-
     // Check to make sure all outputs have the same deps as the module as a
     // whole
     set<InputPort*> cannonDeps =
@@ -456,6 +452,7 @@ void ControlRegion::finalize() {
         }
     }
 
+    this->unifyOutput();
     this->_finalized = true;
 }
 

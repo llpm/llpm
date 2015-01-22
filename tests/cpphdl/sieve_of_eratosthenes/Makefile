@@ -1,13 +1,11 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-mem2reg -dce -constprop -die -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
 CXX=$(CLANGXX)
 DIS=../../../bin/llvm/bin/llvm-dis
 LINK=../../../bin/llvm/bin/llvm-link
-OPT=../../../bin/llvm/bin/opt
 
 NAME=sieve
 ROOT=SieveAccel
@@ -33,8 +31,7 @@ ${NAME}_test: ${NAME}_test.bc obj/${ROOT}_sw.bc
 	${CXX} -O0 -g -o $@ ${NAME}_test_all.bc
 
 %.bc: %.cpp
-	${CLANGXX} -c -g -fno-inline -emit-llvm ${CFLAGS} $< -o $@.tmp
-	${OPT} ${OPTS} $@.tmp -o $@
+	${CLANGXX} -c -g -fno-inline -emit-llvm ${CFLAGS} $< -o $@
 	${DIS} $@
 
 %.pdf: obj/%.gv

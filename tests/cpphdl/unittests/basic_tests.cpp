@@ -20,6 +20,7 @@ public:
 
     void set(unsigned idx, uint64_t v);
     uint64_t memadd(unsigned i, unsigned j);
+    uint64_t doubleLoop(unsigned b1, unsigned b2);
 
     void setCond(bool c);
     bool condTest(unsigned i);
@@ -41,6 +42,16 @@ void BasicTests::set(unsigned idx, uint64_t v) {
 
 uint64_t BasicTests::memadd(unsigned i, unsigned j) {
     return mem[i] + mem[j];
+}
+
+uint64_t BasicTests::doubleLoop(unsigned b1, unsigned b2) {
+    unsigned sum = 0;
+    for (unsigned i=0; i<b1; i++) {
+        for (unsigned j=0; j<b2; j++) {
+            sum += mem[(i+j)%8];
+        }
+    }
+    return sum;
 }
 
 void BasicTests::setCond(bool c) {
@@ -69,6 +80,8 @@ bool test1() {
 
     tests.set(1, 65);
     tests.set(3, 98);
+    printf("doubleLoop...\n");
+    tests.doubleLoop(2, 4);
     printf("memadd... ");
     fflush(stdout);
     tests.memadd(1, 3);

@@ -1,6 +1,5 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-mem2reg -dce -constprop -die -mergereturn -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
@@ -24,8 +23,7 @@ ${NAME}_run: ${NAME}_run.cpp ${ROOT}.hpp
 	${CXX} -o ${NAME}_run ${NAME}_run.cpp.bc obj/${ROOT}_sw.bc
 
 %.bc: %.cpp
-	${CLANGXX} -c -emit-llvm ${CFLAGS} $< -o $@.tmp
-	${OPT} ${OPTS} $@.tmp -o $@
+	${CLANGXX} -c -emit-llvm ${CFLAGS} $< -o $@
 	${DIS} $@
 
 %.pdf: obj/%.gv

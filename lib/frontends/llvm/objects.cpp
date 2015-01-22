@@ -152,17 +152,15 @@ void LLVMBasicBlock::addInput(llvm::Value* v) {
     // desired. If it's already absorbed by a PHI, we need another
     // copy to pass around the original value.
     if (_nonPhiInputMap.find(v) != _nonPhiInputMap.end()) {
-        // Other code (the PHI input code, for example) insert into
-        // inputMap, but only we insert into nonPhiInputMap. If it
-        // ain't here, we haven't seen it.
+        // If the value ain't here, we haven't seen it.
         return;
     }
 
     // If we haven't seen this input, then we need to create an input
     // for it and request it from all predecessors.
-    unsigned inputNum = _numInputs++;
-    _inputMap[v].insert(inputNum);
+    unsigned inputNum = _numInputs;
     _nonPhiInputMap[v] = inputNum;
+    _numInputs += 1;
     unsigned pred_count = 0;
     for(auto iter = llvm::pred_begin(_basicBlock);
         iter != llvm::pred_end(_basicBlock); iter++) {
@@ -196,19 +194,19 @@ void LLVMBasicBlock::buildRequests() {
         if (llvm::PHINode* phi = llvm::dyn_cast<llvm::PHINode>(&ins)) {
             // PHI instructions are special
             inputTypes.push_back(LLVMInstruction::GetOutput(phi));
-            _phiInputMap[phi] = _numInputs;
+            unsigned inputNum = _numInputs;
+            _numInputs += 1;
+            _phiInputMap[phi] = inputNum;
             assert(phi->getNumIncomingValues() > 0);
             for (unsigned i=0; i<phi->getNumIncomingValues(); i++) {
                 llvm::Value* v = phi->getIncomingValue(i);
                 llvm::BasicBlock* pred = phi->getIncomingBlock(i);
                 _valueSources[v].insert(pred);
-                _inputMap[v].insert(_numInputs);
 
                 auto predBlock = _function->blockMap(pred);
                 assert(predBlock);
                 predBlock->requestOutput(v);
             }
-            _numInputs += 1;
         } else {
             unsigned numOperands = ins.getNumOperands();
             for (unsigned i=0; i<numOperands; i++) {
@@ -264,15 +262,18 @@ void LLVMBasicBlock::buildIO() {
      */
     std::vector<llvm::Type*> inputs(_numInputs);
 
-    for (auto& pr: _inputMap) {
+    for (auto& pr: _nonPhiInputMap) {
         auto value = pr.first;
-        for (auto idx: pr.second) {
-            if (inputs[idx] != NULL) {
-                assert(inputs[idx] == GetHWType(value));
-            } else {
-                inputs[idx] = GetHWType(value);
-            }
-        }
+        auto idx = pr.second;
+        assert(inputs[idx] == NULL);
+        inputs[idx] = GetHWType(value);
+    }
+
+    for (auto& pr: _phiInputMap) {
+        auto value = pr.first;
+        auto idx = pr.second;
+        assert(inputs[idx] == NULL);
+        inputs[idx] = GetHWType(value);
     }
 
     for (unsigned i=0; i<inputs.size(); i++) {
@@ -395,24 +396,22 @@ InputPort* LLVMControl::addPredecessor(LLVMControl* pred, vector<llvm::Value*>& 
     inputData.clear();
     inputData.resize(_basicBlock->numInputs());
 
-    auto inputMap = _basicBlock->inputMap();
-    // printf("\n");
-    for (auto pr: inputMap) {
-        auto v = pr.first;
-        for (auto idx: pr.second) {
-            // printf("%u: %s\n", idx, v->getName().str().c_str());
+    const auto& npInputMap = _basicBlock->nonPhiInputMap();
+    const auto& pInputMap = _basicBlock->phiInputMap();
 
-            const std::set<llvm::BasicBlock*>& sources =
-                _basicBlock->valueSources(v);
-            assert(sources.size() > 0);
-            llvm::BasicBlock* predBB =
-                (pred == NULL) ?
-                    (NULL) :
-                    (pred->basicBlock()->basicBlock());
-            if (sources.count(predBB) > 0) {
-                inputData[idx] = v;
-            }
-        }
+    for (auto pr: npInputMap) {
+        auto v = pr.first;
+        auto idx = pr.second;
+        assert(idx < inputData.size());
+        inputData[idx] = v;
+    }
+
+    for (auto pr: pInputMap) {
+        auto phi = pr.first;
+        auto idx = pr.second;
+        assert(idx < inputData.size());
+        auto v = phi->getIncomingValueForBlock(pred->basicBlock()->basicBlock());
+        inputData[idx] = v;
     }
 
     for (unsigned i=0; i<inputData.size(); i++) {

@@ -1,6 +1,5 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-O1 -disable-inlining -mem2reg -dce -constprop
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
@@ -31,8 +30,7 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 	${CXX} -O0 -o ${NAME}_test ${NAME}_test.cpp.bc obj/${ROOT}_sw.bc
 
 %.bc: %.cpp
-	${CLANGXX} -c -fno-inline -emit-llvm ${CFLAGS} $< -o $@.tmp
-	${OPT} ${OPTS} $@.tmp -o $@
+	${CLANGXX} -c -fno-inline -emit-llvm ${CFLAGS} $< -o $@
 	${DIS} $@
 
 %.pdf: obj/%.gv

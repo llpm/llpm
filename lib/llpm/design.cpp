@@ -123,16 +123,21 @@ void Design::optimize(bool debug) {
     p.run();
 }
 
-
-llvm::Module* Design::readBitcode(std::string fnName) {
+llvm::PassRegistry* Design::llvmPassReg() {
     if (_passReg == NULL) {
         _passReg = llvm::PassRegistry::getPassRegistry();
         initializeCore(*_passReg);
         initializeAnalysis(*_passReg);
-        // initializeBasicCallGraphPass(*_passReg);
         initializeScalarOpts(*_passReg);
+        initializeTransformUtils(*_passReg);
+        initializeVectorization(*_passReg);
+        initializeInstCombine(*_passReg);
     }
+    return _passReg;
+}
 
+llvm::Module* Design::readBitcode(std::string fnName) {
+    llvmPassReg();
     llvm::SMDiagnostic Err;
     llvm::Module *mod = 
         llvm::ParseIRFile(fnName, Err, context());

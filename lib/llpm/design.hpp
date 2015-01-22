@@ -107,6 +107,8 @@ public:
         _llvmModules.erase(mod);
         delete mod;
     }
+
+    llvm::PassRegistry* llvmPassReg();
 };
 
 } // namespace llpm

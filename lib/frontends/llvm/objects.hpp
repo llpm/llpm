@@ -93,7 +93,6 @@ protected:
 
     std::map<llvm::PHINode*, unsigned> _phiInputMap;
     std::map<llvm::Value*, unsigned> _nonPhiInputMap;
-    std::map<llvm::Value*, std::set<unsigned> > _inputMap;
 
     std::map<llvm::Value*, std::set<llvm::BasicBlock*> > _valueSources;
     std::map<llvm::Value*, unsigned> _outputMap;
@@ -149,28 +148,11 @@ public:
         return f->second;
     }
 
-
-    std::set<unsigned> mapInput(llvm::Value* ins) const {
-        auto f = _inputMap.find(ins);
-        assert(f != _inputMap.end());
-        return f->second;
-    }
-
-    bool isInput(llvm::Value* v) const {
-        return _inputMap.count(v) > 0;
-    }
-
-    const std::map<llvm::Value*, std::set<unsigned> >& inputMap() const {
-        return _inputMap;
-    }
-
-    const std::map<llvm::PHINode*, unsigned>&
-    phiInputMap() const {
+    const std::map<llvm::PHINode*, unsigned>& phiInputMap() const {
         return _phiInputMap;
     }
 
-    const std::map<llvm::Value*, unsigned>&
-    nonPhiInputMap() const {
+    const std::map<llvm::Value*, unsigned>& nonPhiInputMap() const {
         return _nonPhiInputMap;
     }
 

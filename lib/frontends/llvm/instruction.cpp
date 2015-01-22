@@ -653,6 +653,7 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::ICmp, WrapperInstruction<IntCompare>::Create},
 
     // Conversion operators
+    {llvm::Instruction::BitCast, WrapperInstruction<Cast>::Create},
     {llvm::Instruction::Trunc, WrapperInstruction<IntTruncate>::Create},
     {llvm::Instruction::ZExt, WrapperInstruction<IntExtend>::Create},
     {llvm::Instruction::SExt, WrapperInstruction<IntExtend>::Create},

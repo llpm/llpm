@@ -1,18 +1,16 @@
 CFLAGS=-O0
 CXXFLAGS=${CFLAGS}
-OPTS=-mem2reg -dce -constprop -die -simplifycfg -loop-simplify
 
 CLANGXX=../../../bin/llvm/bin/clang++
 CLANG=../../../bin/llvm/bin/clang
 CXX=$(CLANGXX)
 DIS=../../../bin/llvm/bin/llvm-dis
 LINK=../../../bin/llvm/bin/llvm-link
-OPT=../../../bin/llvm/bin/opt
 
 NAME=linear_algebra
 ROOT=LinearAlg
 
-default: ${NAME}_test ${ROOT}_simple.pdf
+default: ${NAME}_test
 
 ${NAME}.bc: ${NAME}_accel.bc ${NAME}_accel_test.bc
 	${LINK} -o $@ $^
@@ -33,8 +31,7 @@ ${NAME}_test: ${NAME}_test.bc obj/${ROOT}_sw.bc
 	${CXX} -O0 -o $@ ${NAME}_test_all.bc
 
 %.bc: %.cpp
-	${CLANGXX} -c -fno-inline -emit-llvm ${CFLAGS} $< -o $@.tmp
-	${OPT} ${OPTS} $@.tmp -o $@
+	${CLANGXX} -c -fno-inline -emit-llvm ${CFLAGS} $< -o $@
 	${DIS} $@
 
 %.pdf: obj/%.gv

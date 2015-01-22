@@ -3,7 +3,7 @@
 
 int main() {
     BasicTests* bt = new BasicTests();
-    bt->trace("debug.vcd");
+    //bt->trace("debug.vcd");
     bt->reset();
 
     bool passed = bt->test1();

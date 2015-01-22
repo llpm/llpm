@@ -156,7 +156,7 @@ namespace llpm {
         static llvm::Type* OutType(llvm::Type* a, llvm::Type* b, bool isSigned);
         IntRemainder(llvm::Type* a, llvm::Type* b, bool isSigned);
 
-        DEF_GET(isSigned);
+        DEF_GET_NP(isSigned);
     };
 
     // Bitwise AND, OR, or XOR of N inputs. All inputs must be of
@@ -208,7 +208,7 @@ namespace llpm {
                    Cmp op, bool isSigned);
 
         DEF_GET_NP(op);
-        DEF_GET(isSigned);
+        DEF_GET_NP(isSigned);
 
         virtual std::string print() const {
             std::string ret = _isSigned ? "s " : "u ";
