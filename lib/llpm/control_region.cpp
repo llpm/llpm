@@ -411,8 +411,6 @@ void ControlRegion::validityCheck() const {
 }
 
 void ControlRegion::finalize() {
-    this->unifyOutput();
-
     // Check to make sure all outputs have the same deps as the module as a
     // whole
     set<InputPort*> cannonDeps =
@@ -456,6 +454,7 @@ void ControlRegion::finalize() {
         }
     }
 
+    this->unifyOutput();
     this->_finalized = true;
 }
 
