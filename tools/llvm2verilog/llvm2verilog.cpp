@@ -25,56 +25,46 @@ using namespace std;
 
 int main(int argc, const char** argv) {
     try {
-
-
-        if (argc < 3) {
-            fprintf(stderr, "Usage: %s <llvm_bitcode> <output directory> [<function_name>*]\n", argv[0]);
-            return 1;
-        }
-
-        string dirName = argv[2];
-        Design d(dirName, true);
-        VerilogSynthesizer vs(d);
-        d.backend(&vs);
-
+        Design d;
         LLVMTranslator trans(d);
-        trans.readBitcode(argv[1]);
 
-        vector<Module*> modules;
-        for (int i=3; i<argc; i++) {
-            auto m = trans.translate(argv[i]);
-            modules.push_back(m);
-            d.addModule(m);
+        string inputFN, modName;
+
+        po::options_description desc("CPPHDL Options");
+        desc.add_options()
+            ("help", "Show this output")
+            ("input,i", po::value<string>(&inputFN)->required(),
+                  "Filename of input bitcode")
+            ("module,m", po::value<string>(&modName)->required(),
+                  "Name of top module")
+        ;
+        po::positional_options_description pd;
+        pd.add("input", 1)
+          .add("module", 2);
+
+        desc.add(d.optDesc());
+
+        for (int i=1; i<argc; i++) {
+            if (strcmp(argv[i], "--help") == 0) {
+                cout << desc << "\n";
+                return 1;
+            }
         }
 
-        d.elaborations()->append<SynthesizeMemoryPass>();
-        d.elaborations()->append<SynthesizeTagsPass>();
-        d.elaborations()->append<RefinePass>();
+        po::variables_map vm;
+        po::store(po::command_line_parser(argc, argv)
+                      .options(desc).positional(pd).run(), vm);
+        po::notify(vm);
+        d.notify(vm);
 
-        d.optimizations()->append<SimplifyPass>();
-        d.optimizations()->append<FormControlRegionPass>();
-        d.optimizations()->append<SynthesizeForksPass>();
-        d.optimizations()->append<CheckConnectionsPass>();
+        trans.readBitcode(inputFN);
+        auto m = trans.translate(modName);
+        d.addModule(m);
 
-        printf("Elaborating...\n");
-        d.elaborate();
-        printf("Optimizing...\n");
-        d.optimize();
-
-        GraphvizOutput gv(d);
-        VerilatorWedge vw(&vs);
-
-        FileSet* fs = d.workingDir();
-
-        for (Module* mod: d.modules()) {
-            gv.writeModule(fs->create(mod->name() + ".gv"), mod);
-            vw.writeModule(*fs, mod);
-        }
-
+        return d.go();
     } catch (Exception& e) {
         fprintf(stderr, "Caught exception!\n\t%s\n", e.msg.c_str());
         return 1;
     }
-
     return 0;
 }

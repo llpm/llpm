@@ -1,10 +1,11 @@
 #ifndef __LLPM_VERILATOR_VERILATOR_HPP__
 #define __LLPM_VERILATOR_VERILATOR_HPP__
 
-#include <string>
-
 #include <util/files.hpp>
 #include <backends/verilog/synthesize.hpp>
+#include <wedges/wedge.hpp>
+
+#include <string>
 
 namespace llvm {
     class CallInst;
@@ -12,7 +13,7 @@ namespace llvm {
 
 namespace llpm {
 
-class VerilatorWedge {
+class VerilatorWedge : public Wedge {
     VerilogSynthesizer* _verilog; 
 
     void writeHeader(FileSet::File*, Module*);

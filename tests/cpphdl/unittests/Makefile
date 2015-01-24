@@ -13,7 +13,7 @@ ROOT=BasicTests
 default: ${NAME}_run ${ROOT}.pdf ${ROOT}_simple.pdf
 
 obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
-	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
+	../../../bin/cpphdl ${NAME}.bc ${ROOT}
 
 ${ROOT}.hpp: obj/${ROOT}.hpp
 	cp obj/${ROOT}.hpp .

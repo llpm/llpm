@@ -19,7 +19,7 @@ ${NAME}.bc: ${NAME}_accel.bc ${NAME}_accel_test.bc
 ${NAME}_accel.bc: ${NAME}_accel.cpp ${NAME}_accel.hpp
 
 obj/${ROOT}.hpp obj/${ROOT}_sw.bc: ${NAME}.bc ../../../bin/cpphdl
-	../../../bin/cpphdl ${NAME}.bc obj ${ROOT}
+	../../../bin/cpphdl ${NAME}.bc ${ROOT}
 
 ${ROOT}.hpp: obj/${ROOT}.hpp
 	cp obj/${ROOT}.hpp .

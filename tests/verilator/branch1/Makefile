@@ -9,7 +9,7 @@ simple.pdf: obj/simple.gv
 	dot -Tpdf -o simple.pdf obj/simple.gv
 
 obj/simple.hpp: simple.bc ../../../bin/llvm2verilog
-	../../../bin/llvm2verilog simple.bc obj simple
+	../../../bin/llvm2verilog simple.bc simple
 
 simple.hpp: obj/simple.hpp
 	cp obj/simple.hpp .

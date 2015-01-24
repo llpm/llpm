@@ -22,7 +22,7 @@ env = Environment(
             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
             -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split()
             + CxxLdFlags,
-    LIBS="""LLVM-3.5""".split(),
+    LIBS="""boost_program_options LLVM-3.5""".split(),
     LIBPATH=map(lambda x: "bin/" + x, LibPaths),
     LINKFLAGS=[]
               + CxxLdFlags

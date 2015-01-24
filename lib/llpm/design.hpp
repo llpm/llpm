@@ -7,12 +7,14 @@
 #include <refinery/refinery.hpp>
 #include <synthesis/object_namer.hpp>
 #include <backends/backend.hpp>
+#include <wedges/wedge.hpp>
 #include <util/macros.hpp>
 #include <util/files.hpp>
 #include <passes/manager.hpp>
 
 #include <memory>
 #include <vector>
+#include <boost/program_options.hpp>
 
 namespace llvm {
     class PassRegistry;
@@ -31,6 +33,7 @@ class Design {
     std::vector<Module*> _modules;
     ObjectNamer* _namer;
     Backend* _backend;
+    Wedge* _wedge;
     GraphvizOutput* _gvOutput;
     FileSet _workingDir;
 
@@ -39,27 +42,41 @@ class Design {
 
     std::set<llvm::Module*> _llvmModules;
 
+    boost::program_options::options_description _optDesc;
+    void buildOpts();
+
 public:
-    Design(std::string workingDir,
-           bool keepTemps = false,
-           std::shared_ptr<llvm::LLVMContext> ctxt = NULL) :
+    Design(std::shared_ptr<llvm::LLVMContext> ctxt = NULL) :
         _passReg(NULL),
         _refinery(new Refinery()),
         _namer(NULL),
         _backend(NULL),
+        _wedge(NULL),
         _gvOutput(NULL),
-        _workingDir(keepTemps, workingDir),
+        _workingDir(),
         _elaborations(*this, "elab"),
-        _optimizations(*this, "opt")
+        _optimizations(*this, "opt"),
+        _optDesc("Design global options")
     {
         if (ctxt == NULL)
             ctxt = std::make_shared<llvm::LLVMContext>();
         _context = ctxt;
         _refinery->refiners().appendEntry(
             std::make_shared<BlockDefaultRefiner>());
+        buildOpts();
     }
 
     ~Design();
+
+    boost::program_options::options_description& optDesc() {
+        return _optDesc;
+    }
+    void notify(boost::program_options::variables_map&);
+
+    /**
+     * Do all elaboration and synthesis
+     */
+    int go();
 
     Refinery& refinery() {
         return *_refinery;
@@ -67,6 +84,8 @@ public:
 
     DEF_GET_NP(backend);
     DEF_SET_NONULL(backend);
+    DEF_GET_NP(wedge);
+    DEF_SET_NONULL(wedge);
     DEF_GET(elaborations);
     DEF_GET(optimizations);
 

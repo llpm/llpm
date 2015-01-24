@@ -3,6 +3,7 @@
 #include <llpm/module.hpp>
 #include <backends/graphviz/graphviz.hpp>
 #include <util/misc.hpp>
+#include <util/llvm_type.hpp>
 
 #include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
@@ -27,6 +28,62 @@ Design::~Design() {
         delete m;
     }
     DEL_IF(_passReg);
+}
+
+int Design::go() {
+    printf("Elaborating...\n");
+    this->elaborate(true);
+    printf("Optimizing...\n");
+    this->optimize(true);
+
+    FileSet* fs = workingDir();
+
+    // printf("Writing graphviz output...\n");
+    // for (Module* mod: d.modules()) {
+        // gv.writeModule(fs.create(mod->name() + ".gv"), mod);
+    // }
+
+    for (Module* mod: modules()) {
+        printf("Interfaces: \n");
+        for (Interface* i: mod->interfaces()) {
+            printf("  <-> %s  %s -> %s\n",
+                   i->name().c_str(),
+                   typestr(i->req()->type()).c_str(),
+                   typestr(i->resp()->type()).c_str());
+        }
+
+        printf("Ports: \n");
+        for (InputPort* ip: mod->inputs()) {
+            printf("  -> %s : %s\n",
+                   ip->name().c_str(), typestr(ip->type()).c_str());
+        }
+        for (OutputPort* op: mod->outputs()) {
+            printf("  <- %s : %s\n",
+                   op->name().c_str(), typestr(op->type()).c_str());
+        }
+
+        printf("Writing graphviz output...\n");
+        auto f =fs->create(mod->name() + ".gv");
+        gv()->writeModule(f, mod, true);
+        f->close();
+        f = fs->create(mod->name() + "_simple.gv");
+        gv()->writeModule(f, mod, false);
+        f->close();
+
+        vector<Module*> submodules;
+        mod->submodules(submodules);
+        for (auto sm: submodules) {
+            gv()->writeModule(fs->create(sm->name() + ".gv"), sm, true);
+        }
+        fs->flush();
+
+        if (_wedge) {
+            printf("Writing Verilog output...\n");
+            _wedge->writeModule(*fs, mod);
+        }
+    }
+
+    return 0;
 }
 
 static const unsigned MaxPasses = 100;

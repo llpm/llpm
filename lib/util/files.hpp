@@ -15,6 +15,10 @@
 #include <util/macros.hpp>
 #include <llpm/exceptions.hpp>
 
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
+
 namespace llpm {
 
 class FileSet {
@@ -90,6 +94,7 @@ public:
         }
     };
 
+    bool _valid;
     std::string _dfltDir;
     std::set<File*> _files;
     bool _keepTemps;
@@ -101,12 +106,16 @@ public:
     }
 
 public:
-    FileSet(bool keepTemps = false,
-            std::string dfltDir = "",
+    FileSet(bool keepTemps,
+            std::string dfltDir,
             bool create=true) :
+        _valid(true),
         _keepTemps(keepTemps) {
         this->dfltDir(dfltDir, create);
     }
+
+    FileSet() :
+        _valid(false) { }
 
     ~FileSet() {
         for (File* f: _files) {
@@ -115,6 +124,20 @@ public:
         }
 
         // TODO: rm -rf everything in _temporaries
+    }
+
+    void addOpts(po::options_description& desc) {
+        desc.add_options()
+            ("workdir", po::value<std::string>(&_dfltDir)->default_value("obj"),
+                "Location to store temporary files")
+            ("keeptemps", po::value<bool>(&_keepTemps)->default_value(true),
+                "Should the temporary files be kept or deleted?")
+        ;
+    }
+
+    void notify(po::variables_map&) {
+        this->dfltDir(_dfltDir, true);
+        _valid = true;
     }
 
     DEF_GET_NP(dfltDir);
@@ -146,6 +169,7 @@ public:
     }
 
     File* create(std::string fn) {
+        assert(_valid);
         File* f = new File(*this, createAbsFileName(fn));
         _files.insert(f);
         return f;
@@ -157,6 +181,7 @@ public:
     }
 
     std::string tmpdir() {
+        assert(_valid);
         char name[_dfltDir.size() + 16];
         sprintf(name, "%s/tmpXXXXXX", _dfltDir.c_str());
         std::string dn = mkdtemp(name);
@@ -165,6 +190,7 @@ public:
     }
 
     void erase(File* f) {
+        assert(_valid);
         f->close();
         if (!_keepTemps) {
             auto entry = _files.find(f);
@@ -178,12 +204,14 @@ public:
 
     template<typename Container>
     void erase(Container c) {
+        assert(_valid);
         for (auto&& f: c) {
             this->erase(f);
         }
     }
 
     bool exists(std::string fn) {
+        assert(_valid);
         fn = _dfltDir + "/" + fn;
         struct stat s;
         int rc = stat(_dfltDir.c_str(), &s);
@@ -193,6 +221,7 @@ public:
     }
 
     File* copy(std::string fn, std::string newName = "") {
+        assert(_valid);
         if (newName == "") {
             auto loc = fn.find_last_of("/");
             if (loc == std::string::npos)
