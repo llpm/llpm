@@ -41,12 +41,6 @@ static const std::vector<std::string> externalFiles = {
     "/verilator/share/verilator/include/verilated_syms.h",
     "/verilator/share/verilator/include/verilated.cpp",
     "/verilator/share/verilator/include/verilated_vcd_c.cpp",
-
-    // Verilog libraries
-    "/support/backends/verilog/select.sv",
-    "/support/backends/verilog/pipeline.sv",
-    "/support/backends/verilog/memory.sv",
-    "/support/backends/verilog/fork.sv",
 };
 
 
@@ -81,25 +75,29 @@ static void run(std::string command) {
 }
 
 void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
+    set<FileSet::File*> myFiles;
+
     // Write verilog module
-    FileSet::File* vModFile = fileset.create(mod->name() + ".sv");
-    _verilog->writeModule(vModFile, mod);
+    _verilog->writeModule(fileset, mod, myFiles);
 
     std::list<FileSet::File*> cppFiles;
     std::list<FileSet::File*> verilatedHppFiles;
     std::list<FileSet::File*> vFiles;
-    vFiles.push_back(vModFile);
 
     // Copy in the necessary globals
     for (auto f: externalFiles) {
-        auto ext = f.substr(f.find_last_of("."));
         auto cpy = fileset.copy(Directories::executablePath() + f);
+        myFiles.insert(cpy);
+    }
+
+    for (auto f: myFiles) {
+        auto ext = f->ext();
         if (ext == ".cpp")
-            cppFiles.push_back(cpy);
+            cppFiles.push_back(f);
         if (ext == ".h")
-            verilatedHppFiles.push_back(cpy);
+            verilatedHppFiles.push_back(f);
         if (ext == ".v" || ext == ".sv")
-            vFiles.push_back(cpy);
+            vFiles.push_back(f);
     }
 
     std::string verilogFiles = "";
@@ -118,8 +116,10 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
             % verilogFiles
             ));
 
-    // Don't need the verilog output anymore
-    vModFile->erase();
+    for (auto vf: vFiles) {
+        // Don't need the verilog files anymore
+        vf->erase();
+    }
 
     // Copy in some of the verilator outputs
     std::vector<std::string> verilatorOutputs;

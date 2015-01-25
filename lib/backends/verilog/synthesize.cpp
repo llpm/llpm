@@ -20,6 +20,14 @@ using namespace std;
 
 namespace llpm {
 
+    // Verilog libraries
+static const vector<string> externalFiles {
+    "/support/backends/verilog/select.sv",
+    "/support/backends/verilog/pipeline.sv",
+    "/support/backends/verilog/memory.sv",
+    "/support/backends/verilog/fork.sv",
+};
+
 VerilogSynthesizer::VerilogSynthesizer(Design& d) :
     _design(d)
 {
@@ -34,12 +42,14 @@ void VerilogSynthesizer::addStops() {
     _stops.addClass<Latch>();
 }
 
+#if 0
 void VerilogSynthesizer::write(std::ostream& os) {
     auto& modules = _design.modules();
     for (auto& m: modules) {
         writeModule(os, m);
     }
 }
+#endif
 
 InputPort* VerilogSynthesizer::findSink(const ConnectionDB* conns,
                                         const OutputPort* op) {
@@ -61,9 +71,26 @@ static const std::string header = R"STRING(
  ******/
 )STRING";
 
+#if 0
 void VerilogSynthesizer::writeModule(FileSet::File* f, Module* mod) {
     writeModule(f->openStream(), mod);
     f->close();
+}
+#endif
+
+void VerilogSynthesizer::writeModule(FileSet& dir,
+                                     Module* mod,
+                                     std::set<FileSet::File*>& files) 
+{
+    for (auto f: externalFiles) {
+        auto cpy = dir.copy(Directories::executablePath() + f);
+        files.insert(cpy);
+    }
+
+    auto vf = dir.create(mod->name() + ".sv");
+    writeModule(vf->openStream(), mod);
+    vf->close();
+    files.insert(vf);
 }
 
 

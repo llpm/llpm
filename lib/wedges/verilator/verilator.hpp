@@ -34,7 +34,7 @@ public:
         assert(vs != NULL);
     }
 
-    void writeModule(FileSet& fileset, Module* mod);
+    virtual void writeModule(FileSet& fileset, Module* mod);
 };
 
 };

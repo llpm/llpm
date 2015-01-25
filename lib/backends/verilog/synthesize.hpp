@@ -119,9 +119,10 @@ public:
 
     DEF_GET_NP(printers);
 
-    void writeModule(FileSet::File* fn, Module* mod);
     void writeModule(std::ostream& os, Module* mod);
-    void write(std::ostream& os);
+    virtual void writeModule(FileSet& dir,
+                             Module* mod,
+                             std::set<FileSet::File*>& files);
 
     void print(Context& ctxt, Block* b);
 

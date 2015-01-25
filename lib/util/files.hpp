@@ -48,6 +48,10 @@ public:
             return _name.substr(_name.find_last_of("/")+1);
         }
 
+        std::string ext() {
+            return baseName().substr(baseName().find_last_of("."));
+        }
+
         FILE* openFile(const char* mode) {
             if (_stream.is_open()) {
                 throw InvalidCall("Cannot open FILE* while file has an ofstream open!");

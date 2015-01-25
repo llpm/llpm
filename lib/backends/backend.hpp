@@ -3,6 +3,7 @@
 
 #include <llpm/block.hpp>
 #include <refinery/refinery.hpp>
+#include <util/files.hpp>
 
 namespace llpm {
 
@@ -15,6 +16,10 @@ public:
 
     virtual bool blockIsPrimitive(Block* b) = 0;
     virtual Refinery::StopCondition* primitiveStops() = 0;
+
+    virtual void writeModule(FileSet& dir,
+                             Module* mod,
+                             std::set<FileSet::File*>& files) = 0;
 };
 
 };
