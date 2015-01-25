@@ -36,9 +36,11 @@ if GetOption('cxx') != None:
    env.Replace(CXX = GetOption('cxx'))
 
 libenv = env.Clone()
-llpm = libenv.SharedLibrary('bin/llpm', Glob("./lib/*.cpp") +
+llpm = libenv.SharedLibrary('bin/llpm',
+                               Glob("./lib/*.cpp") +
                                Glob("./lib/*/*.cpp") +
-                               Glob("./lib/*/*/*.cpp"))
+                               Glob("./lib/*/*/*.cpp") +
+                               Glob("./lib/*/*/*/*.cpp"))
 env.Prepend(LIBS=['llpm'])
 
 for d in Glob("./tools/*"):

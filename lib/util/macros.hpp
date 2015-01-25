@@ -1,7 +1,12 @@
 #ifndef __LLPM_MACROS_HPP__
 #define __LLPM_MACROS_HPP__
 
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <algorithm>
 #include <memory>
+#include <type_traits>
 
 template< class T > struct add_const_if_ref      {typedef T type;};
 template< class T > struct add_const_if_ref<T&>  {typedef const T& type;};
@@ -64,5 +69,23 @@ struct RawEqualTo
 
 #define DEL_ARRAY(A) \
     { for (auto a: A) { delete a; } }
+
+
+// enable operator<< and operator>> for V values
+#define ENUM_SER(V, STRINGS) \
+    std::ostream& operator<<(std::ostream& str, const V& data) { \
+       return str << STRINGS[static_cast<unsigned>(data)]; \
+    } \
+    std::istream& operator>>(std::istream& str, V& data) { \
+        std::string value; \
+        str >> value; \
+        static auto begin  = std::begin(STRINGS); \
+        static auto end    = std::end(STRINGS); \
+        auto find = std::find(begin, end, value); \
+        if (find != end) {    \
+            data = static_cast<V>(std::distance(begin, find)); \
+        } \
+        return str; \
+    }
 
 #endif // __LLPM_MACROS_HPP__
