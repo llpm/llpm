@@ -26,20 +26,22 @@ AXIWrapper::AXIWrapper(Module* mod) :
         adapter->connect(conns(), op);
     }
 
-    addInputPort(adapter->writeAddress());
-    addInputPort(adapter->writeData());
-    addOutputPort(adapter->writeResp());
+    addInputPort(adapter->writeAddress(), "writeAddres");
+    addInputPort(adapter->writeData(), "writeData");
+    addOutputPort(adapter->writeResp(), "writeResp");
     
-    addInputPort(adapter->readAddress());
-    addOutputPort(adapter->readData());
+    addInputPort(adapter->readAddress(), "readAddress");
+    addOutputPort(adapter->readData(), "readData");
 }
 
-void AXIWedge::writeModule(FileSet& dir, Module* mod) {
+Module* AXIWedge::wrapModule(Module* mod) {
     // Create a wrapper module which contains the adapter
     auto wrapper = new AXIWrapper(mod);
-
+    return wrapper;
+}
+void AXIWedge::writeModule(FileSet& dir, Module* mod) {
     set<FileSet::File*> files;
-    _design.backend()->writeModule(dir, wrapper, files);
+    _design.backend()->writeModule(dir, mod, files);
 }
 
 } // namespace llpm

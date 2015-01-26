@@ -18,6 +18,7 @@ public:
 
     DEF_GET_NP(design);
 
+    virtual Module* wrapModule(Module* mod);
     virtual void writeModule(FileSet& fileset, Module* mod);
 };
 

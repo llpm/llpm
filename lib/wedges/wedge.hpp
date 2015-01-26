@@ -12,6 +12,9 @@ class Wedge {
 public:
     virtual ~Wedge() { }
 
+    virtual Module* wrapModule(Module* mod) {
+        return mod;
+    }
     virtual void writeModule(FileSet& fileset, Module* mod) = 0;
 };
 
