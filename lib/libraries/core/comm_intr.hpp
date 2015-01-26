@@ -110,6 +110,8 @@ public:
         assert(op == &_dout);
         return inputs();
     }
+
+    static Join* get(ConnectionDB&, const std::vector<OutputPort*>&);
 };
 
 /**

@@ -67,6 +67,16 @@ Join::Join(llvm::Type* output) :
     }
 }
 
+Join* Join::get(ConnectionDB& conns, const std::vector<OutputPort*>& in) {
+    vector<llvm::Type*> types;
+    for (auto op: in)
+        types.push_back(op->type());
+    Join* join = new Join(types);
+    for (unsigned i=0; i<in.size(); i++)
+        conns.connect(in[i], join->din(i));
+    return join;
+}
+
 Select::Select(unsigned N, llvm::Type* type) :
     _dout(this, type)
 {
