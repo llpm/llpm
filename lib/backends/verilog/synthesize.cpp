@@ -541,7 +541,7 @@ public:
             op = ">>";
         }
 
-        ctxt << "    " << ctxt.name(s->dout()) << " = "
+        ctxt << "    assign " << ctxt.name(s->dout()) << " = "
              << ctxt.name(s->din()) << " ";
         switch (s->style()) {
         case ConstShift::LogicalTruncating:
