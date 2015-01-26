@@ -16,7 +16,8 @@ namespace llpm {
  *
  * Clients must write and read entire tokens or else behavior is
  * undefined. This block may -- in the future -- enforce this rule
- * with proper response codes.
+ * with proper response codes. Additionally, all reads and writes must
+ * be 4 or 8 byte aligned, depending on the data width.
  */
 class AXI4LiteSlaveAdapter : public Block {
     /// Write address channel {addr, prot}
@@ -41,6 +42,21 @@ class AXI4LiteSlaveAdapter : public Block {
     unsigned _addrWidth;
     unsigned _dataWidth;
     uint64_t _addrOffset;
+    unsigned _currOffset;
+
+    // For each I/O Port, what are the memory ranges to which it is
+    // mapped into?
+    std::map<Port*, std::pair<unsigned, unsigned>> _offsetRanges;
+    void assignPort(Port*);
+    std::pair<unsigned, unsigned> offsetRange(Port* p) const {
+        auto f = _offsetRanges.find(p);
+        if (f != _offsetRanges.end())
+            return f->second;
+        throw InvalidArgument("Port does not appear to be mapped!");
+    }
+
+    virtual void refineWriteSide(ConnectionDB&) const;
+    virtual void refineReadSide(ConnectionDB&) const;
 
 public:
     AXI4LiteSlaveAdapter(unsigned addr_width,
@@ -77,6 +93,11 @@ public:
 
     virtual DependenceRule depRule(const OutputPort*) const;
     virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+
+    virtual bool refinable() const {
+        return true;
+    }
+    virtual bool refine(ConnectionDB&) const;
 };
 
 } // namespace llpm
