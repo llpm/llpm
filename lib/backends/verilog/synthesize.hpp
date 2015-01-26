@@ -19,6 +19,9 @@ namespace llvm {
 
 namespace llpm {
 
+// Mo fwd. defs., mo idiocy
+class WrapLLPMMModule;
+
 class VerilogSynthesizer : public Backend {
 public:
     class Context {
@@ -110,6 +113,7 @@ private:
     void addStops();
 
     void writeModuleOnly(std::ostream& os, Module* mod);
+    void writeWrapper(std::ostream& os, WrapLLPMMModule* mod);
 
     static InputPort* findSink(const ConnectionDB*, const OutputPort*);
 

@@ -14,7 +14,7 @@ public:
 };
 
 AXIWrapper::AXIWrapper(AXIWedge& wedge, Module* mod) :
-    ContainerModule(mod->design(), mod->name() + "_axiwrapper")
+    ContainerModule(mod->design(), mod->name() + "_axi")
 {
     auto adapter = new AXI4LiteSlaveAdapter(32, 64, 0x80000000,
                                             mod->design().context());

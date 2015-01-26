@@ -11,6 +11,7 @@
 #include <libraries/core/std_library.hpp>
 #include <libraries/synthesis/memory.hpp>
 #include <libraries/synthesis/fork.hpp>
+#include <libraries/legacy/rtl_wrappers.hpp>
 
 #include <llvm/IR/Constants.h>
 
@@ -97,7 +98,11 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
 void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
     // Write out header
     os << header;
-    writeModuleOnly(os, mod);
+    if (mod->is<WrapLLPMMModule>()) {
+        writeWrapper(os, mod->as<WrapLLPMMModule>());
+    } else {
+        writeModuleOnly(os, mod);
+    }
 }
 
 void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
@@ -1278,6 +1283,139 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
 bool VerilogSynthesizer::blockIsPrimitive(Block* b) {
     return primitiveStops()->stopRefine(b);
+}
+
+void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
+    Context ctxt(os, mod);
+
+    os << "\n";
+    os << "// RTL Wrapper for " << mod->wrapped()->name() << "\n";
+    os << "module " << mod->name() << " (\n";
+
+    const auto& pinDefs = mod->pinDefs();
+    for (auto& pr: pinDefs) {
+        Port* port = pr.first;
+        string recvIn;
+        string recvOut;
+        if (port->asInput() == nullptr) {
+            recvIn = "output";
+            recvOut = "input";
+        } else {
+            recvIn = "input";
+            recvOut = "output";
+        }
+
+        RTLTranslator* trans = pr.second;
+        LIBus* li = dynamic_cast<LIBus*>(trans);
+        if (li == nullptr)
+            throw InvalidArgument("Sorry, the verilog synthesizer only knows "
+                                  "how to use the LIBus RTL translator");
+        auto pins = trans->pins();
+        os << "    " << recvIn << " " << li->valid().name() << ",\n";
+        os << "    " << recvOut << " " << li->bp().name() << ",\n";
+        deque<llvm::Type*> types;
+        if (numContainedTypes(port->type()) == 0) {
+            types.push_back(port->type());
+        } else {
+            for (unsigned i=0; i<numContainedTypes(port->type()); i++) {
+                types.push_back(nthType(port->type(), i));
+            }
+        }
+
+        for (const auto& pin: pins) {
+            auto type = types.front();
+            types.pop_front();
+            if (bitwidth(type) > 0) {
+                os << boost::format(
+                    "    %1% [%2%-1:0] %3%, // %4%\n")
+                    % recvIn
+                    % bitwidth(type)
+                    % pin.name()
+                    % typestr(type);
+            }
+        }
+        os << "\n";
+    }
+
+    os << "    input clk,\n"
+       << "    input resetn\n"
+       << ");\n";
+
+    for (auto& pr: pinDefs) {
+        RTLTranslator* trans = pr.second;
+        LIBus* li = dynamic_cast<LIBus*>(trans);
+        if (li == nullptr)
+            throw InvalidArgument("Sorry, the verilog synthesizer only knows "
+                                  "how to use the LIBus RTL translator");
+        const auto& pins = li->pins();
+        Port* port = pr.first;
+        if (port->asInput() != nullptr) {
+            // This is an input port
+            auto ip = port->asInput();
+            ctxt << boost::format(
+                "    reg %1%_valid = %2%;\n"
+                "    reg %1%_bp;\n"
+                "    assign %3% = %4% %1%_bp;\n")
+                % ctxt.name(ip)
+                % li->valid().name()
+                % li->bp().name()
+                % (li->bpStyle() == LIBus::BPStyle::Wait ? " " : "!") ;
+
+            ctxt << boost::format(
+                "    reg [%1%-1:0] %2% = {\n")
+                % bitwidth(ip->type())
+                % ctxt.name(ip);
+            for (unsigned i=0; i<pins.size(); i++) {
+                Pin pin = pins[pins.size() - i - 1];
+                if (i == pins.size() - 1)
+                    ctxt << "        " << pin.name() << "\n";
+                else
+                    ctxt << "        " << pin.name() << ",\n";
+            }
+            ctxt << "    };\n";
+        } else {
+            // This is an output port
+            auto op = port->asOutput();
+            ctxt << boost::format(
+                "    reg %1%_valid;\n"
+                "    assign %2% = %1%_valid;\n"
+                "    reg %1%_bp = %4% %3%;\n")
+                % ctxt.name(op)
+                % li->valid().name()
+                % li->bp().name()
+                % (li->bpStyle() == LIBus::BPStyle::Wait ? " " : "!") ;
+
+            ctxt << boost::format(
+                "    reg [%1%-1:0] %2%;\n")
+                % bitwidth(op->type())
+                % ctxt.name(op);
+            if (pins.size() == 1) {
+                ctxt << "    assign " << pins[0].name() << " = "
+                                      << ctxt.name(op) << ";\n";
+            } else {
+                for (unsigned i=0; i<pins.size(); i++) {
+                    unsigned offset = bitoffset(op->type(), i);
+                    unsigned width = bitwidth(nthType(op->type(), i));
+                    Pin pin = pins[i];
+                    ctxt << boost::format(
+                        "    assign %1% = %2%[%3%:%4%];\n")
+                        % pin.name()
+                        % ctxt.name(op)
+                        % (offset + width - 1)
+                        % offset;
+                }
+            }
+        }
+    }
+
+    // Print the module instantiation
+    const auto& possible_printers = _printers(mod->wrapped());
+    assert(possible_printers.size() > 0);
+    auto printer = possible_printers.front();
+    printer->print(ctxt, mod->wrapped());
+    os << "endmodule\n";
+
+    writeModuleOnly(os, mod->wrapped());
 }
 
 } // namespace llpm

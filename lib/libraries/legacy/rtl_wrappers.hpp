@@ -28,6 +28,18 @@ public:
  * extend this class
  */
 class RTLTranslator {
+protected:
+    virtual void dummy() {} 
+
+    std::vector<Pin> _pins;
+
+public:
+    Pin& pin(unsigned pi) {
+        assert(pi < _pins.size());
+        return _pins[pi];
+    }
+
+    DEF_ARRAY_GET(pins);
 };
 
 /**
@@ -47,7 +59,6 @@ private:
     BPStyle _bpStyle;;
     Pin _valid;
     Pin _bp;
-    std::vector<Pin> _pins;
 
 public:
     LIBus(Port* p, BPStyle style) :
@@ -85,11 +96,10 @@ public:
         }
     }
 
-    Pin& pin(unsigned pi) {
-        assert(pi < _pins.size());
-        return _pins[pi];
-    }
-
+    DEF_GET_NP(port);
+    DEF_GET_NP(bpStyle);
+    DEF_GET_NP(valid);
+    DEF_GET_NP(bp);
 };
 
 /**
@@ -103,7 +113,7 @@ class WrapLLPMMModule : public Module {
 
 public:
     WrapLLPMMModule(Module* mod) :
-        Module(mod->design(), mod->name() + "rtlwrapper"),
+        Module(mod->design(), mod->name() + "_rtl"),
         _wrapped(mod)
     { }
 
