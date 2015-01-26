@@ -8,7 +8,19 @@
 namespace llpm {
 
 class AXIWedge : public Wedge {
+    friend class AXIWrapper;
+
+    enum class ChannelType {
+        WriteAddress,
+        WriteData,
+        WriteResp,
+        ReadAddress,
+        ReadData
+    };
+
     Design& _design;
+    std::map<Port*, ChannelType> _types;
+    std::vector<std::string> getPinNames(Port*) const; 
 public:
     AXIWedge(Design& design) :
         _design(design) 

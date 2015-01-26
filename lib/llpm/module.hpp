@@ -85,8 +85,12 @@ public:
     }
 
     // For opaque modules, this may return NULL
-    virtual ConnectionDB* conns() = 0;
-    virtual const ConnectionDB* conns() const = 0;
+    virtual ConnectionDB* conns() {
+        return NULL;
+    }
+    virtual const ConnectionDB* conns() const {
+        return NULL;
+    }
 
     // Return the current change count -- useful for tracking if
     // changes have been made to a module
@@ -107,8 +111,12 @@ public:
     }
     virtual void validityCheck() const = 0;
 
-    virtual OutputPort* getDriver(const InputPort* ip) const = 0;
-    virtual InputPort* getSink(const OutputPort* op) const = 0;
+    virtual OutputPort* getDriver(const InputPort*) const {
+        return nullptr;
+    }
+    virtual InputPort* getSink(const OutputPort*) const {
+        return nullptr;
+    }
     void internalDrivers(std::vector<OutputPort*>&) const;
 
     virtual bool hasCycle() const = 0;
