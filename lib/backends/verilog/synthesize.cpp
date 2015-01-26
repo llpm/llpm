@@ -524,6 +524,46 @@ public:
     }
 };
 
+class ConstShiftPrinter : public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<ConstShift*>(b) != NULL;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        const char* op = NULL;
+        ConstShift* s = dynamic_cast<ConstShift*>(c);
+        
+        if (s->shift() > 0) {
+            assert(s->style() != ConstShift::Arithmetic);
+            op = "<<";
+        } else {
+            op = ">>";
+        }
+
+        ctxt << "    " << ctxt.name(s->dout()) << " = "
+             << ctxt.name(s->din()) << " ";
+        switch (s->style()) {
+        case ConstShift::LogicalTruncating:
+            ctxt << op;
+            break;
+        case ConstShift::LogicalExtending: {
+            assert(false && "Extending shifts not yet implemented!");
+            break;
+        }
+        case ConstShift::Rotating: {
+            assert(false && "Rotating shifts not yet implemented!");
+            break;
+        }
+        case ConstShift::Arithmetic:
+            ctxt << ">>>";
+            break;
+        }
+
+        ctxt << " " << ctxt.name(s->din()) << ";\n";
+    }
+};
+
 class IntTruncatePrinter: public VerilogSynthesizer::Printer {
 public:
     bool handles(Block* b) const {
@@ -1206,6 +1246,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(make_shared<CompareOpPrinter>());
     _printers.appendEntry(make_shared<BitwiseOpPrinter>());
     _printers.appendEntry(make_shared<ShiftPrinter>());
+    _printers.appendEntry(make_shared<ConstShiftPrinter>());
 
     _printers.appendEntry(make_shared<IntTruncatePrinter>());
     _printers.appendEntry(make_shared<IntExtendPrinter>());
