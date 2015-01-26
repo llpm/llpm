@@ -208,8 +208,15 @@ void CanonicalizeInputs::canonicalizeInput(
         } else if (b->is<Identity>()) {
             ip = b->as<Identity>()->din();
         } else if (b->is<Cast>()) {
-            cast = true;
-            ip = b->as<Cast>()->din();
+            auto c = b->as<Cast>();
+            if (c->din()->type()->isSingleValueType() &&
+                c->dout()->type()->isSingleValueType()) {
+                cast = true;
+                ip = b->as<Cast>()->din();
+            } else {
+                // If cast deals in structs, error out!
+                ip = nullptr;
+            }
         } else if (b->is<Wait>()) {
             auto w = b->as<Wait>();
             ip = w->din();
