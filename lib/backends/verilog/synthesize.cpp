@@ -70,6 +70,7 @@ static const std::string header = R"STRING(
  *  DO NOT MODIFY MANUALLY!
  *  Manual changes will be overwritten.
  ******/
+`default_nettype none
 )STRING";
 
 #if 0
@@ -88,25 +89,18 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
         files.insert(cpy);
     }
 
-    auto vf = dir.create(mod->name() + ".sv");
-    writeModule(vf->openStream(), mod);
-    vf->close();
-    files.insert(vf);
-}
-
-
-void VerilogSynthesizer::writeModule(std::ostream& os, Module* mod) {
-    // Write out header
-    os << header;
     if (mod->is<WrapLLPMMModule>()) {
-        writeWrapper(os, mod->as<WrapLLPMMModule>());
-    } else {
-        writeModuleOnly(os, mod);
+        writeWrapper(dir, mod->as<WrapLLPMMModule>(), files);
+        return;
     }
-}
 
-void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
+    auto vf = dir.create(mod->name() + ".sv");
+    files.insert(vf);
+    std::ostream& os = vf->openStream();
+
     Context ctxt(os, mod);
+
+    ctxt << header;
 
     ctxt << "\n\n";
     ctxt << "// The \"" << mod->name() << "\" module of type "
@@ -121,6 +115,7 @@ void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
     writeBlocks(ctxt);
 
     ctxt << "endmodule\n";
+    ctxt << "`default_nettype wire\n";
 
 
     vector<Module*> submodules;
@@ -129,9 +124,11 @@ void VerilogSynthesizer::writeModuleOnly(std::ostream& os, Module* mod) {
         ControlRegion* cr = dynamic_cast<ControlRegion*>(sm);
         if (cr != NULL) {
             ctxt << "\n";
-            writeModuleOnly(os, cr);
+            writeModule(dir, cr, files);
         }
     }
+
+    vf->close();
 }
 
 void VerilogSynthesizer::writeIO(Context& ctxt) {
@@ -141,12 +138,12 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
         auto inputName = ctxt.name(ip, true);
         auto width = bitwidth(ip->type());
         if (bitwidth(ip->type()) > 0)
-            ctxt << boost::format("    input [%1%:0] %2%, //Type: %3%\n")
+            ctxt << boost::format("    input wire [%1%:0] %2%, //Type: %3%\n")
                     % (width - 1)
                     % inputName
                     % typestr(ip->type());
-        ctxt << boost::format("    input %1%_valid,\n") % inputName;
-        ctxt << boost::format("    output %1%_bp,\n") % inputName;
+        ctxt << boost::format("    input wire %1%_valid,\n") % inputName;
+        ctxt << boost::format("    output wire %1%_bp,\n") % inputName;
 
     }
     ctxt << "\n";
@@ -154,17 +151,17 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
         auto outputName = ctxt.name(op, true);
         auto width = bitwidth(op->type());
         if (bitwidth(op->type()) > 0)
-            ctxt << boost::format("    output [%1%:0] %2%, //Type: %3%\n")
+            ctxt << boost::format("    output wire [%1%:0] %2%, //Type: %3%\n")
                     % (width - 1)
                     % outputName
                     % typestr(op->type());
-        ctxt << boost::format("    output %1%_valid,\n") % outputName;
-        ctxt << boost::format("    input %1%_bp,\n") % outputName;
+        ctxt << boost::format("    output wire %1%_valid,\n") % outputName;
+        ctxt << boost::format("    input wire %1%_bp,\n") % outputName;
     }
 
     ctxt << "\n"
-         << "    input clk,\n"
-         << "    input resetn\n"
+         << "    input wire clk,\n"
+         << "    input wire resetn\n"
          << ");\n\n";
 
     bool globalBP = ctxt.module()->is<ControlRegion>();
@@ -288,14 +285,14 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
             }
 
             if (bitwidth(ip->type()) > 0) {
-                ctxt << boost::format("    reg [%1%-1:0] %2% = %3%;\n")
+                ctxt << boost::format("    wire [%1%-1:0] %2% = %3%;\n")
                             % bitwidth(ip->type())
                             % ctxt.name(ip)
                             % opName;
             }
             if (writeControlBits) {
-                ctxt << boost::format("    reg %1%_valid = %2%_valid;\n"
-                                      "    reg %1%_bp;\n")
+                ctxt << boost::format("    wire %1%_valid = %2%_valid;\n"
+                                      "    wire %1%_bp;\n")
                             % ctxt.name(ip)
                             % opName;
             }
@@ -303,14 +300,14 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
 
         for (OutputPort* op: b->outputs()) {
             if (bitwidth(op->type()) > 0) {
-                ctxt << boost::format("    reg [%1%-1:0] %2%;\n")
+                ctxt << boost::format("    wire [%1%-1:0] %2%;\n")
                             % bitwidth(op->type())
                             % ctxt.name(op);
             }
 
             if (writeControlBits) {
-                ctxt << boost::format("    reg %1%_valid;\n"
-                                      "    reg %1%_bp = ")
+                ctxt << boost::format("    wire %1%_valid;\n"
+                                      "    wire %1%_bp = ")
                             % ctxt.name(op);
                 InputPort* sink = findSink(conns, op);
                 if (sink) {
@@ -615,7 +612,7 @@ public:
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
         Op* f = dynamic_cast<Op*>(c);
-        if (bitwidth(f->din()->type()) > 0)
+        if (bitwidth(f->dout()->type()) > 0)
             ctxt << "    assign " << ctxt.name(f->dout()) << " = "
                  << ctxt.name(f->din()) << ";\n";
     }
@@ -836,23 +833,31 @@ public:
         unsigned nWidth = bitwidth(nthType(dinType, 0));
         unsigned nOffset = bitoffset(dinType, 0);
 
-        ctxt << "    always\n"
-             << "    begin\n"
-             << boost::format("        case (%1%[%2%:%3%])\n") 
-                    % dinName
-                    % (nWidth + nOffset - 1)
-                    % nOffset;
+        ctxt << boost::format(
+                "    wire [%7%-1:0] %1%_sel = %4%[%5%:%6%];\n"
+                "    wire [%3%-1:0][%2%-1:0] %1%_ic;\n")
+                % ctxt.name(m)
+                % bitwidth(m->dout()->type())
+                % (numContainedTypes(dinType) - 1)
+                % dinName
+                % (nWidth + nOffset - 1)
+                % nOffset
+                % nWidth;
+
         for (size_t i=1; i<numContainedTypes(dinType); i++) {
             auto offset = bitoffset(dinType, i);
-            ctxt << boost::format("            %1% : %2% = %3%[%4%:%5%];\n")
-                        % (i - 1)
-                        % doutName
+            ctxt << boost::format("    assign %1%_ic[%2%] = %3%[%4%:%5%];\n")
+                        % ctxt.name(m)
+                        % (i-1)
                         % dinName
                         % (offset + bitwidth(nthType(dinType, i)) - 1)
                         % offset;
         }
-        ctxt << "        endcase\n"
-             << "    end\n";
+        
+        ctxt << boost::format(
+                "    assign %1% = %2%_ic[%2%_sel];\n")
+                % doutName
+                % ctxt.name(m);
     }
 };
 
@@ -1285,9 +1290,17 @@ bool VerilogSynthesizer::blockIsPrimitive(Block* b) {
     return primitiveStops()->stopRefine(b);
 }
 
-void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
+void VerilogSynthesizer::writeWrapper(
+        FileSet& dir,
+        WrapLLPMMModule* mod,
+        std::set<FileSet::File*>& files)
+{
+    FileSet::File* vf = dir.create(mod->name() + ".sv");
+    files.insert(vf);
+    std::ostream& os = vf->openStream();
     Context ctxt(os, mod);
 
+    os << header;
     os << "\n";
     os << "// RTL Wrapper for " << mod->wrapped()->name() << "\n";
     os << "module " << mod->name() << " (\n";
@@ -1298,11 +1311,11 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
         string recvIn;
         string recvOut;
         if (port->asInput() == nullptr) {
-            recvIn = "output";
-            recvOut = "input";
+            recvIn = "output wire";
+            recvOut = "input wire";
         } else {
-            recvIn = "input";
-            recvOut = "output";
+            recvIn = "input wire";
+            recvOut = "output wire";
         }
 
         RTLTranslator* trans = pr.second;
@@ -1355,8 +1368,8 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
             // This is an input port
             auto ip = port->asInput();
             ctxt << boost::format(
-                "    reg %1%_valid = %2%;\n"
-                "    reg %1%_bp;\n"
+                "    wire %1%_valid = %2%;\n"
+                "    wire %1%_bp;\n"
                 "    assign %3% = %4% %1%_bp;\n")
                 % ctxt.name(ip)
                 % li->valid().name()
@@ -1364,7 +1377,7 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
                 % (li->bpStyle() == LIBus::BPStyle::Wait ? " " : "!") ;
 
             ctxt << boost::format(
-                "    reg [%1%-1:0] %2% = {\n")
+                "    wire [%1%-1:0] %2% = {\n")
                 % bitwidth(ip->type())
                 % ctxt.name(ip);
             for (unsigned i=0; i<pins.size(); i++) {
@@ -1379,16 +1392,16 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
             // This is an output port
             auto op = port->asOutput();
             ctxt << boost::format(
-                "    reg %1%_valid;\n"
+                "    wire %1%_valid;\n"
                 "    assign %2% = %1%_valid;\n"
-                "    reg %1%_bp = %4% %3%;\n")
+                "    wire %1%_bp = %4% %3%;\n")
                 % ctxt.name(op)
                 % li->valid().name()
                 % li->bp().name()
                 % (li->bpStyle() == LIBus::BPStyle::Wait ? " " : "!") ;
 
             ctxt << boost::format(
-                "    reg [%1%-1:0] %2%;\n")
+                "    wire [%1%-1:0] %2%;\n")
                 % bitwidth(op->type())
                 % ctxt.name(op);
             if (pins.size() == 1) {
@@ -1423,7 +1436,8 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
     printer->print(ctxt, mod->wrapped());
     os << "endmodule\n";
 
-    writeModuleOnly(os, mod->wrapped());
+    vf->close();
+    writeModule(dir, mod->wrapped(), files);
 }
 
 } // namespace llpm

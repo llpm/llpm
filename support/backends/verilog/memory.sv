@@ -2,6 +2,7 @@
  *
  * This file contains memory implementations. Registers, block rams, etc..
  */
+`default_nettype none
 
 module RTLReg(clk, resetn,
     write_req, write_req_valid, write_req_bp,
@@ -10,18 +11,18 @@ module RTLReg(clk, resetn,
 
 parameter Width = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input [Width-1:0] write_req;
-input             write_req_valid;
-output            write_req_bp;
+input wire [Width-1:0] write_req;
+input wire             write_req_valid;
+output wire            write_req_bp;
 
-output write_resp_valid;
-input  write_resp_bp;
+output wire write_resp_valid;
+input  wire write_resp_bp;
 
-output [Width-1:0] read;
-output             read_valid;
+output wire [Width-1:0] read;
+output wire             read_valid;
 
 
 reg             valid;
@@ -64,15 +65,15 @@ parameter Width = 8;
 parameter Depth = 8;
 parameter AddrWidth = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
 reg [Width - 1 : 0] mem [Depth - 1 : 0];
 
 /* Port 0 */
-input [(Width + AddrWidth + 1) - 1 : 0] port0_req;
-input                                   port0_req_valid;
-output                                  port0_req_bp;
+input wire [(Width + AddrWidth + 1) - 1 : 0] port0_req;
+input wire                                   port0_req_valid;
+output wire                                  port0_req_bp;
 
 wire                     port0_wr   = port0_req[0];
 wire [Width - 1 : 0]     port0_data = port0_req[Width : 1];
@@ -80,7 +81,7 @@ wire [AddrWidth - 1 : 0] port0_addr = port0_req[Width + AddrWidth : Width + 1];
 
 output reg [Width - 1 : 0] port0_resp;
 output reg                 port0_resp_valid;
-input                      port0_resp_bp;
+input  wire                port0_resp_bp;
 
 assign port0_req_bp = port0_resp_bp;
 assign port0_resp_valid = port0_req_valid;
@@ -101,9 +102,9 @@ end
 
 
 /* Port 1 */
-input [(Width + AddrWidth + 1) - 1 : 0] port1_req;
-input                                   port1_req_valid;
-output                                  port1_req_bp;
+input wire [(Width + AddrWidth + 1) - 1 : 0] port1_req;
+input wire                                   port1_req_valid;
+output wire                                  port1_req_bp;
 
 wire                     port1_wr   = port1_req[0];
 wire [Width - 1 : 0]     port1_data = port1_req[Width : 1];
@@ -111,7 +112,7 @@ wire [AddrWidth - 1 : 0] port1_addr = port1_req[Width + AddrWidth : Width + 1];
 
 output reg [Width - 1 : 0] port1_resp;
 output reg                 port1_resp_valid;
-input                      port1_resp_bp;
+input  wire                port1_resp_bp;
 
 
 assign port1_req_bp = port1_resp_bp;
@@ -132,4 +133,5 @@ begin
 end
 
 endmodule
+`default_nettype wire
 

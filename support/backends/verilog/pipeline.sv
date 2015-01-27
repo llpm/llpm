@@ -3,6 +3,7 @@
  * This file contains implementations of pipeline stuff: registers, LI
  * control, ect..
  */
+`default_nettype none 
 
 // This pipeline register contains two buffer slots so it can operate at
 // full throughput even with dynamic scheduling
@@ -12,16 +13,16 @@ module PipelineReg_DoubleWidth(clk, resetn,
 
 parameter Width = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input [Width-1:0] d;
-input             d_valid;
-output            d_bp;
+input wire [Width-1:0] d;
+input wire             d_valid;
+output wire            d_bp;
 
-output [Width-1:0] q;
-output             q_valid;
-input              q_bp;
+output wire [Width-1:0] q;
+output wire             q_valid;
+input  wire             q_bp;
 
 
 // This is buffer slot one. It is always the output
@@ -97,14 +98,14 @@ module PipelineReg_DoubleWidth_NoData(
 
 parameter Width = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input             d_valid;
-output            d_bp;
+input  wire            d_valid;
+output wire            d_bp;
 
-output             q_valid;
-input              q_bp;
+output wire             q_valid;
+input  wire             q_bp;
 
 
 // This is buffer slot one. It is always the output
@@ -172,16 +173,16 @@ module PipelineReg_SingleStore(clk, resetn,
 
 parameter Width = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input [Width-1:0] d;
-input             d_valid;
-output            d_bp;
+input wire [Width-1:0] d;
+input wire             d_valid;
+output wire            d_bp;
 
-output [Width-1:0] q;
-output             q_valid;
-input              q_bp;
+output wire [Width-1:0] q;
+output wire             q_valid;
+input  wire             q_bp;
 
 
 reg [Width-1:0] data;
@@ -228,16 +229,16 @@ module Latch(clk, resetn,
 
 parameter Width = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input [Width-1:0] d;
-input             d_valid;
-output            d_bp;
+input wire [Width-1:0] d;
+input wire             d_valid;
+output wire            d_bp;
 
-output [Width-1:0] q;
-output             q_valid;
-input              q_bp;
+output wire [Width-1:0] q;
+output wire             q_valid;
+input  wire             q_bp;
 
 
 reg [Width-1:0] data;
@@ -282,14 +283,14 @@ module Latch_NoData(clk, resetn,
 
 parameter Width = 8;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input             d_valid;
-output            d_bp;
+input  wire            d_valid;
+output wire            d_bp;
 
-output             q_valid;
-input              q_bp;
+output wire             q_valid;
+input  wire             q_bp;
 
 reg             valid;
 
@@ -322,3 +323,4 @@ begin
 end
 
 endmodule
+`default_nettype wire

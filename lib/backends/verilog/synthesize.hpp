@@ -107,12 +107,14 @@ public:
 private:
     PCollection _printers;
     BaseLibraryStopCondition _stops;
+    bool _copiedExt;
 
     void addDefaultPrinters();
     void addStops();
 
-    void writeModuleOnly(std::ostream& os, Module* mod);
-    void writeWrapper(std::ostream& os, WrapLLPMMModule* mod);
+    void writeWrapper(FileSet& dir,
+                      WrapLLPMMModule* mod,
+                      std::set<FileSet::File*>& files);
 
     static InputPort* findSink(const ConnectionDB*, const OutputPort*);
 
@@ -122,7 +124,6 @@ public:
 
     DEF_GET_NP(printers);
 
-    void writeModule(std::ostream& os, Module* mod);
     virtual void writeModule(FileSet& dir,
                              Module* mod,
                              std::set<FileSet::File*>& files);

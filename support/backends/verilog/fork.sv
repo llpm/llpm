@@ -3,6 +3,7 @@
  * This file contains verilog implementations of Forks
  */
 
+`default_nettype none
 
 // An actual fork which contains duplicate valid bits for each output
 module Fork(clk, resetn,
@@ -12,16 +13,16 @@ module Fork(clk, resetn,
 parameter Width = 8;
 parameter NumOutputs = 4;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input [Width-1:0]  din;
-input              din_valid;
-output             din_bp;
+input wire [Width-1:0]  din;
+input wire             din_valid;
+output wire            din_bp;
 
-output [Width-1:0]      dout;
-output [NumOutputs-1:0] dout_valid;
-input  [NumOutputs-1:0] dout_bp;
+output wire [Width-1:0]      dout;
+output wire [NumOutputs-1:0] dout_valid;
+input  wire [NumOutputs-1:0] dout_bp;
 
 assign dout = din;
 
@@ -58,14 +59,14 @@ module Fork_VoidData(
 parameter Width = 8;
 parameter NumOutputs = 4;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input              din_valid;
-output             din_bp;
+input  wire             din_valid;
+output wire             din_bp;
 
-output [NumOutputs-1:0] dout_valid;
-input  [NumOutputs-1:0] dout_bp;
+output wire [NumOutputs-1:0] dout_valid;
+input  wire [NumOutputs-1:0] dout_bp;
 
 reg [NumOutputs-1:0] previouslyAccepted;
 wire [NumOutputs-1:0] accepted =
@@ -100,16 +101,16 @@ module VirtFork(clk, resetn,
 parameter Width = 8;
 parameter NumOutputs = 4;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input [Width-1:0]  din;
-input              din_valid;
-output             din_bp;
+input wire [Width-1:0]  din;
+input wire              din_valid;
+output wire             din_bp;
 
-output [Width-1:0]      dout;
-output [NumOutputs-1:0] dout_valid;
-input  [NumOutputs-1:0] dout_bp;
+output wire [Width-1:0]      dout;
+output wire [NumOutputs-1:0] dout_valid;
+input  wire [NumOutputs-1:0] dout_bp;
 
 wire [NumOutputs-1:0] accepted = (~dout_bp & dout_valid);
 
@@ -128,14 +129,14 @@ module VirtFork_VoidData(
 parameter Width = 8;
 parameter NumOutputs = 4;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input              din_valid;
-output             din_bp;
+input  wire             din_valid;
+output wire             din_bp;
 
-output [NumOutputs-1:0] dout_valid;
-input  [NumOutputs-1:0] dout_bp;
+output wire [NumOutputs-1:0] dout_valid;
+input  wire [NumOutputs-1:0] dout_bp;
 
 wire [NumOutputs-1:0] accepted = (~dout_bp & dout_valid);
 
@@ -144,3 +145,4 @@ assign dout_valid = {NumOutputs{din_valid}};
 
 endmodule
 
+`default_nettype wire

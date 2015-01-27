@@ -5,7 +5,7 @@
  * paths are purely combinatorial. Clock and reset signals are provided only
  * so that implementations may enforce fairness.
  */
-
+`default_nettype none
 
 // This select implementation uses an arbiter which always favors the highest
 // number input. Can cause starvation on other inputs. Cheap and if
@@ -16,22 +16,22 @@ parameter Width = 8;
 parameter NumInputs = 4;
 parameter CLog2NumInputs = 2;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input      [Width-1:0] x       [NumInputs-1:0];
-input                  x_valid [NumInputs-1:0];
+input wire      [Width-1:0] x       [NumInputs-1:0];
+input wire                  x_valid [NumInputs-1:0];
 output reg             x_bp    [NumInputs-1:0];
 
-output [Width-1:0] a;
-output             a_valid;
-input              a_bp;
+output wire [Width-1:0] a;
+output wire             a_valid;
+input  wire             a_bp;
 
 reg has_valid;
 reg [CLog2NumInputs-1:0] select;
 
 integer i;
-always@(x_valid)
+always@(*)
 begin
     select = {CLog2NumInputs{1'bx}};
     has_valid = 1'b0;
@@ -46,7 +46,7 @@ begin
 end
 
 integer j;
-always@(a_bp, select, has_valid)
+always@(*)
 begin
     for (j=0; j<NumInputs; j = j + 1)
     begin
@@ -71,20 +71,20 @@ parameter Width = 8;
 parameter NumInputs = 4;
 parameter CLog2NumInputs = 2;
 
-input clk;
-input resetn;
+input wire clk;
+input wire resetn;
 
-input              x_valid [NumInputs-1:0];
+input wire              x_valid [NumInputs-1:0];
 output reg         x_bp    [NumInputs-1:0];
 
-output             a_valid;
-input              a_bp;
+output wire             a_valid;
+input  wire             a_bp;
 
 reg has_valid;
 reg [CLog2NumInputs-1:0] select;
 
 integer i;
-always@(x_valid)
+always@(*)
 begin
     select = {CLog2NumInputs{1'bx}};
     has_valid = 1'b0;
@@ -99,7 +99,7 @@ begin
 end
 
 integer j;
-always@(a_bp, select, has_valid)
+always@(*)
 begin
     for (j=0; j<NumInputs; j = j + 1)
     begin
@@ -113,4 +113,4 @@ end
 assign a_valid = has_valid;
 
 endmodule
-
+`default_nettype wire
