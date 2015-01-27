@@ -27,12 +27,12 @@ public:
 };
 
 class PipelineRegister : public Block {
-    OutputPort* _source;
+    const Port* _source;
     InputPort _din;
     OutputPort _dout;
 
 public:
-    PipelineRegister(OutputPort* src) :
+    PipelineRegister(const Port* src) :
         _source(src),
         _din(this, src->type(), "d"),
         _dout(this, src->type(), "q")

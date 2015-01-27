@@ -7,6 +7,7 @@
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/logic_intr.hpp>
 #include <libraries/core/std_library.hpp>
+#include <libraries/synthesis/pipeline.hpp>
 
 #include <llvm/IR/DerivedTypes.h>
 
@@ -123,7 +124,9 @@ void AXI4LiteSlaveAdapter::refineWriteSide(ConnectionDB& conns) const {
     // Build write side
     auto& ctxt = writeAddress()->type()->getContext();
     auto addr = new Extract(writeAddress()->type(), {0});
-    conns.remap(this->writeAddress(), {addr->din()});
+    auto waReg = new PipelineRegister(this->writeAddress());
+    conns.connect(waReg->dout(), addr->din());
+    conns.remap(this->writeAddress(), {waReg->din()});
     auto glblOffset = new Constant(
         llvm::Constant::getIntegerValue(
             llvm::Type::getIntNTy(ctxt, _addrWidth),
@@ -137,7 +140,9 @@ void AXI4LiteSlaveAdapter::refineWriteSide(ConnectionDB& conns) const {
                                  ConstShift::LogicalTruncating);
     conns.connect(offset->dout(), regSel->din());
     auto data = new Extract(writeData()->type(), {0});
-    conns.remap(this->writeData(), {data->din()});
+    auto wdReg = new PipelineRegister(this->writeData());
+    conns.connect(wdReg->dout(), data->din());
+    conns.remap(this->writeData(), {wdReg->din()});
 
     unsigned maxOffset = 0;
     for (auto driver: _inputDrivers) {
@@ -208,7 +213,9 @@ void AXI4LiteSlaveAdapter::refineReadSide(ConnectionDB& conns) const {
     auto dataWidthInt = llvm::Type::getIntNTy(ctxt, _dataWidth);
 
     auto addr = new Extract(readAddress()->type(), {0});
-    conns.remap(this->readAddress(), {addr->din()});
+    auto raReg = new PipelineRegister(this->readAddress());
+    conns.connect(raReg->dout(), addr->din());
+    conns.remap(this->readAddress(), {raReg->din()});
     auto glblOffset = new Constant(
         llvm::Constant::getIntegerValue(
             llvm::Type::getIntNTy(addr->din()->type()->getContext(),
