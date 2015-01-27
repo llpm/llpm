@@ -125,7 +125,11 @@ struct FlowVisitor : public Visitor<OIEdge> {
         }
 
         for (auto op: init) {
-            flowAmt[op->owner()].flow = 1.0;
+            if (op->owner()->is<PipelineRegister>()) {
+                flowAmt[op->owner()].flow = 0.0;
+            } else {
+                flowAmt[op->owner()].flow = 1.0;
+            }
         }
 
         GraphSearch<FlowVisitor, BFS> search(conns, *this);
@@ -145,8 +149,7 @@ void PipelineCyclesPass::runInternal(Module* mod) {
         return;
 
     unsigned count = 0;
-    FlowVisitor fvisitor;
-    fvisitor.run(mod);
+
 
     // Strictly speaking, pipeline registers are only necessary for
     // _correctness_ when there exists a cycle in the graph. Therefore,
@@ -157,6 +160,9 @@ void PipelineCyclesPass::runInternal(Module* mod) {
     //
     vector<Connection> cycle;
     while (queries::FindCycle(mod, &isPipelineReg, cycle)) {
+        FlowVisitor fvisitor;
+        fvisitor.run(mod);
+
         Connection toBreak = cycle[rand() % cycle.size()];
         float maxFlow = 0;
         for (Connection c: cycle) {
@@ -168,7 +174,7 @@ void PipelineCyclesPass::runInternal(Module* mod) {
         }
 
         auto preg = new PipelineRegister(toBreak.source());
-        t.insertBetween(toBreak, preg);
+        t.insertAfter(toBreak.source(), preg);
         // printf("    preg at: %s -> %s\n",
                // toBreak.source()->owner()->globalName().c_str(),
                // toBreak.sink()->owner()->globalName().c_str());
