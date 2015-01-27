@@ -177,10 +177,18 @@ void AXI4LiteSlaveAdapter::refineWriteSide(ConnectionDB& conns) const {
         }
 
         auto outJoin = Join::get(conns, ports);
-        auto outCast = new Cast(outJoin->dout()->type(),
-                                driver->type());
-        conns.connect(outJoin->dout(), outCast->din());
-        conns.remap(driver, outCast->dout());
+        if (width > 0) {
+            auto outCast = new Cast(outJoin->dout()->type(),
+                                    driver->type());
+            conns.connect(outJoin->dout(), outCast->din());
+            conns.remap(driver, outCast->dout());
+        } else {
+            auto outConst = Constant::getVoid(module()->design());
+            auto outWait = new Wait(outConst->dout()->type());
+            conns.connect(outConst->dout(), outWait->din());
+            outWait->newControl(&conns, outJoin->dout());
+            conns.remap(driver, outWait->dout());
+        }
     }
 
     auto wrespConst = new Constant(
@@ -247,13 +255,32 @@ void AXI4LiteSlaveAdapter::refineReadSide(ConnectionDB& conns) const {
             unsigned lclwidth = 
                 (i != (regEnd-1)) ?
                     _dataWidth :
-                    _dataWidth - (width % _dataWidth);
+                    (width % _dataWidth);
+            if (lclwidth == 0)
+                // Special case: width of channel is zero. Deal with
+                // it later on, but for now specify a full-width type
+                lclwidth = _dataWidth;
             castTypeVec.push_back(llvm::Type::getIntNTy(ctxt, lclwidth));
         }
         llvm::StructType* castType = llvm::StructType::get(ctxt, castTypeVec);
-        auto inCast = new Cast(sink->type(), castType);
-        conns.remap(sink, {inCast->din()});
-        auto inSplit = inCast->dout()->split(conns);
+        OutputPort* castedIn;
+        if (width > 0) {
+            auto inCast = new Cast(sink->type(), castType);
+            conns.remap(sink, {inCast->din()});
+            castedIn = inCast->dout();
+        } else {
+            // Special case: width of channel is zero. Construct a
+            // wait instead
+            auto inConst = new Constant(
+                                llvm::Constant::getIntegerValue(
+                                    dataWidthInt,
+                                    llvm::APInt(_dataWidth, 0)));
+            auto inWait = new Wait(castType);
+            conns.connect(inConst->dout(), inWait->din()->join(conns)->din(0));
+            conns.remap(sink, inWait->newControl(sink->type()));
+            castedIn = inWait->dout();
+        }
+        auto inSplit = castedIn->split(conns);
 
         for (unsigned i=regBegin; i<regEnd; i++) {
             OutputPort* op = inSplit->dout(i - regBegin);
