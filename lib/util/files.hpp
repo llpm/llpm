@@ -254,6 +254,10 @@ public:
                 newName = fn.substr(loc+1);
         }
         auto dst = _dfltDir + "/" + newName;
+        for (auto f: _files) {
+            if (f->name() == dst)
+                return f;
+        }
         if (exists(newName))
             unlink(dst.c_str());
         int rc = link(fn.c_str(), dst.c_str());
