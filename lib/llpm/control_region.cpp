@@ -3,6 +3,7 @@
 #include <analysis/graph.hpp>
 #include <analysis/graph_queries.hpp>
 #include <libraries/synthesis/fork.hpp>
+#include <libraries/synthesis/pipeline.hpp>
 
 #include <boost/format.hpp>
 #include <boost/function.hpp>
@@ -108,6 +109,9 @@ bool ControlRegion::BlockAllowed(Block* b) {
          b->firing() != DependenceRule::AND) {
         return false;
     }
+    if (b->is<Latch>() || b->is<PipelineRegister>())
+        // Don't allow sequential elements for now
+        return false;
     return true;
 }
 
