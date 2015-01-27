@@ -34,6 +34,7 @@ class Design {
     ObjectNamer* _namer;
     Backend* _backend;
     Wedge* _wedge;
+    Wrapper* _wrapper;
     GraphvizOutput* _gvOutput;
     FileSet _workingDir;
 
@@ -52,6 +53,7 @@ public:
         _namer(NULL),
         _backend(NULL),
         _wedge(NULL),
+        _wrapper(NULL),
         _gvOutput(NULL),
         _workingDir(),
         _elaborations(*this, "elab"),
@@ -86,6 +88,8 @@ public:
     DEF_SET_NONULL(backend);
     DEF_GET_NP(wedge);
     DEF_SET_NONULL(wedge);
+    DEF_GET_NP(wrapper);
+    DEF_SET(wrapper);
     DEF_GET(elaborations);
     DEF_GET(optimizations);
 

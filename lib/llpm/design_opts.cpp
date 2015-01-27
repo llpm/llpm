@@ -35,6 +35,16 @@ char const* WedgeEnumStrings [] = {
 };
 ENUM_SER(WedgeEnum, WedgeEnumStrings);
 
+enum class WrapperEnum {
+    None,
+    AXI
+};
+char const* WrapperEnumStrings [] = {
+    "none",
+    "axi"
+};
+ENUM_SER(WrapperEnum, WrapperEnumStrings);
+
 enum class BackendEnum {
     Verilog,
     IPXACT
@@ -50,6 +60,9 @@ void Design::buildOpts() {
         ("wedge", value<WedgeEnum>()->default_value(WedgeEnum::Verilator)
                                     ->required(),
             "Selects which wedge to use (e.g. verilator, axi)")
+        ("wrapper", value<WrapperEnum>()->default_value(WrapperEnum::None)
+                                    ->required(),
+            "Selects a wrapper (e.g. none, axi)")
         ("backend", value<BackendEnum>()->default_value(BackendEnum::Verilog)
                                     ->required(),
             "Selects which backend to use (e.g. verilog, ipxact)")
@@ -69,12 +82,23 @@ void Design::notify(variables_map& vm) {
         break;
     }
 
+    bool axiWedge = false;
     switch (vm["wedge"].as<WedgeEnum>()) {
     case WedgeEnum::Verilator:
         wedge(new VerilatorWedge(*this));
         break;
     case WedgeEnum::AXI:
         wedge(new AXIWedge(*this));
+        axiWedge = true;
+        break;
+    }
+
+    switch (vm["wrapper"].as<WrapperEnum>()) {
+    case WrapperEnum::None:
+        break;
+    case WrapperEnum::AXI:
+        if (!axiWedge)
+            wrapper(new AXIWedge(*this));
         break;
     }
 

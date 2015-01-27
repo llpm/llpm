@@ -9,7 +9,7 @@ namespace llpm {
 // Fwd defs
 class IPXactBackend;
 
-class AXIWedge : public Wedge {
+class AXIWedge : public Wedge, public Wrapper {
     friend class AXIWrapper;
 
     enum class ChannelType {

@@ -33,8 +33,10 @@ Design::~Design() {
 int Design::go() {
     // If wedges require wrapper, wrap away!
     printf("Wrapping modules...\n");
-    for (unsigned i=0; i<_modules.size(); i++) {
-        _modules[i] = _wedge->wrapModule(_modules[i]);
+    if (_wrapper) {
+        for (unsigned i=0; i<_modules.size(); i++) {
+            _modules[i] = _wrapper->wrapModule(_modules[i]);
+        }
     }
       
     printf("Elaborating...\n");
