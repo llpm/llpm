@@ -105,7 +105,6 @@ public:
     void writeBlocks(Context&);
 
 private:
-    Design& _design;
     PCollection _printers;
     BaseLibraryStopCondition _stops;
 

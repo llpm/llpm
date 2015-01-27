@@ -6,6 +6,8 @@
 #include <backends/verilog/synthesize.hpp>
 
 namespace llpm {
+// Fwd defs
+class IPXactBackend;
 
 class AXIWedge : public Wedge {
     friend class AXIWrapper;
@@ -20,7 +22,9 @@ class AXIWedge : public Wedge {
 
     Design& _design;
     std::map<Port*, ChannelType> _types;
+    static std::vector<std::string> getPinNames(ChannelType ct);
     std::vector<std::string> getPinNames(Port*) const; 
+    void writeMetadata(Module* mod, IPXactBackend* ipxact);
 public:
     AXIWedge(Design& design) :
         _design(design) 

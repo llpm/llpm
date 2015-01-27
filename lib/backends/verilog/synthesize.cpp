@@ -1322,6 +1322,8 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
             }
         }
 
+        pins.erase(pins.begin());
+        pins.erase(pins.begin());
         for (const auto& pin: pins) {
             auto type = types.front();
             types.pop_front();
@@ -1393,9 +1395,15 @@ void VerilogSynthesizer::writeWrapper(std::ostream& os, WrapLLPMMModule* mod) {
                 ctxt << "    assign " << pins[0].name() << " = "
                                       << ctxt.name(op) << ";\n";
             } else {
-                for (unsigned i=0; i<pins.size(); i++) {
-                    unsigned offset = bitoffset(op->type(), i);
-                    unsigned width = bitwidth(nthType(op->type(), i));
+                for (unsigned i=2; i<pins.size(); i++) {
+                    unsigned offset, width;
+                    if (numContainedTypes(op->type()) > 0) {
+                        offset = bitoffset(op->type(), i-2);
+                        width = bitwidth(nthType(op->type(), i-2));
+                    } else {
+                        offset = 0;
+                        width = bitwidth(op->type());
+                    }
                     Pin pin = pins[i];
                     ctxt << boost::format(
                         "    assign %1% = %2%[%3%:%4%];\n")

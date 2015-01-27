@@ -10,17 +10,29 @@
 
 namespace llpm {
 
+//fwd defs
+class IPXactBackend;
+
 class Pin {
     std::string _name;
+    bool _input;
+    unsigned _width;
 public:
     Pin(std::string name) :
-        _name(name)
+        _name(name),
+        _width(1)
     { }
 
-    Pin() { }
+    Pin() :
+        _width(1)
+    { }
 
     DEF_GET_NP(name);
     DEF_SET(name);
+    DEF_GET_NP(input);
+    DEF_SET(input);
+    DEF_GET_NP(width);
+    DEF_SET(width);
 };
 
 /**
@@ -57,10 +69,9 @@ public:
 private:
     Port* _port;
     BPStyle _bpStyle;;
-    Pin _valid;
-    Pin _bp;
 
 public:
+#if 0
     LIBus(Port* p, BPStyle style) :
         _port(p),
         _bpStyle(style)
@@ -68,38 +79,50 @@ public:
         if (bitwidth(p->type()) > 0) {
             auto nct = numContainedTypes(p->type());
             if (nct >= 1)
-                _pins.resize(nct);
+                _pins.resize(nct+2);
             else
-                _pins.resize(1);
+                _pins.resize(3);
         }
     }
+#endif
 
     LIBus(Port* p, BPStyle style, const std::vector<std::string>& names) :
         _port(p),
-        _bpStyle(style),
-        _valid(names[0]),
-        _bp(names[1])
+        _bpStyle(style)
     {
-        if (bitwidth(p->type()) > 0) {
-            auto nct = numContainedTypes(p->type());
-            if (nct >= 1)
-                _pins.resize(nct);
-            else
-                _pins.resize(1);
+        auto nct = numContainedTypes(p->type());
+        if (nct >= 1)
+            _pins.resize(nct+2);
+        else
+            _pins.resize(3);
 
-            if (names.size() != _pins.size() + 2)
-                throw InvalidArgument("Must have equal number of names as pins!");
+        if (names.size() != _pins.size())
+            throw InvalidArgument("Must have equal number of names as pins!");
 
-            for (unsigned i=0; i<_pins.size(); i++) {
-                _pins[i].name(names[i+2]);
+        bool input = p->asInput() != nullptr;
+        for (unsigned i=0; i<_pins.size(); i++) {
+            _pins[i].name(names[i]);
+            _pins[i].input(input);
+
+            if (i >= 2) {
+                if (nct >= 1)
+                    _pins[i].width( bitwidth(nthType(p->type(), i-2)) );
+                else
+                    _pins[i].width( bitwidth(p->type()) );
             }
         }
+        _pins[1].input(!input);
     }
 
     DEF_GET_NP(port);
     DEF_GET_NP(bpStyle);
-    DEF_GET_NP(valid);
-    DEF_GET_NP(bp);
+
+    Pin valid() const {
+        return _pins[0];
+    }
+    Pin bp() const {
+        return _pins[1];
+    }
 };
 
 /**
@@ -126,6 +149,8 @@ public:
     const std::map<Port*, RTLTranslator*>& pinDefs() const {
         return _pinDefs;
     }
+
+    void writeMetadata(IPXactBackend*) const;
 
     virtual bool hasCycle() const {
         return _wrapped->hasCycle();
