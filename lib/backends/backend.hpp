@@ -6,10 +6,15 @@
 #include <util/files.hpp>
 
 namespace llpm {
+// Fwd defs, not very fwd looking
+class Design;
 
 class Backend {
 protected:
-    Backend() { }
+    Design& _design;
+
+    Backend(Design& design) :
+        _design(design) { }
 
 public:
     virtual ~Backend() { }

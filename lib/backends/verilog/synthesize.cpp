@@ -30,7 +30,7 @@ static const vector<string> externalFiles {
 };
 
 VerilogSynthesizer::VerilogSynthesizer(Design& d) :
-    _design(d)
+    Backend(d)
 {
     StdLibStops(_stops);
     addStops();

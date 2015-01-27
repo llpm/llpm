@@ -24,9 +24,14 @@ class VerilatorWedge : public Wedge {
                          llvm::Function*, llvm::CallInst*);
 
 public:
-    VerilatorWedge(Design& design) :
-        _verilog(new VerilogSynthesizer(design))
-    { }
+    VerilatorWedge(Design& design) {
+        Backend* designBackend = design.backend();
+        VerilogSynthesizer* vs = dynamic_cast<VerilogSynthesizer*>(designBackend);
+        if (vs == NULL) {
+            vs = new VerilogSynthesizer(design);
+        }
+        _verilog = vs;
+    }
 
     VerilatorWedge(VerilogSynthesizer* vs) :
         _verilog(vs)
