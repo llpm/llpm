@@ -44,6 +44,8 @@ Cast::Cast(llvm::Type* from, llvm::Type* to) :
     Function(from, to),
     _cast(NULL)
 {
+    if (bitwidth(from) != bitwidth(to))
+        throw InvalidArgument("Can only cast to/from types of the same width");
 }
 
 Join::Join(const vector<llvm::Type*>& inputs) :
