@@ -126,7 +126,6 @@ struct FlowVisitor : public Visitor<OIEdge> {
 
         for (auto op: init) {
             flowAmt[op->owner()].flow = 1.0;
-            assert(flowAmt[op->owner()].outputEdges > 0);
         }
 
         GraphSearch<FlowVisitor, BFS> search(conns, *this);
