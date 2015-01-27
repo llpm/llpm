@@ -17,12 +17,12 @@ AddOption('--cxx', action='store', type='string', dest='cxx', nargs=1, metavar='
 
 env = Environment(
     CPPPATH=['./lib', './bin/llvm/include/'],
-    CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
+    CXXFLAGS="""-O3 -mfpmath=sse -msse4 -march=native
             -Wall -Wextra -std=c++1y
             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
             -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split()
             + CxxLdFlags,
-    LIBS="""boost_program_options LLVM-3.5""".split(),
+    LIBS="""tinyxml2 boost_program_options LLVM-3.5""".split(),
     LIBPATH=map(lambda x: "bin/" + x, LibPaths),
     LINKFLAGS=[]
               + CxxLdFlags
