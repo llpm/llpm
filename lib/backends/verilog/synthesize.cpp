@@ -533,21 +533,32 @@ public:
     }
 
     void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
-        const char* op = NULL;
         ConstShift* s = dynamic_cast<ConstShift*>(c);
-        
-        if (s->shift() > 0) {
-            assert(s->style() != ConstShift::Arithmetic);
-            op = "<<";
-        } else {
-            op = ">>";
-        }
 
-        ctxt << "    assign " << ctxt.name(s->dout()) << " = "
-             << ctxt.name(s->din()) << " ";
+        unsigned width = bitwidth(s->dout()->type());
+        int amt = s->shift();
+        int absAmt;
+        if (amt < 0)
+            absAmt = -1 * amt;
+        else
+            absAmt= amt;
+
+        string name = ctxt.name(s->din());
+        ctxt << "    assign " << ctxt.name(s->dout()) << " = ";
         switch (s->style()) {
         case ConstShift::LogicalTruncating:
-            ctxt << op;
+            if (s->shift() < 0) {
+                ctxt << boost::format(
+                        "%1%[%2%:%3%];\n")
+                        % name
+                        % (absAmt + width - 1)
+                        % absAmt;
+            } else {
+                ctxt << boost::format(
+                        "{%1%, {%2%{1'b0}}};\n")
+                        % name
+                        % absAmt;
+            }
             break;
         case ConstShift::LogicalExtending: {
             assert(false && "Extending shifts not yet implemented!");
@@ -558,11 +569,12 @@ public:
             break;
         }
         case ConstShift::Arithmetic:
-            ctxt << ">>>";
+            ctxt << boost::format(
+                    "%1% >>> %2%;\n")
+                    % name
+                    % absAmt;
             break;
         }
-
-        ctxt << " " << ctxt.name(s->din()) << ";\n";
     }
 };
 
