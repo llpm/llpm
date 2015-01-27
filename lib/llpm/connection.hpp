@@ -84,12 +84,7 @@ class ConnectionDB {
     std::set<BlockP> _newBlocks;
 
     void registerBlock(BlockP block);
-    void deregisterBlock(BlockP block) {
-        uint64_t& count = _blockUseCounts[block];
-        assert(count >= 1);
-        count -= 1;
-    }
-
+    void deregisterBlock(BlockP block);
 
 public:
     ConnectionDB(Module* m) :

@@ -32,6 +32,12 @@ void ConnectionDB::registerBlock(BlockP block) {
     _changeCounter++;
 }
 
+void ConnectionDB::deregisterBlock(BlockP block) {
+    uint64_t& count = _blockUseCounts[block];
+    assert(count >= 1);
+    count -= 1;
+}
+
 void ConnectionDB::findSinks(const OutputPort* op,
                              std::vector<InputPort*>& out) const
 {
