@@ -158,7 +158,7 @@ public:
         int rc = stat(_dfltDir.c_str(), &s);
         if (rc != 0) {
             if (errno == ENOENT && create) {
-                rc = mkdir(_dfltDir.c_str(), 0777);
+                rc = ::mkdir(_dfltDir.c_str(), 0777);
                 if (rc != 0) {
                     throw SysError("creating working directory '" + _dfltDir + "'");
                 }
@@ -222,6 +222,26 @@ public:
         if (rc == ENOENT)
             return false;
         return true;
+    }
+
+    void mkdir(std::string dirname) {
+        std::string currPath;
+        while (dirname.size() > 0) {
+            auto slash = dirname.find("/");
+            if (slash != std::string::npos) {
+                currPath += dirname.substr(0, slash);
+                slash++;
+            } else {
+                currPath += dirname;
+            }
+            if (slash < dirname.size()) {
+                dirname = dirname.substr(slash);
+            } else {
+                dirname = "";
+            }
+            ::mkdir(createAbsFileName(currPath).c_str(), 0777);
+            currPath += "/";
+        }
     }
 
     File* copy(std::string fn, std::string newName = "") {
