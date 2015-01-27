@@ -11,7 +11,8 @@ RUN apt-get -y dist-upgrade
 RUN apt-get -y install build-essential
 RUN apt-get install -y sudo lsb-release git scons
 RUN apt-get install -y clang-3.5 
-RUN apt-get install -y doxygen libboost-all-dev autoconf automake
+RUN apt-get install -y libboost-all-dev libtinyxml2-dev
+RUN apt-get install -y doxygen autoconf automake
 RUN apt-get install -y flex bison groff
 RUN apt-get install -y graphviz
 RUN mkdir /home/user
