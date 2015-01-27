@@ -87,10 +87,13 @@ void Design::notify(variables_map& vm) {
     case WedgeEnum::Verilator:
         wedge(new VerilatorWedge(*this));
         break;
-    case WedgeEnum::AXI:
-        wedge(new AXIWedge(*this));
+    case WedgeEnum::AXI: {
+        auto aw = new AXIWedge(*this);
+        wedge(aw);
+        wrapper(aw);
         axiWedge = true;
         break;
+    }
     }
 
     switch (vm["wrapper"].as<WrapperEnum>()) {
