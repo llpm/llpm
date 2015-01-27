@@ -352,7 +352,7 @@ void IPXactBackend::writeComponent(FileSet::File* xmlFile, Module* mod) {
             pr.PushText("zynq");
         }
         pr("xilinx:displayName", mod->name());
-        pr("xilinx:coreRevision", "1");
+        pr("xilinx:coreRevision", time(NULL));
     }
 
     pr.CloseElement();
