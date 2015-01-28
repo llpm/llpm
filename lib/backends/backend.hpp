@@ -4,6 +4,7 @@
 #include <llpm/block.hpp>
 #include <refinery/refinery.hpp>
 #include <util/files.hpp>
+#include <util/time.hpp>
 
 namespace llpm {
 // Fwd defs, not very fwd looking
@@ -21,6 +22,7 @@ public:
 
     virtual bool blockIsPrimitive(Block* b) = 0;
     virtual Refinery::StopCondition* primitiveStops() = 0;
+    virtual Time latency(InputPort*, OutputPort*) const;
 
     virtual void writeModule(FileSet& dir,
                              Module* mod,

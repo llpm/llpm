@@ -73,6 +73,10 @@ public:
     virtual ~FiniteArray() { }
 
     DEF_GET_NP(depth);
+
+    float logicalEffort(InputPort*, OutputPort*) const {
+        return 10.0;
+    }
 };
 
 } // namespace llpm

@@ -139,6 +139,12 @@ public:
         assert(op == &_dout);
         return inputs();
     }
+
+    float logicalEffort(InputPort*, OutputPort*) const {
+        // Since this'll become a multiplexer, there's a little effort
+        // involved
+        return 1.0;
+    }
 };
 
 /**
@@ -166,6 +172,12 @@ public:
             deps(const OutputPort* op) const {
         assert(op == &_dout);
         return inputs();
+    }
+
+    float logicalEffort(InputPort*, OutputPort*) const {
+        // Since this'll become a multiplexer, there's a little effort
+        // involved
+        return 1.0;
     }
 };
 
@@ -243,6 +255,10 @@ public:
     virtual bool hasState() const {
         return false;
     }
+
+    virtual float logicalEffortFunc() const {
+        return 1.0;
+    }
 };
 
 /**
@@ -278,6 +294,10 @@ public:
         assert(std::find_if(_dout.begin(), _dout.end(),
                          RawEqualTo<const OutputPort>(op)) != _dout.end());
         return inputs();
+    }
+
+    float logicalEffort(InputPort*, OutputPort*) const {
+        return 1.0;
     }
 };
 

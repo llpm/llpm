@@ -14,6 +14,7 @@
 #include <libraries/core/mem_intr.hpp>
 #include <libraries/core/logic_intr.hpp>
 #include <refinery/refinery.hpp>
+#include <util/llvm_type.hpp>
 
 namespace llpm {
 
@@ -25,6 +26,10 @@ namespace llpm {
 
     // Sum of integers
     class IntAddition : public Function {
+        virtual float logicalEffortFunc() const {
+            return log2((float)bitwidth(dout()->type()));
+        }
+
     public:
         static llvm::Type* InType(std::vector<llvm::Type*>);
         static llvm::Type* OutType(std::vector<llvm::Type*>);
@@ -39,6 +44,10 @@ namespace llpm {
 
     // a - b. Integers only
     class IntSubtraction : public Function {
+        virtual float logicalEffortFunc() const {
+            return log2((float)bitwidth(dout()->type()));
+        }
+
     public:
         IntSubtraction(llvm::Type* a, llvm::Type* b);
     };
@@ -70,6 +79,10 @@ namespace llpm {
 
     // Variable amount shift. Integers only. Truncating only
     class Shift : public Function {
+        virtual float logicalEffortFunc() const {
+            return log2((float)bitwidth(dout()->type()));
+        }
+
     public:
         enum Direction {
             Left,
@@ -114,6 +127,7 @@ namespace llpm {
     // Extend an int, adding some MSBs, possibly with sign extension
     class IntExtend: public Function {
         bool _signExtend;
+
     public:
         static llvm::Type* InType(unsigned N, llvm::Type*);
         static llvm::Type* OutType(unsigned N, llvm::Type*);
@@ -124,6 +138,10 @@ namespace llpm {
 
     // Multiply a bunch of integers
     class IntMultiply : public Function {
+        virtual float logicalEffortFunc() const {
+            return log2((float)bitwidth(dout()->type()));
+        }
+
     public:
         static llvm::Type* InType(std::vector<llvm::Type*>);
         static llvm::Type* OutType(std::vector<llvm::Type*>);
@@ -138,6 +156,11 @@ namespace llpm {
     // Divide integer a by integer b
     class IntDivide : public Function {
         bool _isSigned;
+
+        virtual float logicalEffortFunc() const {
+            // Int divide is very expensive
+            return 25 * log2((float)bitwidth(dout()->type()));
+        }
 
     public:
         static llvm::Type* InType(llvm::Type* a, llvm::Type* b, bool isSigned);
@@ -175,6 +198,10 @@ namespace llpm {
     private:
         Op _op;
 
+        virtual float logicalEffortFunc() const {
+            return 1.0;
+        }
+
     public:
         Bitwise(unsigned N, llvm::Type* t, Op op);
         DEF_GET_NP(op);
@@ -202,6 +229,10 @@ namespace llpm {
     private:
         Cmp _op;
         bool _isSigned;
+
+        virtual float logicalEffortFunc() const {
+            return 1.0;
+        }
 
     public:
         IntCompare(llvm::Type* a, llvm::Type* b,

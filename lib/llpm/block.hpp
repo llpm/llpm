@@ -161,6 +161,19 @@ public:
     virtual void deps(const InputPort*, std::set<OutputPort*>&) const;
 
     /**
+     * What is the logical effort expended in getting a token from
+     * this block's InputPort i to OutputPort o?
+     *
+     * Logical effort is intended to be some abstract measure
+     * correlated to the amount of computation involved. Maybe there
+     * is some good way to formalize this (like the Sutherland's
+     * logical effort in VLSI design), but we're not doing that yet.
+     */
+    virtual float logicalEffort(InputPort*, OutputPort*) const {
+        return 0.0;
+    }
+
+    /**
      * Does the logic in this block contain any cycles? Cycles mean
      * that logic cannot be completely combinatorial and prevents
      * static region formation
@@ -274,6 +287,10 @@ protected:
         _dout.reset(output);
     }
 
+    virtual float logicalEffortFunc() const {
+        return 0.0;
+    }
+
 public:
     virtual bool hasState() const {
         return false;
@@ -293,6 +310,11 @@ public:
     }
     OutputPort* dout(ConnectionDB& conns, unsigned idx) {
         return _dout.split(conns, idx);
+    }
+
+
+    float logicalEffort(InputPort*, OutputPort*) const {
+        return logicalEffortFunc();
     }
 
     virtual DependenceRule depRule(const OutputPort* op) const {
