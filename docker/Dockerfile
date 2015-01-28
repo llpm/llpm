@@ -15,6 +15,7 @@ RUN apt-get install -y libboost-all-dev libtinyxml2-dev
 RUN apt-get install -y doxygen autoconf automake
 RUN apt-get install -y flex bison groff
 RUN apt-get install -y graphviz
+RUN apt-get install -y gdb
 RUN mkdir /home/user
 RUN useradd -d /home/user -m -s /bin/bash user
 RUN chown -R user:user /home/user
