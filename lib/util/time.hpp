@@ -12,6 +12,14 @@ class Time {
     { }
 
 public:
+    Time() :
+        _time(0.0)
+    { }
+
+    Time(const Time& t) :
+        _time(t._time)
+    { }
+
     double sec() const {
         return _time;
     }
@@ -31,6 +39,11 @@ public:
     static Time ps(double t) {
         return Time(t * 1e-12);
     }
+
+    Time& operator+=(const Time& t) {
+        _time += t._time;
+        return *this;
+    }
 };
 
 inline Time operator+(const Time &t1, const Time &t2) {
@@ -43,6 +56,26 @@ inline Time operator-(const Time &t1, const Time &t2) {
 
 inline Time operator*(const Time &t1, unsigned n) {
     return Time::s(t1.sec() * n);
+}
+
+inline bool operator>(const Time &t1, const Time &t2) {
+    return t1.sec() > t2.sec();
+}
+
+inline bool operator>=(const Time &t1, const Time &t2) {
+    return t1.sec() >= t2.sec();
+}
+
+inline bool operator<(const Time &t1, const Time &t2) {
+    return t1.sec() < t2.sec();
+}
+
+inline bool operator<=(const Time &t1, const Time &t2) {
+    return t1.sec() <= t2.sec();
+}
+
+inline bool operator==(const Time &t1, const Time &t2) {
+    return t1.sec() == t2.sec();
 }
 
 } // namespace llpm
