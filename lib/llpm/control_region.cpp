@@ -479,5 +479,9 @@ DependenceRule ControlRegion::depRule(const OutputPort*) const {
     return DependenceRule(DependenceRule::AND, DependenceRule::Always);
 }
 
+unsigned ControlRegion::clocks() const {
+    // TODO: compute this based on the static schedule
+    return 0;
+}
 
 } // namespace llpm

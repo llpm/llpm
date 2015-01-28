@@ -210,5 +210,103 @@ void LatchUntiedOutputs::runInternal(Module* mod) {
     printf("    Inserted %u latches\n", count);
 }
 
+struct DelayVisitor : public Visitor<OIEdge> {
+    struct Stats {
+        Time inputPathDelay;
+        unsigned visits;
+
+        Stats() :
+            inputPathDelay(),
+            visits(0)
+        { }
+    };
+
+    Backend* backend;
+    Time period;
+    map<OutputPort*, Stats> delays;
+    set<OutputPort*> pipeline;
+
+    DelayVisitor(Backend* b, Time period) :
+        backend(b),
+        period(period)
+    { }
+
+    Time edgeDelay(OutputPort* op) {
+        if (pipeline.count(op) > 0)
+            return Time();
+        Stats& s = delays[op];
+        return s.inputPathDelay + backend->maxLatency(op);
+    }
+
+    Terminate visit(const ConnectionDB*, const OIEdge& edge) {
+        // Get the delay to the output port of our origin
+        Time delay = edgeDelay(edge.end().first);
+
+        // Add the routing delay
+        delay += backend->latency(edge.end());
+
+        if (delay >= period) {
+            pipeline.insert(edge.end().first);
+            delay = Time();
+        }
+
+        set<OutputPort*> deps;
+        edge.endPort()->owner()->deps(edge.endPort(), deps);
+
+        for (auto op: deps) {
+            Stats& s = delays[op];
+            if (s.inputPathDelay < delay)
+                s.inputPathDelay = delay;
+            s.visits += 1;
+        }
+        return Continue;
+    }
+
+    void run(Module* mod) {
+        ConnectionDB* conns = mod->conns();
+        if (conns == NULL)
+            return;
+
+        vector<OutputPort*> init;
+        mod->internalDrivers(init);
+
+        for (auto op: init) {
+            if (op->owner()->is<PipelineRegister>()) {
+                pipeline.insert(op->owner()->as<PipelineRegister>()->dout());
+            }
+        }
+
+        GraphSearch<DelayVisitor, BFS> search(conns, *this);
+        search.go(init);
+    }
+};
+
+void PipelineFrequencyPass::runInternal(Module* mod) {
+    // TODO: We assume a delay of 0.0 at the start of the module. That is
+    // wrong. Get a delay from a previous execution of this function. Better
+    // yet, run this function recursively with that number.
+
+    DelayVisitor dv(_design.backend(), _maxDelay);
+    dv.run(mod);
+    if (dv.pipeline.size() > 0) {
+        printf("Inserting %lu pipeline registers into %s to meet timing...\n",
+               dv.pipeline.size(),
+               mod->name().c_str());
+    }
+
+    Transformer t(mod);
+    for (auto op: dv.pipeline) {
+        if (op->owner()->is<PipelineRegister>())
+            continue;
+        auto preg = new PipelineRegister(op);
+        t.insertAfter(op, preg);
+    }
+
+    if (mod->is<ControlRegion>() && dv.pipeline.size() > 0) {
+        printf("    CR cycle latency: %u\n",
+               mod->as<ControlRegion>()->clocks());
+    }
+}
+
 } // namespace llpm
 

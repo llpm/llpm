@@ -66,6 +66,9 @@ void Design::buildOpts() {
         ("backend", value<BackendEnum>()->default_value(BackendEnum::Verilog)
                                     ->required(),
             "Selects which backend to use (e.g. verilog, ipxact)")
+        ("clk", value<float>()->default_value(-1.0)
+                              ->required(),
+            "Pipeline the design targeting this clock frequency, in MHz")
     ;
     _workingDir.addOpts(_optDesc);
 }
@@ -118,6 +121,11 @@ void Design::notify(variables_map& vm) {
     optimizations()->append<SimplifyPass>();
     optimizations()->append<PipelineDependentsPass>();
     optimizations()->append<GVPrinterPass>();
+    float clkFreq = vm["clk"].as<float>() * 1e6;
+    if (clkFreq > 0.0) {
+        Time period = Time::s(1.0 / clkFreq);
+        optimizations()->append<PipelineFrequencyPass>(period);
+    }
     optimizations()->append<PipelineCyclesPass>();
     optimizations()->append<LatchUntiedOutputs>();
     optimizations()->append<SynthesizeForksPass>();
