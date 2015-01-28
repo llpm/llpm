@@ -3,6 +3,7 @@
 
 #include <llpm/block.hpp>
 #include <refinery/refinery.hpp>
+#include <llpm/connection.hpp>
 #include <util/files.hpp>
 #include <util/time.hpp>
 
@@ -22,7 +23,25 @@ public:
 
     virtual bool blockIsPrimitive(Block* b) = 0;
     virtual Refinery::StopCondition* primitiveStops() = 0;
+
+    /**
+     * What is the maximum latency from an input port to an output port in the
+     * same block? Ideally, this returns an accurate time based on layout
+     * information, but an estimate is more realistic.
+     */
     virtual Time latency(InputPort*, OutputPort*) const;
+
+    /**
+     * What is the longest latency to this output port?
+     */
+    Time maxLatency(OutputPort*) const;
+
+    /**
+     * What is the maximum latency for a signal to propagate a connection?
+     * Again, this is ideally based on layout or at least floor planning, but
+     * that may not be practical.
+     */
+    virtual Time latency(Connection) const;
 
     virtual void writeModule(FileSet& dir,
                              Module* mod,
