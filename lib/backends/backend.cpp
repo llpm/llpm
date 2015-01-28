@@ -35,6 +35,12 @@ Time Backend::latency(Connection c) const {
         // ControlRegion does not count as a module.
         return Time::ns(10);
     }
+
+    if (source->maxLogicalEffort(c.source()) == 0.0) {
+        // If the source block does nothing, assume it will be synthesized away
+        // along with its output routing.
+        return Time();
+    }
     // Assume that everything else is a relatively local connection and thus
     // relatively short latency
     return Time::ps(250);

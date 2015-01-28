@@ -173,6 +173,8 @@ public:
         return 0.0;
     }
 
+    float maxLogicalEffort(OutputPort*) const;
+
     /**
      * Does the logic in this block contain any cycles? Cycles mean
      * that logic cannot be completely combinatorial and prevents

@@ -15,6 +15,16 @@ bool Block::refine(std::vector<Block*>& blocks) {
 }
 #endif
 
+float Block::maxLogicalEffort(OutputPort* op) const {
+    float max = 0.0;
+    for (auto ip: op->deps()) {
+        float le = logicalEffort(ip, op);
+        if (le > max)
+            max = le;
+    }
+    return max;
+}
+
 string Block::globalName() const {
     auto m = module();
     if (m == NULL)
