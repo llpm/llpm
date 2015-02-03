@@ -8,6 +8,7 @@ namespace llpm {
 
 // Fwd. defs
 class PipelineRegister;
+class PipelineStageController;
 
 /**
  * A ControlRegion is a group of blocks with the following properties:
@@ -30,6 +31,7 @@ class ControlRegion : public ContainerModule {
     bool _scheduled;
     std::vector<std::set<Block*>> _blockSchedule;
     std::vector<std::set<PipelineRegister*>> _regSchedule;
+    std::vector<PipelineStageController*> _stageControllers;
 
     void schedule();
 

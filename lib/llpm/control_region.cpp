@@ -563,6 +563,7 @@ void ControlRegion::schedule() {
         maxDepth = std::max(maxDepth, stat.depth);
     }
     _regSchedule.resize(maxDepth);
+    _stageControllers.resize(maxDepth);
     _blockSchedule.resize(maxDepth + 1);
     Transformer t(this);
 
@@ -622,6 +623,32 @@ void ControlRegion::schedule() {
             _regSchedule[stat.depth].insert(block->as<PipelineRegister>());
         } else {
             _blockSchedule[stat.depth].insert(block);
+        }
+    }
+
+    for (unsigned stage=0; stage<_regSchedule.size(); stage++) {
+        PipelineStageController* controller =
+            new PipelineStageController(design());
+        controller->name(str(boost::format("%1%_stage%2%")
+                                    % name()
+                                    % stage));
+        controller->module(this);
+        _stageControllers[stage] = controller;
+        if (stage == 0) {
+            if (inputs().size() > 0) {
+                vector<OutputPort*> drivers;
+                this->internalDrivers(drivers);
+                auto inpJoin = Join::get(_conns, drivers);
+                controller->connectVin(&_conns, inpJoin->dout());
+            } else {
+                controller->connectVin(&_conns, getDriver(inputs().front()));
+            }
+        } else {
+            controller->connectVin(&_conns, _stageControllers[stage-1]->vout());
+        }
+
+        for (auto preg: _regSchedule[stage]) {
+            preg->controller(&_conns, controller);
         }
     }
 
