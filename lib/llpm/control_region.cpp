@@ -4,6 +4,9 @@
 #include <analysis/graph_queries.hpp>
 #include <libraries/synthesis/fork.hpp>
 #include <libraries/synthesis/pipeline.hpp>
+#include <analysis/graph.hpp>
+#include <analysis/graph_impl.hpp>
+#include <util/transform.hpp>
 
 #include <boost/format.hpp>
 #include <boost/function.hpp>
@@ -109,8 +112,8 @@ bool ControlRegion::BlockAllowed(Block* b) {
          b->firing() != DependenceRule::AND) {
         return false;
     }
-    if (b->is<Latch>() || b->is<PipelineRegister>())
-        // Don't allow sequential elements for now
+    if (b->is<Latch>())
+        // Don't allow Latches for now
         return false;
     return true;
 }
@@ -479,9 +482,157 @@ DependenceRule ControlRegion::depRule(const OutputPort*) const {
     return DependenceRule(DependenceRule::AND, DependenceRule::Always);
 }
 
-unsigned ControlRegion::clocks() const {
-    // TODO: compute this based on the static schedule
-    return 0;
+struct PipelineDepthVisitor : public Visitor<OIEdge> {
+    struct Stats {
+        unsigned depth;
+        unsigned visits;
+
+        Stats() :
+            depth(0),
+            visits(0)
+        { }
+    };
+
+    map<Block*, Stats> stats;
+
+    PipelineDepthVisitor()
+    { }
+
+    Terminate visit(const ConnectionDB*, const OIEdge& edge) {
+        // Get the delay to the output port of our origin
+        Block* dst = edge.endPort()->owner();
+        Block* src = edge.end().first->owner();
+
+        auto& dstStats = stats[dst];
+        auto& srcStats = stats[src];
+
+        dstStats.visits++;
+
+        unsigned pdepth = 
+            src->is<PipelineRegister>() ? (srcStats.depth + 1) : (srcStats.depth);
+        dstStats.depth = std::max(pdepth, dstStats.depth);
+
+        if (dstStats.visits >= dst->inputs().size())
+            return Continue;
+        return TerminatePath;
+    }
+
+    Terminate next(
+            const ConnectionDB*,
+            const OIEdge& edge,
+            std::vector<OutputPort*>& out) {
+        _visits += 1;
+        Block* b = edge.endPort()->owner();
+        out.insert(out.end(), b->outputs().begin(), b->outputs().end());
+        return Continue;
+    }
+
+    void run(ControlRegion* cr) {
+        ConnectionDB* conns = cr->conns();
+        if (conns == NULL)
+            return;
+
+        vector<OutputPort*> init;
+        cr->internalDrivers(init);
+
+        std::set<Block*> blocks;
+        conns->findAllBlocks(blocks);
+
+        for (auto b: blocks) {
+            if (b->inputs().size() == 0) {
+                init.insert(init.end(), b->outputs().begin(), b->outputs().end());
+            }
+        }
+
+        GraphSearch<PipelineDepthVisitor, DFS> search(conns, *this);
+        search.go(init);
+        assert(stats.size() >= blocks.size());
+    }
+};
+
+void ControlRegion::schedule() {
+    _regSchedule.clear();
+    _blockSchedule.clear();
+    PipelineDepthVisitor pdv;
+
+    pdv.run(this);
+
+    unsigned maxDepth = 0;
+    for (auto& pr: pdv.stats) {
+        auto stat = pr.second;
+        maxDepth = std::max(maxDepth, stat.depth);
+    }
+    _regSchedule.resize(maxDepth);
+    _blockSchedule.resize(maxDepth + 1);
+    Transformer t(this);
+
+    /* Any connection spanning a depth > 0 needs to be pipelined. */
+    // Build a list of blocks to be checked for additional pipelining.
+    std::deque<Block*> blocks;
+    for (auto& pr: pdv.stats) {
+        blocks.push_back(pr.first);
+    }
+    // Use a deque and pop from the front since the body may append to
+    // the list
+    unsigned balanceRegs = 0;
+    while (!blocks.empty()) {
+        auto block = blocks.front();
+        blocks.pop_front();
+        auto f = pdv.stats.find(block);
+        assert(f != pdv.stats.end());
+        auto srcStat = f->second;
+
+        for (auto op: block->outputs()) {
+            PipelineRegister* preg = nullptr;
+            vector<InputPort*> sinks;
+            _conns.findSinks(op, sinks);
+            for (auto sink: sinks) {
+                auto dstStat = pdv.stats[sink->owner()];
+                assert(dstStat.depth >= srcStat.depth);
+                unsigned carry = dstStat.depth - srcStat.depth;
+                assert(! (block->is<PipelineRegister>() && carry == 0) );
+                
+                if ( (carry > 0 && !block->is<PipelineRegister>()) ||
+                     (carry > 1 && block->is<PipelineRegister>()) ) {
+                    if (preg == NULL) {
+                        preg = new PipelineRegister(op);
+                        _conns.connect(op, preg->din());
+                        blocks.push_back(preg);
+                        if (block->is<PipelineRegister>()) {
+                            pdv.stats[preg].depth = srcStat.depth + 1;
+                        } else {
+                            pdv.stats[preg].depth = srcStat.depth;
+                        }
+                    }
+                    t.insertBetween(Connection(op, sink), nullptr, preg->dout());
+                }
+            }
+
+            if (preg != nullptr) {
+                balanceRegs += 1;
+            }
+        }
+    }
+    printf("    Inserted %u pipeline registers to balance CR\n", balanceRegs);
+
+    for (auto& pr: pdv.stats) {
+        auto stat = pr.second;
+        auto block = pr.first;
+        if (block->is<PipelineRegister>()) {
+            _regSchedule[stat.depth].insert(block->as<PipelineRegister>());
+        } else {
+            _blockSchedule[stat.depth].insert(block);
+        }
+    }
+
+    _scheduled = true;
+}
+
+
+unsigned ControlRegion::clocks() {
+    if (!_scheduled)
+        schedule();
+    return _regSchedule.size();
 }
 
 } // namespace llpm

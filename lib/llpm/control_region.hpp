@@ -6,6 +6,9 @@
 
 namespace llpm {
 
+// Fwd. defs
+class PipelineRegister;
+
 /**
  * A ControlRegion is a group of blocks with the following properties:
  *   - All of them have AND input firing rules
@@ -24,6 +27,12 @@ class ControlRegion : public ContainerModule {
     bool _finalized;
     bool add(Block*, const std::set<Port*>& constPorts = {});
 
+    bool _scheduled;
+    std::vector<std::set<Block*>> _blockSchedule;
+    std::vector<std::set<PipelineRegister*>> _regSchedule;
+
+    void schedule();
+
     std::set<InputPort*> findDependences(OutputPort*) const;
 
 public:
@@ -32,7 +41,8 @@ public:
                   std::string name="") :
         ContainerModule(parent->design(), name),
         _parent(parent),
-        _finalized(false) {
+        _finalized(false),
+        _scheduled(false) {
         this->module(parent);
         auto rc = add(seed);
         assert(rc);
@@ -65,7 +75,7 @@ public:
     virtual DependenceRule depRule(const OutputPort* op) const;
 
     /// How many clock cycles does it take to compute this CR?
-    unsigned clocks() const;
+    unsigned clocks();
 };
 
 class FormControlRegionPass : public ModulePass {

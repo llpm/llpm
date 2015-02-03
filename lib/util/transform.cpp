@@ -117,8 +117,10 @@ void Transformer::insertBetween(Connection c, Block* b) {
 }
 void Transformer::insertBetween(Connection c,
                                 InputPort* ip, OutputPort* op) {
-    _conns->disconnect(c);
-    _conns->connect(c.source(), ip);
+    assert(_conns->exists(c));
+    _conns->disconnect(c.source(), c.sink());
+    if (ip != nullptr)
+        _conns->connect(c.source(), ip);
     _conns->connect(op, c.sink());
 }
 

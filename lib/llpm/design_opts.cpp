@@ -114,7 +114,7 @@ void Design::notify(variables_map& vm) {
 
     optimizations()->append<SimplifyPass>();
     optimizations()->append<CanonicalizeInputs>();
-    // optimizations()->append<SimplifyWaits>();
+    optimizations()->append<SimplifyWaits>();
     optimizations()->append<SimplifyPass>();
     optimizations()->append<FormControlRegionPass>();
     optimizations()->append<SimplifyPass>();
