@@ -125,9 +125,9 @@ bool SHA256::update(Data data, unsigned len)  {
     G = s[6];
     H = s[7];
 
-#if 1
     P( A, B, C, D, E, F, G, H, W[ 0], 0x428A2F98 );
     P( H, A, B, C, D, E, F, G, W[ 1], 0x71374491 );
+#if 1
     P( G, H, A, B, C, D, E, F, W[ 2], 0xB5C0FBCF );
     P( F, G, H, A, B, C, D, E, W[ 3], 0xE9B5DBA5 );
     P( E, F, G, H, A, B, C, D, W[ 4], 0x3956C25B );

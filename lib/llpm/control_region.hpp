@@ -66,6 +66,10 @@ public:
     void finalize();
     DEF_GET_NP(finalized);
 
+    DEF_ARRAY_GET(blockSchedule);
+    DEF_ARRAY_GET(regSchedule);
+    DEF_ARRAY_GET(stageControllers);
+
     virtual void validityCheck() const;
 
     virtual bool refine(ConnectionDB& conns) const;
@@ -78,6 +82,12 @@ public:
 
     /// How many clock cycles does it take to compute this CR?
     unsigned clocks();
+    
+    virtual std::string print() const {
+        return str(boost::format(
+                "CR clks: %1%")
+                % _regSchedule.size());
+    }
 };
 
 class FormControlRegionPass : public ModulePass {

@@ -174,10 +174,31 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
 
 void VerilogSynthesizer::writeCRControl(Context& ctxt) {
     Module* mod = ctxt.module();
+    ControlRegion* cr = mod->as<ControlRegion>();
+    assert(cr != nullptr);
     ConnectionDB* conns = mod->conns();
     if (conns == NULL) {
         throw InvalidArgument("Verilog synthesizer cannot operate on "
                               "opaque modules!");
+    }
+
+    InputPort* outControlSink = nullptr;
+    OutputPort* inControlDriver = nullptr;
+    OutputPort* outControl = nullptr;
+    InputPort* inControl = nullptr;
+    if (cr->clocks() > 0) {
+        auto psc0 = cr->stageControllers(0);
+        inControl = psc0->vin();
+        inControlDriver = conns->findSource(psc0->vin());
+        auto pscF = cr->stageControllers(cr->stageControllers_size()-1);
+        vector<InputPort*> outPorts;
+        conns->findSinks(pscF->vout(), outPorts);
+        if (outPorts.size() != 1) {
+            throw InvalidArgument("All PipelineStageControllers must drive one "
+                                  "and only one input from vout!");
+        }
+        outControl = pscF->vout();
+        outControlSink = outPorts.front();
     }
 
     ctxt << "    wire cr_valid = \n";
@@ -186,8 +207,15 @@ void VerilogSynthesizer::writeCRControl(Context& ctxt) {
     }
     ctxt << "        1'b1;\n\n";
 
-    ctxt << "    wire cr_bp = \n"
-         << "        ~cr_valid | \n";
+    if (inControlDriver) {
+        ctxt << boost::format("    wire %1%_valid = cr_valid;\n")
+                % ctxt.name(inControlDriver);
+    } 
+
+    ctxt << "    wire cr_bp = \n";
+    if (cr->clocks() == 0) {
+         ctxt << "        ~cr_valid | \n";
+    }
     for (auto op: mod->outputs()) {
         ctxt << "        " << ctxt.name(op, true) << "_bp | \n";
     }
@@ -196,8 +224,19 @@ void VerilogSynthesizer::writeCRControl(Context& ctxt) {
     for (auto&& ip: mod->inputs()) {
         OutputPort* dummyOP = mod->getDriver(ip);
         ctxt.namer().assignName(dummyOP, mod, ctxt.name(ip, true));
-        ctxt << boost::format("    assign %1%_bp = cr_bp;\n")
-                        % ctxt.name(ip, true);
+        if (inControl) {
+            ctxt << boost::format("    assign %1%_bp = %2%_bp;\n")
+                            % ctxt.name(ip, true)
+                            % ctxt.name(inControl);
+        } else {
+            ctxt << boost::format("    assign %1%_bp = cr_bp;\n")
+                            % ctxt.name(ip, true);
+        }
+    }
+
+    if (outControlSink) {
+        ctxt << boost::format("    wire %1%_bp = cr_bp;\n")
+                % ctxt.name(outControlSink);
     }
 
     for (auto&& op: mod->outputs()) {
@@ -209,8 +248,14 @@ void VerilogSynthesizer::writeCRControl(Context& ctxt) {
                         % ctxt.name(op, true)
                         % ctxt.name(source);
 
-        ctxt << boost::format("    assign %1%_valid = cr_valid;\n")
-                        % ctxt.name(op, true);
+        if (outControl) {
+            ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
+                            % ctxt.name(op, true)
+                            % ctxt.name(outControl);
+        } else {
+            ctxt << boost::format("    assign %1%_valid = cr_valid;\n")
+                            % ctxt.name(op, true);
+        }
     }
 
     ctxt << "\n";
@@ -259,13 +304,24 @@ void VerilogSynthesizer::writeLocalIOControl(Context& ctxt) {
 
 void VerilogSynthesizer::writeBlocks(Context& ctxt) {
     ConnectionDB* conns = ctxt.module()->conns();
-    bool writeControlBits = !ctxt.module()->is<ControlRegion>();
     
     vector<Block*> blocks;
     ctxt.module()->blocks(blocks);
     for (Block* b: blocks) {
         if (dynamic_cast<DummyBlock*>(b) != NULL)
             continue;
+
+        const vector<Printer*>& possible_printers = _printers(b);
+        bool writeControlBits = !ctxt.module()->is<ControlRegion>();
+        if (possible_printers.size() == 0) {
+            auto blockName = ctxt.name(b);
+            throw ImplementationError(
+                str(boost::format(
+                        " Cannot translate block %1% of type %2% into verilog.") 
+                            % blockName
+                            % cpp_demangle(typeid(*b).name())));
+        }
+        auto printer = possible_printers.front();
 
         ctxt << "    // Block \"" << ctxt.primBlockName(b) << "\" type "
              << cpp_demangle(typeid(*b).name()) << "\n";
@@ -290,12 +346,15 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                             % ctxt.name(ip)
                             % opName;
             }
-            if (writeControlBits) {
-                ctxt << boost::format("    wire %1%_valid = %2%_valid;\n"
-                                      "    wire %1%_bp;\n")
+            if (writeControlBits || printer->alwaysWriteValid(ip)) {
+                ctxt << boost::format("    wire %1%_valid = %2%_valid;\n")
                             % ctxt.name(ip)
                             % opName;
             }
+            if (writeControlBits || printer->alwaysWriteBP(ip)) {
+                ctxt << boost::format("    wire %1%_bp;\n")
+                            % ctxt.name(ip);
+            } 
         }
 
         for (OutputPort* op: b->outputs()) {
@@ -305,9 +364,12 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                             % ctxt.name(op);
             }
 
-            if (writeControlBits) {
-                ctxt << boost::format("    wire %1%_valid;\n"
-                                      "    wire %1%_bp = ")
+            if (writeControlBits || printer->alwaysWriteValid(op)) {
+                ctxt << boost::format("    wire %1%_valid;\n")
+                                      % ctxt.name(op);
+            }
+            if (writeControlBits || printer->alwaysWriteBP(op)) {
+                ctxt << boost::format("    wire %1%_bp = ")
                             % ctxt.name(op);
                 InputPort* sink = findSink(conns, op);
                 if (sink) {
@@ -338,10 +400,6 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
         auto printer = possible_printers.front();
         printer->print(ctxt, b);
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
-        if (!writeControlBits) {
-            assert(!printer->customLID());
-            assert(b->firing() == DependenceRule::AND);
-        }
 
         if (writeControlBits && !printer->customLID()) {
             assert(b->outputsTied());
@@ -1159,7 +1217,12 @@ struct AttributePrinter {
                     % t
                     % (last ? "" : ",");
     }
-
+    bool alwaysWriteValid(Port*) const {
+        return false;
+    }
+    bool alwaysWriteBP(Port*) const {
+        return false;
+    }
 };
 
 template<typename BType, typename Attrs>
@@ -1177,6 +1240,8 @@ public:
         BType* mod = dynamic_cast<BType*>(b);
         assert(mod != NULL);
 
+        bool writeControlBits = !ctxt.module()->is<ControlRegion>();
+
         Attrs a;
         ctxt << "    " << a.name(mod) << " # ( \n";
         a(ctxt, mod);
@@ -1187,10 +1252,16 @@ public:
                 ctxt << boost::format("        .%1%(%2%),\n")
                         % ctxt.name(ip, true)
                         % ctxt.name(ip);
-            ctxt << boost::format("        .%1%_valid(%2%_valid),\n"
-                                  "        .%1%_bp(%2%_bp),\n")
-                    % ctxt.name(ip, true)
-                    % ctxt.name(ip);
+            if (writeControlBits || a.alwaysWriteValid(ip)) {
+                ctxt << boost::format("        .%1%_valid(%2%_valid),\n")
+                        % ctxt.name(ip, true)
+                        % ctxt.name(ip);
+            }
+            if (writeControlBits || a.alwaysWriteBP(ip)) {
+                ctxt << boost::format("        .%1%_bp(%2%_bp),\n")
+                        % ctxt.name(ip, true)
+                        % ctxt.name(ip);
+            }
         }
 
         for (OutputPort* op: mod->outputs()) {
@@ -1198,16 +1269,31 @@ public:
                 ctxt << boost::format("        .%1%(%2%),\n")
                         % ctxt.name(op, true)
                         % ctxt.name(op);
-            ctxt << boost::format("        .%1%_valid(%2%_valid),\n"
-                                  "        .%1%_bp(%2%_bp),\n")
-                    % ctxt.name(op, true)
-                    % ctxt.name(op);
+
+            if (writeControlBits || a.alwaysWriteValid(op)) {
+                ctxt << boost::format("        .%1%_valid(%2%_valid),\n")
+                        % ctxt.name(op, true)
+                        % ctxt.name(op);
+            }
+            if (writeControlBits || a.alwaysWriteBP(op)) {
+                ctxt << boost::format("        .%1%_bp(%2%_bp),\n")
+                        % ctxt.name(op, true)
+                        % ctxt.name(op);
+            }
         }
 
         ctxt << "        .clk(clk),\n"
              << "        .resetn(resetn)\n";
 
         ctxt << "    );\n";
+    }
+    bool alwaysWriteValid(Port* p) const {
+        Attrs a;
+        return a.alwaysWriteValid(p);
+    }
+    bool alwaysWriteBP(Port* p) const {
+        Attrs a;
+        return a.alwaysWriteBP(p);
     }
 };
 
@@ -1221,14 +1307,39 @@ struct ModuleAttr: public AttributePrinter {
 struct PipelineRegAttr: public AttributePrinter {
     std::string name(Block* m) {
         auto preg = m->as<PipelineRegister>();
-        if (bitwidth(preg->dout()->type()) == 0)
-            return "PipelineReg_DoubleWidth_NoData";
-        return "PipelineReg_DoubleWidth";
+        if (preg->enable() != nullptr) {
+            return "PipelineReg_Slave";
+        } else {
+            if (bitwidth(preg->dout()->type()) == 0)
+                return "PipelineReg_DoubleWidth_NoData";
+            return "PipelineReg_DoubleWidth";
+        }
     }
 
     void operator()(VerilogSynthesizer::Context& ctxt,
                     PipelineRegister* r) {
         print(ctxt, "Width", bitwidth(r->din()->type()), true);
+    }
+
+    bool alwaysWriteValid(Port* p) const {
+        return p->name() == "ce";
+    }
+};
+
+struct PSCRegAttr: public AttributePrinter {
+    std::string name(Block* m) {
+        auto psc = m->as<PipelineStageController>();
+        assert(psc != nullptr);
+        return "PipelineStageController";
+    }
+    void operator()(VerilogSynthesizer::Context&,
+                    PipelineStageController*) {
+    }
+    bool alwaysWriteValid(Port*) const {
+        return true;
+    }
+    bool alwaysWriteBP(Port* p) const {
+        return p->name() != "ce";
     }
 };
 
@@ -1292,6 +1403,8 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(make_shared<RTLRegPrinter>());
     _printers.appendEntry(make_shared<VModulePrinter<PipelineRegister,
                                                      PipelineRegAttr>>());
+    _printers.appendEntry(make_shared<VModulePrinter<PipelineStageController,
+                                                     PSCRegAttr>>());
     _printers.appendEntry(make_shared<VModulePrinter<BlockRAM,
                                                      BlockRAMAttr>>());
     _printers.appendEntry(make_shared<VModulePrinter<Latch, LatchAttr>>());

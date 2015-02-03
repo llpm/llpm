@@ -86,19 +86,28 @@ bool test1() {
     fflush(stdout);
     tests.memadd(1, 3);
     printf("done\n");
+
+    printf("addSS... \n");
     tests.addSS(numeric_limits<int64_t>::min(),
                 numeric_limits<int64_t>::min());
+    printf("addSS... \n");
     tests.addSS(numeric_limits<int64_t>::min(),
                 numeric_limits<int64_t>::max());
+    printf("addSS... \n");
     tests.addSS(numeric_limits<int64_t>::max(),
                 numeric_limits<int64_t>::min());
     for (unsigned i=0; i<1000; i++) {
+        printf("addUU... \n");
         tests.addUU(myrand<uint64_t>(), myrand<uint64_t>());
+        printf("addUS... \n");
         tests.addUS(myrand<uint64_t>(), myrand<int64_t>());
+        printf("addSS... \n");
         tests.addSS(myrand<int64_t>(), myrand<int64_t>());
     }
 
+    printf("setCond... \n");
     tests.setCond(false);
+    printf("condTest... \n");
     tests.condTest(64);
 
     printf("All tests passed!\n");

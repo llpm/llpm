@@ -614,7 +614,9 @@ void ControlRegion::schedule() {
             }
         }
     }
-    printf("    Inserted %u pipeline registers to balance CR\n", balanceRegs);
+    if (balanceRegs > 0) {
+        printf("    Inserted %u pipeline registers to balance CR\n", balanceRegs);
+    }
 
     for (auto& pr: pdv.stats) {
         auto stat = pr.second;
@@ -635,16 +637,27 @@ void ControlRegion::schedule() {
         controller->module(this);
         _stageControllers[stage] = controller;
         if (stage == 0) {
-            if (inputs().size() > 0) {
-                vector<OutputPort*> drivers;
-                this->internalDrivers(drivers);
-                auto inpJoin = Join::get(_conns, drivers);
-                controller->connectVin(&_conns, inpJoin->dout());
-            } else {
-                controller->connectVin(&_conns, getDriver(inputs().front()));
-            }
+            assert(inputs().size() > 0 && "We need an input for a valid signal!");
+            vector<OutputPort*> drivers;
+            this->internalDrivers(drivers);
+            auto inJoin = Join::get(_conns, drivers);
+            inJoin->name(name() + "_inJoin");
+            controller->connectVin(&_conns, inJoin->dout());
         } else {
             controller->connectVin(&_conns, _stageControllers[stage-1]->vout());
+        }
+
+        if (stage == _regSchedule.size()-1) {
+            for (OutputPort* op: outputs()) {
+                auto wait = new Wait(op->type());
+                wait->name(name() + "_pipeline_out");
+                wait->newControl(&_conns, controller->vout());
+                auto sink = getSink(op);
+                auto opDriver = _conns.findSource(sink); 
+                assert(opDriver != nullptr);
+                t.insertBetween(Connection(opDriver, sink),
+                                wait->din(), wait->dout());
+            }
         }
 
         for (auto preg: _regSchedule[stage]) {

@@ -220,6 +220,96 @@ end
 
 endmodule
 
+module PipelineStageController(
+    clk, resetn,
+    vin_valid, vin_bp,
+    vout_valid, vout_bp,
+    ce_valid);
+
+input wire clk;
+input wire resetn;
+
+input wire vin_valid;
+output wire vin_bp;
+
+output wire vout_valid;
+input wire vout_bp;
+
+output wire ce_valid;
+
+
+reg             valid;
+
+// Backpressure our input if we have data
+assign vin_bp = valid || ~vin_valid;
+
+// Must we absorb a token?
+wire incoming = vin_valid && ~vin_bp;
+
+// Is the current token leaving us?
+wire outgoing = valid && ~vout_bp;
+
+assign ce_valid = incoming;
+assign vout_valid = valid;
+
+always@(posedge clk)
+begin
+    if(~resetn)
+    begin
+        valid <= 1'b0;
+    end else begin
+        if (outgoing)
+        begin
+            valid <= 1'b0;
+        end
+        else if (incoming)
+        begin
+            valid <= 1'b1;
+        end 
+    end
+end
+
+endmodule
+
+
+// A pipeline register which contains no control logic, just a clock
+// enable
+module PipelineReg_Slave(
+    clk, resetn,
+    ce_valid,
+    d,
+    q);
+
+parameter Width = 8;
+
+input wire clk;
+input wire resetn;
+
+input wire [Width-1:0] d;
+
+output wire [Width-1:0] q;
+
+input wire ce_valid;
+
+reg [Width-1:0] data;
+
+assign q = data;
+
+always@(posedge clk)
+begin
+    if(~resetn)
+    begin
+        data <= {Width{1'bx}};
+    end else begin
+        if (ce_valid)
+        begin
+            data <= d;
+        end
+    end
+end
+
+endmodule
+
 // A latch is totally transparent, but isolates previous stuff from
 // backpressure by latching incoming data when downstream backpressure
 // requires it.

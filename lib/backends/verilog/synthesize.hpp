@@ -97,6 +97,12 @@ public:
         virtual bool customLID() const {
             return false;
         }
+        virtual bool alwaysWriteValid(Port*) const {
+            return false;
+        }
+        virtual bool alwaysWriteBP(Port*) const {
+            return false;
+        }
     };
 
     void writeIO(Context&);
