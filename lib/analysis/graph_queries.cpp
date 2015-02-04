@@ -355,9 +355,9 @@ void FindConstants(Module* mod,
                 init.push_back(op);
         }
     }
-    printf("Starting with %lu const ports\n", visitor.constPorts.size());
+    // printf("Starting with %lu const ports\n", visitor.constPorts.size());
     search.go(init);
-    printf("Ending with %lu const ports\n", visitor.constPorts.size());
+    // printf("Ending with %lu const ports\n", visitor.constPorts.size());
 
     if (constBlocks.size() == 0)
         constBlocks.swap(visitor.constBlocks);

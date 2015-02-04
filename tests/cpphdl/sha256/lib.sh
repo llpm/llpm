@@ -1,4 +1,4 @@
 #!/bin/bash
 
 ../../../bin/cpphdl sha256.bc SHA256 --workdir lib \
-    --backend ipxact --wedge axi
+    --backend ipxact --wedge axi --clk 150.0

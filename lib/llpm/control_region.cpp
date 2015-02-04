@@ -567,6 +567,10 @@ void ControlRegion::schedule() {
     _blockSchedule.resize(maxDepth + 1);
     Transformer t(this);
 
+    set<Port*> constPorts;
+    set<Block*> constBlocks;
+    queries::FindConstants(this, constPorts, constBlocks);
+
     /* Any connection spanning a depth > 0 needs to be pipelined. */
     // Build a list of blocks to be checked for additional pipelining.
     std::deque<Block*> blocks;
@@ -584,6 +588,9 @@ void ControlRegion::schedule() {
         auto srcStat = f->second;
 
         for (auto op: block->outputs()) {
+            // No need to pipeline const stuff
+            if (constPorts.count(op) > 0)
+                continue;
             PipelineRegister* preg = nullptr;
             vector<InputPort*> sinks;
             _conns.findSinks(op, sinks);
