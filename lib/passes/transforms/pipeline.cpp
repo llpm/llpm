@@ -5,6 +5,7 @@
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 #include <util/transform.hpp>
+#include <util/llvm_type.hpp>
 #include <analysis/graph.hpp>
 #include <analysis/graph_queries.hpp>
 
@@ -155,7 +156,7 @@ void PipelineCyclesPass::runInternal(Module* mod) {
         return;
 
     unsigned count = 0;
-
+    unsigned bits = 0;
 
     // Strictly speaking, pipeline registers are only necessary for
     // _correctness_ when there exists a cycle in the graph. Therefore,
@@ -185,9 +186,10 @@ void PipelineCyclesPass::runInternal(Module* mod) {
                // toBreak.source()->owner()->globalName().c_str(),
                // toBreak.sink()->owner()->globalName().c_str());
         count++;
+        bits += bitwidth(preg->dout()->type());
     }
 
-    printf("    Inserted %u pipeline registers\n", count);
+    printf("    Inserted %u pipeline registers (%u bits)\n", count, bits);
 }
 
 void LatchUntiedOutputs::runInternal(Module* mod) {
@@ -294,9 +296,15 @@ void PipelineFrequencyPass::runInternal(Module* mod) {
 
     DelayVisitor dv(_design.backend(), _maxDelay);
     dv.run(mod);
+    unsigned bits = 0;
+    for (auto p: dv.pipeline) {
+        bits += bitwidth(p->type());
+    }
     if (dv.pipeline.size() > 0) {
-        printf("Inserting %lu pipeline registers into %s to meet timing...\n",
+        printf("Inserting %lu pipeline registers (%u bits) "
+               "into %s to meet timing...\n",
                dv.pipeline.size(),
+               bits,
                mod->name().c_str());
     }
 

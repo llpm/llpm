@@ -7,6 +7,7 @@
 #include <analysis/graph.hpp>
 #include <analysis/graph_impl.hpp>
 #include <util/transform.hpp>
+#include <util/llvm_type.hpp>
 
 #include <boost/format.hpp>
 #include <boost/function.hpp>
@@ -580,6 +581,7 @@ void ControlRegion::schedule() {
     // Use a deque and pop from the front since the body may append to
     // the list
     unsigned balanceRegs = 0;
+    unsigned balanceBits = 0;
     while (!blocks.empty()) {
         auto block = blocks.front();
         blocks.pop_front();
@@ -618,11 +620,13 @@ void ControlRegion::schedule() {
 
             if (preg != nullptr) {
                 balanceRegs += 1;
+                balanceBits += bitwidth(op->type());
             }
         }
     }
     if (balanceRegs > 0) {
-        printf("    Inserted %u pipeline registers to balance CR\n", balanceRegs);
+        printf("    Inserted %u pipeline registers (%u bits) to balance CR\n",
+               balanceRegs, balanceBits);
     }
 
     for (auto& pr: pdv.stats) {
