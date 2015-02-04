@@ -103,6 +103,8 @@ struct FlowVisitor : public Visitor<OIEdge> {
 #endif
         bs.flow += ef;
         bs.visits += 1;
+        // if (bs.visits < bs.inputEdges)
+            // return TerminatePath;
         return Continue;
     }
 
@@ -111,21 +113,25 @@ struct FlowVisitor : public Visitor<OIEdge> {
         if (conns == NULL)
             return;
 
-        vector<OutputPort*> init;
-        mod->internalDrivers(init);
+        vector<OutputPort*> initVec;
+        mod->internalDrivers(initVec);
+
+        set<OutputPort*> init(initVec.begin(), initVec.end());
 
         for (const Connection& c: *conns) {
             if (!c.sink()->owner()->is<PipelineRegister>()) {
                 flowAmt[c.source()->owner()].outputEdges += 1;
                 flowAmt[c.sink()->owner()].inputEdges += 1;
             }
-            if (c.source()->owner()->is<PipelineRegister>()) {
-                init.push_back(c.source());
+            if (c.source()->owner()->is<PipelineRegister>() ||
+                c.source()->owner()->inputs().size() == 0) {
+                init.insert(c.source());
             }
         }
 
         for (auto op: init) {
-            if (op->owner()->is<PipelineRegister>()) {
+            if (op->owner()->is<PipelineRegister>() ||
+                op->owner()->inputs().size() == 0) {
                 flowAmt[op->owner()].flow = 0.0;
             } else {
                 flowAmt[op->owner()].flow = 1.0;
