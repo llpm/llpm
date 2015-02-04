@@ -21,7 +21,7 @@ using namespace std;
 
 namespace llpm {
 
-    // Verilog libraries
+// Verilog libraries
 static const vector<string> externalFiles {
     "/support/backends/verilog/select.sv",
     "/support/backends/verilog/pipeline.sv",
@@ -114,6 +114,15 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
     writeIO(ctxt);
     writeBlocks(ctxt);
 
+#if 0
+    bool globalBP = ctxt.module()->is<ControlRegion>();
+    if (globalBP) {
+        writeCRControl(ctxt);
+    } else {
+        writeLocalIOControl(ctxt);
+    }
+
+#endif
     ctxt << "endmodule\n";
     ctxt << "`default_nettype wire\n";
 
@@ -164,12 +173,7 @@ void VerilogSynthesizer::writeIO(Context& ctxt) {
          << "    input wire resetn\n"
          << ");\n\n";
 
-    bool globalBP = ctxt.module()->is<ControlRegion>();
-    if (globalBP) {
-        writeCRControl(ctxt);
-    } else {
-        writeLocalIOControl(ctxt);
-    }
+
 }
 
 void VerilogSynthesizer::writeCRControl(Context& ctxt) {
@@ -304,9 +308,91 @@ void VerilogSynthesizer::writeLocalIOControl(Context& ctxt) {
 
 void VerilogSynthesizer::writeBlocks(Context& ctxt) {
     ConnectionDB* conns = ctxt.module()->conns();
+    Module* mod = ctxt.module();
     
-    vector<Block*> blocks;
-    ctxt.module()->blocks(blocks);
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
+
+    for (auto ip: mod->inputs()) {
+        blocks.insert(mod->getDriver(ip)->owner());
+    }
+    for (auto op: mod->outputs()) {
+        blocks.insert(mod->getSink(op)->owner());
+    }
+
+    ctxt << "/*********\n"
+         << "   Signal forward defs\n"
+         << " *********/\n"
+         << "\n";
+        
+    for (Block* b: blocks) {
+        const vector<Printer*>& possible_printers = _printers(b);
+        bool writeControlBits = !ctxt.module()->is<ControlRegion>();
+        if (possible_printers.size() == 0) {
+            auto blockName = ctxt.name(b);
+            throw ImplementationError(
+                str(boost::format(
+                        " Cannot translate block %1% of type %2% into verilog.") 
+                            % blockName
+                            % cpp_demangle(typeid(*b).name())));
+        }
+        auto printer = possible_printers.front();
+
+        ctxt << "    // Signal fwd defs \"" << ctxt.primBlockName(b) << "\" type "
+             << cpp_demangle(typeid(*b).name()) << "\n";
+        for (InputPort* ip: b->inputs()) {
+            if (bitwidth(ip->type()) > 0) {
+                ctxt << boost::format("    wire [%1%-1:0] %2%;\n")
+                            % bitwidth(ip->type())
+                            % ctxt.name(ip);
+            }
+            if (writeControlBits || printer->alwaysWriteValid(ip)) {
+                ctxt << boost::format("    wire %1%_valid;\n")
+                            % ctxt.name(ip);
+            }
+            if (writeControlBits || printer->alwaysWriteBP(ip)) {
+                ctxt << boost::format("    wire %1%_bp;\n")
+                            % ctxt.name(ip);
+            } 
+        }
+
+        for (OutputPort* op: b->outputs()) {
+            if (bitwidth(op->type()) > 0) {
+                ctxt << boost::format("    wire [%1%-1:0] %2%;\n")
+                            % bitwidth(op->type())
+                            % ctxt.name(op);
+            }
+
+            if (writeControlBits || printer->alwaysWriteValid(op)) {
+                ctxt << boost::format("    wire %1%_valid;\n")
+                                      % ctxt.name(op);
+            }
+            if (writeControlBits || printer->alwaysWriteBP(op)) {
+                ctxt << boost::format("    wire %1%_bp;\n")
+                            % ctxt.name(op);
+            }
+        }
+
+        ctxt << "\n";
+    }
+
+    ctxt << "/*********\n"
+         << "   Module I/O Connections\n"
+         << " *********/\n"
+         << "\n";
+
+    bool globalBP = ctxt.module()->is<ControlRegion>();
+    if (globalBP) {
+        writeCRControl(ctxt);
+    } else {
+        writeLocalIOControl(ctxt);
+    }
+
+    ctxt << "/*********\n"
+         << "   Block implementations\n"
+         << " *********/\n"
+         << "\n";
+
     for (Block* b: blocks) {
         if (dynamic_cast<DummyBlock*>(b) != NULL)
             continue;
@@ -334,42 +420,28 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                         ctxt.name(ip).c_str());
                 fprintf(stderr, "         input %u of %lu of block %s type %s\n",
                                 b->inputNum(ip)+1, b->inputs().size(),
-                                ctxt.name(b).c_str(), cpp_demangle(typeid(*b).name()).c_str());
+                                ctxt.name(b).c_str(),
+                                cpp_demangle(typeid(*b).name()).c_str());
                 opName = "UNKNOWN";
             } else {
                 opName = ctxt.name(c.source());
             }
 
             if (bitwidth(ip->type()) > 0) {
-                ctxt << boost::format("    wire [%1%-1:0] %2% = %3%;\n")
-                            % bitwidth(ip->type())
+                ctxt << boost::format("    assign %1% = %2%;\n")
                             % ctxt.name(ip)
                             % opName;
             }
             if (writeControlBits || printer->alwaysWriteValid(ip)) {
-                ctxt << boost::format("    wire %1%_valid = %2%_valid;\n")
+                ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
                             % ctxt.name(ip)
                             % opName;
             }
-            if (writeControlBits || printer->alwaysWriteBP(ip)) {
-                ctxt << boost::format("    wire %1%_bp;\n")
-                            % ctxt.name(ip);
-            } 
         }
 
         for (OutputPort* op: b->outputs()) {
-            if (bitwidth(op->type()) > 0) {
-                ctxt << boost::format("    wire [%1%-1:0] %2%;\n")
-                            % bitwidth(op->type())
-                            % ctxt.name(op);
-            }
-
-            if (writeControlBits || printer->alwaysWriteValid(op)) {
-                ctxt << boost::format("    wire %1%_valid;\n")
-                                      % ctxt.name(op);
-            }
             if (writeControlBits || printer->alwaysWriteBP(op)) {
-                ctxt << boost::format("    wire %1%_bp = ")
+                ctxt << boost::format("    assign %1%_bp = ")
                             % ctxt.name(op);
                 InputPort* sink = findSink(conns, op);
                 if (sink) {
@@ -1223,6 +1295,9 @@ struct AttributePrinter {
     bool alwaysWriteBP(Port*) const {
         return false;
     }
+    bool hasAttr() const {
+        return true;
+    }
 };
 
 template<typename BType, typename Attrs>
@@ -1243,9 +1318,14 @@ public:
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
 
         Attrs a;
-        ctxt << "    " << a.name(mod) << " # ( \n";
-        a(ctxt, mod);
-        ctxt << "    ) " << ctxt.name(mod) << " (\n";
+        if (a.hasAttr()) {
+            ctxt << "    " << a.name(mod) << " # ( \n";
+            a(ctxt, mod);
+            ctxt << "    ) " << ctxt.name(mod) << " (\n";
+        } else {
+            ctxt << "    " << a.name(mod)
+                 << " " << ctxt.name(mod) << " (\n";
+        }
 
         for (InputPort* ip: mod->inputs()) {
             if (bitwidth(ip->type()) > 0)
@@ -1302,6 +1382,9 @@ struct ModuleAttr: public AttributePrinter {
         return m->name();
     }
     void operator()(VerilogSynthesizer::Context&, Block*) { }
+    bool hasAttr() const {
+        return false;
+    }
 };
 
 struct PipelineRegAttr: public AttributePrinter {
@@ -1340,6 +1423,9 @@ struct PSCRegAttr: public AttributePrinter {
     }
     bool alwaysWriteBP(Port* p) const {
         return p->name() != "ce";
+    }
+    bool hasAttr() const {
+        return false;
     }
 };
 
@@ -1477,8 +1563,8 @@ void VerilogSynthesizer::writeWrapper(
         os << "\n";
     }
 
-    os << "    input clk,\n"
-       << "    input resetn\n"
+    os << "    input wire clk,\n"
+       << "    input wire resetn\n"
        << ");\n";
 
     for (auto& pr: pinDefs) {
