@@ -240,6 +240,7 @@ public:
                    std::vector<InputPort*>& out) const;
     void findSinks(const OutputPort* op,
                    std::set<InputPort*>& out) const;
+    unsigned countSinks(const OutputPort* op) const;
 
     OutputPort* findSource(const InputPort* ip) const;
     void find(Block* b, std::vector<Connection>&) const;

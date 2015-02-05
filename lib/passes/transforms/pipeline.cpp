@@ -308,9 +308,19 @@ void PipelineFrequencyPass::runInternal(Module* mod) {
                mod->name().c_str());
     }
 
+    set<Port*> constPorts;
+    set<Block*> constBlocks;
+    queries::FindConstants(mod, constPorts, constBlocks);
+
     Transformer t(mod);
     for (auto op: dv.pipeline) {
         if (op->owner()->is<PipelineRegister>())
+            continue;
+        if (constPorts.count(op) > 0)
+            // Don't pipeline constants
+            continue;
+        if (t.conns()->countSinks(op) == 0)
+            // Don't pipeline things with no consumer
             continue;
         auto preg = new PipelineRegister(op);
         t.insertAfter(op, preg);

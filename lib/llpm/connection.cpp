@@ -58,6 +58,15 @@ void ConnectionDB::findSinks(const OutputPort* op,
     }
 }
 
+unsigned ConnectionDB::countSinks(const OutputPort* op) const
+{
+    const auto& f = _sinkIdx.find((OutputPort*)op);
+    if (f != _sinkIdx.end()) {
+        return f->second.size();
+    }
+    return 0;
+}
+
 OutputPort* ConnectionDB::findSource(const InputPort* ip) const
 {
     auto f = _sourceIdx.find((InputPort*)ip);
