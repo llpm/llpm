@@ -14,53 +14,6 @@ using namespace std;
 namespace llpm {
 namespace queries {
 
-typedef Path<OutputPort, InputPort> CyclePath;
-struct CycleDetectionVisitor : public Visitor<CyclePath> {
-    set< InputPort* > seen;
-    bool foundCycle;
-
-    CycleDetectionVisitor() :
-        foundCycle(false) {
-    }
-
-    // Visit a vertex in the graph
-    Terminate visit(const ConnectionDB*,
-                    const CyclePath& path) {
-        InputPort* current = path.endPort();
-        Block* block = current->owner();
-        if (block->hasCycle()) {
-            foundCycle = true;
-            return TerminateSearch;
-        }
-
-        if (path.hasCycle()) {
-            // printf("Block %p %s\n", block, block->name().c_str());
-            // p2.print();
-            foundCycle = true;
-            return TerminateSearch;
-        } else if (seen.count(path.endPort()) > 0) {
-            return TerminatePath;
-        } else {
-            seen.insert(path.endPort());
-            return Continue;
-        }
-    }
-};
-
-bool BlockCycleExists(const ConnectionDB* conns,
-                      const set<OutputPort*>& initList) {
-    for (auto init: initList) {
-        CycleDetectionVisitor visitor;
-        GraphSearch<CycleDetectionVisitor, DFS> search(conns, visitor);
-        vector<OutputPort*> op({init});
-        search.go(op);
-        if (visitor.foundCycle)
-            return true;
-    }
-    return false;
-}
-
-
 typedef Edge<InputPort, OutputPort> IOEdge;
 struct DominatorVisitor : public Visitor<IOEdge> {
     std::set<OutputPort*> dominators;
@@ -266,6 +219,18 @@ struct CycleFindingVisitor: public Visitor<OIEdge> {
         return Continue;
     }
 };
+
+bool BlockCycleExists(const ConnectionDB* conns,
+                      const set<OutputPort*>& initList) {
+    CycleFindingVisitor visitor;
+    visitor.ignoreBlock = [](const Block*) { return false; };
+    GraphSearch<CycleFindingVisitor, DFS> search(conns, visitor);
+    search.go(initList);
+    if (visitor.cycle.size() > 0) {
+        return true;
+    }
+    return false;
+}
 
 bool FindCycle(Module* mod,
                boost::function<bool(Block*)> ignoreBlock,
