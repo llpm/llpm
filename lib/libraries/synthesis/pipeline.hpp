@@ -140,6 +140,10 @@ public:
         assert(op == &_dout);
         return inputs();
     }
+
+    virtual float logicalEffort(InputPort*, OutputPort*) const {
+        return 0.5;
+    }
 };
 
 };

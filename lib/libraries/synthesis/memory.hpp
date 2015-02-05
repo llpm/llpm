@@ -49,6 +49,12 @@ public:
     virtual bool outputsSeparate() const {
         return true;
     }
+
+    virtual float logicalEffort(InputPort* ip, OutputPort*) const {
+        if (ip == _write.din())
+            return 0.5;
+        return 0.1;
+    }
 };
 
 
@@ -89,6 +95,10 @@ public:
 
     virtual bool outputsSeparate() const {
         return true;
+    }
+
+    virtual float logicalEffort(InputPort*, OutputPort*) const {
+        return 1.0;
     }
 };
 
