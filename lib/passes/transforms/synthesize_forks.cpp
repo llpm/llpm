@@ -40,7 +40,13 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         auto fork = new Fork(op->type(), virt);
         if (!virt)
             realForks++;
-        conns->connect(op, fork->din());
+        if (!virt && _pipeline) {
+            auto preg = new PipelineRegister(op);
+            conns->connect(op, preg->din());
+            conns->connect(preg->dout(), fork->din());
+        } else {
+            conns->connect(op, fork->din());
+        }
         for(auto sink: sinks) {
             conns->disconnect(op, sink);
             conns->connect(fork->createOutput(), sink);

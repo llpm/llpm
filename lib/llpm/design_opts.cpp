@@ -130,8 +130,8 @@ void Design::notify(variables_map& vm) {
     optimizations()->append<GVPrinterPass>();
 
     optimizations()->append<PipelineCyclesPass>();
-    optimizations()->append<LatchUntiedOutputs>();
-    optimizations()->append<SynthesizeForksPass>();
+    optimizations()->append<LatchUntiedOutputs>(clkFreq > 0.0);
+    optimizations()->append<SynthesizeForksPass>(clkFreq > 0.0);
     optimizations()->append<CheckConnectionsPass>();
     optimizations()->append<CheckOutputsPass>();
     optimizations()->append<CheckCyclesPass>();

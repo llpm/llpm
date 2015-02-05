@@ -210,8 +210,13 @@ void LatchUntiedOutputs::runInternal(Module* mod) {
 
         // If the outputs aren't tied, a latch may be necessary
         for (auto op: b->outputs()) {
-            auto l = new Latch(op);
-            t.insertAfter(op, l);
+            if (!_useRegs) {
+                auto l = new Latch(op);
+                t.insertAfter(op, l);
+            } else {
+                auto p = new PipelineRegister(op);
+                t.insertAfter(op, p);
+            }
             count++;
         }
     }

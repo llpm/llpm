@@ -36,9 +36,11 @@ public:
 };
 
 class LatchUntiedOutputs: public ModulePass {
+    bool _useRegs;
 public:
-    LatchUntiedOutputs(Design& d) :
-        ModulePass(d) 
+    LatchUntiedOutputs(Design& d, bool useRegs) :
+        ModulePass(d),
+        _useRegs(useRegs)
     { }
 
     virtual void runInternal(Module*);

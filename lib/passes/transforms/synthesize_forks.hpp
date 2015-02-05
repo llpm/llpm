@@ -8,12 +8,16 @@ namespace llpm {
 class ConnectionDB;
 
 class SynthesizeForksPass : public ModulePass {
+    bool _pipeline;
+
 protected:
     virtual void runInternal(Module* mod);
 
 public:
-    SynthesizeForksPass(Design& d) :
-        ModulePass(d) { }
+    SynthesizeForksPass(Design& d, bool pipeline) :
+        ModulePass(d),
+        _pipeline(pipeline)
+    { }
 };
 
 } // namespace llpm
