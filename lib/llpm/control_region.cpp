@@ -8,6 +8,7 @@
 #include <analysis/graph_impl.hpp>
 #include <util/transform.hpp>
 #include <util/llvm_type.hpp>
+#include <passes/transforms/simplify.hpp>
 
 #include <boost/format.hpp>
 #include <boost/function.hpp>
@@ -461,6 +462,11 @@ void ControlRegion::finalize() {
     }
 
     this->unifyOutput();
+
+    SimplifyPass sp(design());
+    sp.runInternal(this);
+
+    this->schedule();
     this->_finalized = true;
 }
 
@@ -535,6 +541,9 @@ struct PipelineDepthVisitor : public Visitor<OIEdge> {
 
         vector<OutputPort*> init;
         cr->internalDrivers(init);
+        for (auto op: init) {
+            stats[op->owner()].visits = op->owner()->inputs().size();
+        }
 
         std::set<Block*> blocks;
         conns->findAllBlocks(blocks);
@@ -545,7 +554,7 @@ struct PipelineDepthVisitor : public Visitor<OIEdge> {
             }
         }
 
-        GraphSearch<PipelineDepthVisitor, DFS> search(conns, *this);
+        GraphSearch<PipelineDepthVisitor, BFS> search(conns, *this);
         search.go(init);
         assert(stats.size() >= blocks.size());
     }
@@ -554,18 +563,10 @@ struct PipelineDepthVisitor : public Visitor<OIEdge> {
 void ControlRegion::schedule() {
     _regSchedule.clear();
     _blockSchedule.clear();
-    PipelineDepthVisitor pdv;
 
+    PipelineDepthVisitor pdv;
     pdv.run(this);
 
-    unsigned maxDepth = 0;
-    for (auto& pr: pdv.stats) {
-        auto stat = pr.second;
-        maxDepth = std::max(maxDepth, stat.depth);
-    }
-    _regSchedule.resize(maxDepth);
-    _stageControllers.resize(maxDepth);
-    _blockSchedule.resize(maxDepth + 1);
     Transformer t(this);
 
     set<Port*> constPorts;
@@ -613,6 +614,7 @@ void ControlRegion::schedule() {
                         } else {
                             pdv.stats[preg].depth = srcStat.depth;
                         }
+                        pdv.stats[preg].visits = 1;
                     }
                     t.insertBetween(Connection(op, sink), nullptr, preg->dout());
                 }
@@ -621,6 +623,7 @@ void ControlRegion::schedule() {
             if (preg != nullptr) {
                 balanceRegs += 1;
                 balanceBits += bitwidth(op->type());
+                assert(_conns.countSinks(preg->dout()) > 0);
             }
         }
     }
@@ -629,11 +632,23 @@ void ControlRegion::schedule() {
                balanceRegs, balanceBits);
     }
 
+    unsigned maxDepth = 0;
+    for (auto& pr: pdv.stats) {
+        auto stat = pr.second;
+        maxDepth = std::max(maxDepth, stat.depth);
+        assert(stat.visits == pr.first->inputs().size());
+    }
+    _regSchedule.resize(maxDepth);
+    _stageControllers.resize(maxDepth);
+    _blockSchedule.resize(maxDepth + 1);
+
     for (auto& pr: pdv.stats) {
         auto stat = pr.second;
         auto block = pr.first;
         if (block->is<PipelineRegister>()) {
-            _regSchedule[stat.depth].insert(block->as<PipelineRegister>());
+            auto preg = block->as<PipelineRegister>();
+            assert(_conns.countSinks(preg->dout()) > 0);
+            _regSchedule[stat.depth].insert(preg);
         } else {
             _blockSchedule[stat.depth].insert(block);
         }
