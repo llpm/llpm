@@ -209,6 +209,7 @@ void CPPHDLClass::getGEPChainAsVector(llvm::Value* ptr,
 
     llvm::Instruction* ins = llvm::dyn_cast_or_null<llvm::Instruction>(ptr);
     if (ins == NULL) {
+        fprintf(stderr, "%s\n", valuestr(ptr).c_str());
         throw InvalidArgument(
             "Only instructions which get pointers can be used to refer "
             "to member variables");

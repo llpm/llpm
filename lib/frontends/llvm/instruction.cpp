@@ -229,17 +229,35 @@ bool WrapperInstruction<Extract>::refine(
         llvm::ConstantInt* ci =
             llvm::dyn_cast_or_null<llvm::ConstantInt>(indexOp);
 
+        auto s = new Split(input()->type());
+        conns.remap(input(), s->din());
         if (ci != NULL) {
-            auto s = new Split(input()->type());
             auto e = new Extract(ee->getVectorOperand()->getType(),
                                  {(unsigned)ci->getLimitedValue()});
             conns.connect(s->dout(0), e->din());
-            conns.remap(input(), s->din());
             conns.remap(output(), e->dout());
             return true;
-        }
+        } else {
+            auto N = numContainedTypes(s->dout(0)->type());
+            assert(N > 0);
+            auto m = new Multiplexer(N,
+                                     nthType(s->dout(0)->type(), 0));
 
-        //TODO: dynamic index selection
+            auto idxTrunc = new IntTruncate(s->dout(1)->type(),
+                                            llvm::Type::getIntNTy(ee->getContext(),
+                                                                  idxwidth(N)));
+            conns.connect(s->dout(1), idxTrunc->din());
+            auto j = m->din()->join(conns);
+            conns.connect(j->din(0), idxTrunc->dout());
+            assert(j->din_size() == N+1);
+
+            auto dataSplit = s->dout(0)->split(conns);
+            for (unsigned i=0; i<N; i++) {
+                conns.connect(j->din(i+1), dataSplit->dout(i));
+            }
+            conns.remap(output(), m->dout()); 
+            return true;
+        }
     }
     return false;
 }
