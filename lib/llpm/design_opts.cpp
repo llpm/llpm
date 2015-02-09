@@ -108,30 +108,32 @@ void Design::notify(variables_map& vm) {
         break;
     }
 
+    float clkFreq = vm["clk"].as<float>() * 1e6;
+
     elaborations()->append<SynthesizeMemoryPass>();
     elaborations()->append<SynthesizeTagsPass>();
     elaborations()->append<RefinePass>();
 
-    optimizations()->append<SimplifyPass>();
-    optimizations()->append<CanonicalizeInputs>();
-    optimizations()->append<SimplifyWaits>();
-    optimizations()->append<SimplifyPass>();
+    // optimizations()->append<SimplifyPass>();
+    // optimizations()->append<CanonicalizeInputs>();
+    // optimizations()->append<SimplifyWaits>();
+    // optimizations()->append<SimplifyPass>();
 
-    float clkFreq = vm["clk"].as<float>() * 1e6;
+    optimizations()->append<SimplifyPass>();
+    optimizations()->append<FormControlRegionPass>();
+    optimizations()->append<SimplifyPass>();
+    optimizations()->append<PipelineDependentsPass>();
+    // optimizations()->append<GVPrinterPass>();
+
+    optimizations()->append<LatchUntiedOutputs>(clkFreq > 0.0);
+    optimizations()->append<SynthesizeForksPass>(clkFreq > 0.0);
+
     if (clkFreq > 0.0) {
         Time period = Time::s(1.0 / clkFreq);
         optimizations()->append<PipelineFrequencyPass>(period);
     }
-    optimizations()->append<SimplifyPass>();
-
-    optimizations()->append<FormControlRegionPass>();
-    optimizations()->append<SimplifyPass>();
-    optimizations()->append<PipelineDependentsPass>();
-    optimizations()->append<GVPrinterPass>();
-
     optimizations()->append<PipelineCyclesPass>();
-    optimizations()->append<LatchUntiedOutputs>(clkFreq > 0.0);
-    optimizations()->append<SynthesizeForksPass>(clkFreq > 0.0);
+
     optimizations()->append<CheckConnectionsPass>();
     optimizations()->append<CheckOutputsPass>();
     optimizations()->append<CheckCyclesPass>();
