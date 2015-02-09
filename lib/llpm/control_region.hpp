@@ -33,7 +33,6 @@ class ControlRegion : public ContainerModule {
     std::vector<std::set<PipelineRegister*>> _regSchedule;
     std::vector<PipelineStageController*> _stageControllers;
 
-    void schedule();
 
     std::set<InputPort*> findDependences(OutputPort*) const;
 
@@ -82,6 +81,7 @@ public:
 
     /// How many clock cycles does it take to compute this CR?
     unsigned clocks();
+    void schedule();
     
     virtual std::string print() const {
         return str(boost::format(

@@ -4,7 +4,12 @@
 #include <passes/pass.hpp>
 #include <util/time.hpp>
 
+#include <map>
+
 namespace llpm {
+
+// fwd defs
+class OutputPort;
 
 class PipelineDependentsPass: public ModulePass {
 public:
@@ -24,19 +29,25 @@ public:
     virtual void runInternal(Module*);
 };
 
-class PipelineFrequencyPass: public ModulePass {
+class PipelineFrequencyPass: public Pass {
     Time _maxDelay;
+    std::map<OutputPort*, Time> _modOutDelays;
+
+    friend struct DelayVisitor;
+    bool runOnModule(Module* mod, Time initTime);
+
 public:
     PipelineFrequencyPass(Design& d, Time maxDelay) :
-        ModulePass(d),
+        Pass(d),
         _maxDelay(maxDelay)
     { }
 
-    virtual void runInternal(Module*);
+    virtual bool run();
 };
 
 class LatchUntiedOutputs: public ModulePass {
     bool _useRegs;
+
 public:
     LatchUntiedOutputs(Design& d, bool useRegs) :
         ModulePass(d),

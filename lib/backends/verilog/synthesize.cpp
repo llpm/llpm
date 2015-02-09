@@ -84,6 +84,11 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
                                      Module* mod,
                                      std::set<FileSet::File*>& files) 
 {
+    if (mod->is<ControlRegion>()) {
+        // Force a schedule if not yet done.
+        mod->as<ControlRegion>()->clocks();
+    }
+
     for (auto f: externalFiles) {
         auto cpy = dir.copy(Directories::executablePath() + f);
         files.insert(cpy);

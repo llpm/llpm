@@ -466,7 +466,6 @@ void ControlRegion::finalize() {
     SimplifyPass sp(design());
     sp.runInternal(this);
 
-    this->schedule();
     this->_finalized = true;
 }
 
