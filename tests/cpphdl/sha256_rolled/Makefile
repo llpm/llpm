@@ -36,5 +36,11 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 %.pdf: obj/%.gv
 	dot -Tpdf -o $@ $< || true
 
+freq: sha256.bc FORCE
+	mkdir -p freq
+	cd freq && ../../../../scripts/benchmarking/freqSweep.py --backend verilog --wedge axi ../sha256.bc SHA256
+
+FORCE:
+
 clean:
 	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll *.tmp
