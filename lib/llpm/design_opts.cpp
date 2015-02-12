@@ -69,6 +69,9 @@ void Design::buildOpts() {
         ("clk", value<float>()->default_value(-1.0)
                               ->required(),
             "Pipeline the design targeting this clock frequency, in MHz")
+        ("control_regions", value<bool>()->default_value(true)
+                                         ->required(),
+            "Controls whether or not control regions are built")
     ;
     _workingDir.addOpts(_optDesc);
 }
@@ -119,8 +122,10 @@ void Design::notify(variables_map& vm) {
     // optimizations()->append<SimplifyWaits>();
     // optimizations()->append<SimplifyPass>();
 
-    optimizations()->append<SimplifyPass>();
-    optimizations()->append<FormControlRegionPass>();
+    if (vm["control_regions"].as<bool>()) {
+        optimizations()->append<SimplifyPass>();
+        optimizations()->append<FormControlRegionPass>();
+    }
     optimizations()->append<SimplifyPass>();
     optimizations()->append<PipelineDependentsPass>();
     // optimizations()->append<GVPrinterPass>();
