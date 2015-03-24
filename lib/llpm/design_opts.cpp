@@ -69,6 +69,9 @@ void Design::buildOpts() {
         ("clk", value<float>()->default_value(-1.0)
                               ->required(),
             "Pipeline the design targeting this clock frequency, in MHz")
+        ("control_regions", value<bool>()->default_value(true)
+                                         ->required(),
+            "Controls whether or not control regions are built")
     ;
     _workingDir.addOpts(_optDesc);
 }
@@ -108,30 +111,34 @@ void Design::notify(variables_map& vm) {
         break;
     }
 
+    float clkFreq = vm["clk"].as<float>() * 1e6;
+
     elaborations()->append<SynthesizeMemoryPass>();
     elaborations()->append<SynthesizeTagsPass>();
     elaborations()->append<RefinePass>();
 
-    optimizations()->append<SimplifyPass>();
-    optimizations()->append<CanonicalizeInputs>();
-    optimizations()->append<SimplifyWaits>();
-    optimizations()->append<SimplifyPass>();
+    // optimizations()->append<SimplifyPass>();
+    // optimizations()->append<CanonicalizeInputs>();
+    // optimizations()->append<SimplifyWaits>();
+    // optimizations()->append<SimplifyPass>();
 
-    float clkFreq = vm["clk"].as<float>() * 1e6;
+    if (vm["control_regions"].as<bool>()) {
+        optimizations()->append<SimplifyPass>();
+        optimizations()->append<FormControlRegionPass>();
+    }
+    optimizations()->append<SimplifyPass>();
+    optimizations()->append<PipelineDependentsPass>();
+    // optimizations()->append<GVPrinterPass>();
+
+    optimizations()->append<LatchUntiedOutputs>(clkFreq > 0.0);
+    optimizations()->append<SynthesizeForksPass>(clkFreq > 0.0);
+
     if (clkFreq > 0.0) {
         Time period = Time::s(1.0 / clkFreq);
         optimizations()->append<PipelineFrequencyPass>(period);
     }
-    optimizations()->append<SimplifyPass>();
-
-    optimizations()->append<FormControlRegionPass>();
-    optimizations()->append<SimplifyPass>();
-    optimizations()->append<PipelineDependentsPass>();
-    optimizations()->append<GVPrinterPass>();
-
     optimizations()->append<PipelineCyclesPass>();
-    optimizations()->append<LatchUntiedOutputs>(clkFreq > 0.0);
-    optimizations()->append<SynthesizeForksPass>(clkFreq > 0.0);
+
     optimizations()->append<CheckConnectionsPass>();
     optimizations()->append<CheckOutputsPass>();
     optimizations()->append<CheckCyclesPass>();

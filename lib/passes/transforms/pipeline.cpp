@@ -30,12 +30,14 @@ void PipelineDependentsPass::runInternal(Module* mod) {
             numNormalOutputs <= 1)
             continue;
 
+#if 0
         if (block->is<Split>()) {
             // if this block is a "split" we can resolve the non-tied
             // inputs by replacing it with some extracts instead.
             if (block->as<Split>()->refineToExtracts(*t.conns()))
                 continue;
         }
+#endif
 
         // Since this block has dependent outputs, all of them better
         // be connected to pipeline regs!
@@ -234,21 +236,33 @@ struct DelayVisitor : public Visitor<OIEdge> {
         { }
     };
 
+    PipelineFrequencyPass* pipePass;
     Backend* backend;
     Time period;
     map<OutputPort*, Stats> delays;
     set<OutputPort*> pipeline;
+    set<Port*> constPorts;
+    set<Block*> constBlocks;
 
-    DelayVisitor(Backend* b, Time period) :
+    DelayVisitor(PipelineFrequencyPass* pass, Backend* b, Time period) :
+        pipePass(pass),
         backend(b),
         period(period)
     { }
 
     Time edgeDelay(OutputPort* op) {
-        if (pipeline.count(op) > 0)
+        if (pipeline.count(op) > 0 || constPorts.count(op) > 0)
             return Time();
         Stats& s = delays[op];
-        return s.inputPathDelay + backend->maxLatency(op);
+        if (op->owner()->is<MutableModule>()) {
+            auto f = pipePass->_modOutDelays.find(op);
+            if (f == pipePass->_modOutDelays.end()) {
+                pipePass->runOnModule(op->owner()->as<Module>(), s.inputPathDelay);
+            }
+            return pipePass->_modOutDelays[op];
+        } else {
+            return s.inputPathDelay + backend->maxLatency(op);
+        }
     }
 
     Terminate visit(const ConnectionDB*, const OIEdge& edge) {
@@ -275,17 +289,24 @@ struct DelayVisitor : public Visitor<OIEdge> {
         return Continue;
     }
 
-    void run(Module* mod) {
+    void run(Module* mod, Time initTime) {
         ConnectionDB* conns = mod->conns();
         if (conns == NULL)
             return;
+
+        queries::FindConstants(mod, constPorts, constBlocks);
 
         vector<OutputPort*> init;
         mod->internalDrivers(init);
 
         for (auto op: init) {
-            if (op->owner()->is<PipelineRegister>()) {
-                pipeline.insert(op->owner()->as<PipelineRegister>()->dout());
+            delays[op].inputPathDelay = initTime;
+        }
+
+        set<Block*> blocks;
+        for (auto block: blocks) {
+            if (block->is<PipelineRegister>()) {
+                pipeline.insert(block->as<PipelineRegister>()->dout());
             }
         }
 
@@ -294,13 +315,13 @@ struct DelayVisitor : public Visitor<OIEdge> {
     }
 };
 
-void PipelineFrequencyPass::runInternal(Module* mod) {
+bool PipelineFrequencyPass::runOnModule(Module* mod, Time initTime) {
     // TODO: We assume a delay of 0.0 at the start of the module. That is
     // wrong. Get a delay from a previous execution of this function. Better
     // yet, run this function recursively with that number.
 
-    DelayVisitor dv(_design.backend(), _maxDelay);
-    dv.run(mod);
+    DelayVisitor dv(this, _design.backend(), _maxDelay);
+    dv.run(mod, initTime);
     unsigned bits = 0;
     for (auto p: dv.pipeline) {
         bits += bitwidth(p->type());
@@ -313,16 +334,9 @@ void PipelineFrequencyPass::runInternal(Module* mod) {
                mod->name().c_str());
     }
 
-    set<Port*> constPorts;
-    set<Block*> constBlocks;
-    queries::FindConstants(mod, constPorts, constBlocks);
-
     Transformer t(mod);
     for (auto op: dv.pipeline) {
         if (op->owner()->is<PipelineRegister>())
-            continue;
-        if (constPorts.count(op) > 0)
-            // Don't pipeline constants
             continue;
         if (t.conns()->countSinks(op) == 0)
             // Don't pipeline things with no consumer
@@ -332,9 +346,29 @@ void PipelineFrequencyPass::runInternal(Module* mod) {
     }
 
     if (mod->is<ControlRegion>() && dv.pipeline.size() > 0) {
+        mod->as<ControlRegion>()->schedule();
         printf("    CR cycle latency: %u\n",
                mod->as<ControlRegion>()->clocks());
     }
+
+    for (auto modOp: mod->outputs()) {
+        OutputPort* intOp = t.conns()->findSource(mod->getSink(modOp));
+        assert(intOp != nullptr);
+        _modOutDelays[modOp] = dv.edgeDelay(intOp);
+    }
+
+    return dv.pipeline.size() > 0;
+}
+
+bool PipelineFrequencyPass::run() {
+    bool ret = false;
+    auto mods = _design.modules();
+    for (Module* m: mods) {
+        if (runOnModule(m, Time::s(0)))
+            ret = true;
+        m->validityCheck();
+    }
+    return ret;
 }
 
 } // namespace llpm

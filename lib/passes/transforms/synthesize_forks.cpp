@@ -4,6 +4,7 @@
 #include <libraries/synthesis/fork.hpp>
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
+#include <analysis/graph_queries.hpp>
 
 
 using namespace std;
@@ -19,6 +20,10 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         // Don't add forks to CRs
         return;
 
+    set<Port*> constPorts;
+    set<Block*> constBlocks;
+    queries::FindConstants(mod, constPorts, constBlocks);
+
     deque<OutputPort*> forkingSources;
     for (const auto& p: conns->sinksRaw()) {
         if (p.second.size() > 1)
@@ -30,8 +35,13 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         set<InputPort*> sinks;
         conns->findSinks(op, sinks);
         assert(sinks.size() > 1);
-
+        
         bool virt = false;
+
+        if (constPorts.count(op) > 0)
+            // Don't need to actually fork const values
+            virt = true;
+
         // Blocks contained in control regions don't require actual
         // forks since they share valid and backpressure signals
         if (mod->is<ControlRegion>())

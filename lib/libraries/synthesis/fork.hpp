@@ -2,6 +2,7 @@
 #define __LLPM_LIBRARIES_SYNTHESIS_FORK_HPP__
 
 #include <llpm/block.hpp>
+#include <cmath>
 
 namespace llpm {
 
@@ -47,6 +48,12 @@ public:
         if (_virt)
             return "virt";
         return "";
+    }
+
+    float logicalEffort(InputPort*, OutputPort*) const {
+        if (_virt)
+            return 0.0;
+        return std::log2((float)_dout.size());
     }
 };
 

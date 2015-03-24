@@ -20,7 +20,7 @@ sha256.bc: sha256_accel.bc sha256_accel_test.bc
 sha256_accel.bc: sha256_accel.cpp sha256_accel.hpp
 
 obj/${ROOT}.hpp: ${NAME}.bc ../../../bin/cpphdl
-	../../../bin/cpphdl ${NAME}.bc ${ROOT} --clk 500.0
+	../../../bin/cpphdl ${NAME}.bc ${ROOT} --clk 250
 
 ${ROOT}.hpp: obj/${ROOT}.hpp
 	cp obj/${ROOT}.hpp .
@@ -35,6 +35,12 @@ ${NAME}_test: ${NAME}_test.cpp ${ROOT}.hpp
 
 %.pdf: obj/%.gv
 	dot -Tpdf -o $@ $< || true
+
+freq: sha256.bc FORCE
+	mkdir -p freq
+	cd freq && ../../../../scripts/benchmarking/freqSweep.py --backend verilog --wedge axi ../sha256.bc SHA256
+
+FORCE:
 
 clean:
 	rm -rf ${NAME}_test ${NAME}.hpp *.bc obj *.ll *.tmp
