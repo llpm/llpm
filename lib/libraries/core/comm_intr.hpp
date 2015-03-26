@@ -4,6 +4,7 @@
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
 #include <util/macros.hpp>
+#include <util/llvm_type.hpp>
 #include <memory>
 
 /*********
@@ -143,7 +144,7 @@ public:
     float logicalEffort(InputPort*, OutputPort*) const {
         // Since this'll become a multiplexer, there's a little effort
         // involved
-        return 1.0;
+        return 1.0 + log2((float)_din.size());
     }
 };
 
@@ -177,7 +178,7 @@ public:
     float logicalEffort(InputPort*, OutputPort*) const {
         // Since this'll become a multiplexer, there's a little effort
         // involved
-        return 1.0;
+        return 1.0 + log2((float)_din.size());
     }
 };
 
@@ -257,7 +258,7 @@ public:
     }
 
     virtual float logicalEffortFunc() const {
-        return 1.0;
+        return 1.0 + log2((float)(numContainedTypes(din()->type()) - 1));
     }
 };
 
@@ -297,7 +298,7 @@ public:
     }
 
     float logicalEffort(InputPort*, OutputPort*) const {
-        return 1.0;
+        return 1.0 + log2((float)_dout.size());
     }
 };
 

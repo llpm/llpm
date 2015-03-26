@@ -27,7 +27,7 @@ namespace llpm {
     // Sum of integers
     class IntAddition : public Function {
         virtual float logicalEffortFunc() const {
-            return log2((float)bitwidth(dout()->type()));
+            return 1.0 + log2((float)bitwidth(dout()->type()));
         }
 
     public:
@@ -45,7 +45,7 @@ namespace llpm {
     // a - b. Integers only
     class IntSubtraction : public Function {
         virtual float logicalEffortFunc() const {
-            return log2((float)bitwidth(dout()->type()));
+            return 1.0 + log2((float)bitwidth(dout()->type()));
         }
 
     public:
@@ -80,7 +80,7 @@ namespace llpm {
     // Variable amount shift. Integers only. Truncating only
     class Shift : public Function {
         virtual float logicalEffortFunc() const {
-            return log2((float)bitwidth(dout()->type()));
+            return 1.0 + log2((float)bitwidth(dout()->type()));
         }
 
     public:
@@ -139,7 +139,7 @@ namespace llpm {
     // Multiply a bunch of integers
     class IntMultiply : public Function {
         virtual float logicalEffortFunc() const {
-            return log2((float)bitwidth(dout()->type()));
+            return 1.0 + log2((float)bitwidth(dout()->type()));
         }
 
     public:
@@ -159,7 +159,7 @@ namespace llpm {
 
         virtual float logicalEffortFunc() const {
             // Int divide is very expensive
-            return 25 * log2((float)bitwidth(dout()->type()));
+            return 25 * (1.0 + log2((float)bitwidth(dout()->type())));
         }
 
     public:
