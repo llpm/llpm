@@ -41,6 +41,25 @@ unsigned Refinery::refine(std::vector<Block*> crude,
                 if(r->refine(c, conns)) {
                     // This refiner did the job!
                     refinedBlocks.insert(c);
+                    if (conns.isUsed(c)) {
+                        for (InputPort* ip: c->inputs()) {
+                            OutputPort* op = conns.findSource(ip);
+                            if (op != nullptr) {
+                                fprintf(stderr, "Refinement error: Block %s input port %s is still driven by %s.%s!\n",
+                                        c->name().c_str(), ip->name().c_str(),
+                                        op->owner()->name().c_str(), op->name().c_str());
+                            }
+                        }
+                        for (OutputPort* op: c->outputs()) {
+                            std::set<InputPort*> sinks;
+                            conns.findSinks(op, sinks);
+                            for (InputPort* ip: sinks) { 
+                                fprintf(stderr, "Refinement error: Block %s output port %s is still drives %s.%s!\n",
+                                        c->name().c_str(), op->name().c_str(),
+                                        ip->owner()->name().c_str(), ip->name().c_str());
+                            }
+                        }
+                    }
                     assert(conns.isUsed(c) == false);
                     std::set<BlockP> newBlocks;
                     conns.readAndClearNewBlocks(newBlocks);
