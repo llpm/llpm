@@ -58,7 +58,9 @@ int main(int argc, const char** argv) {
         d.notify(vm);
 
         trans.readBitcode(inputFN);
-        auto m = trans.translate(modName);
+        trans.prepare(modName);
+        trans.translate();
+        auto m = trans.get(modName);
         d.addModule(m);
 
         return d.go();

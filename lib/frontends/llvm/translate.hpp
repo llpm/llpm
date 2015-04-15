@@ -16,6 +16,8 @@ namespace llpm {
 class LLVMTranslator {
     Design& _design;
     llvm::Module* _llvmModule;
+    std::map<llvm::Function*, llvm::Function*> _origToPrepared;
+    std::set<llvm::Function*> _toPrepare;
 
 public:
     LLVMTranslator(Design& design);
@@ -27,8 +29,17 @@ public:
         return _llvmModule;
     }
 
-    LLVMFunction* translate(llvm::Function*);
-    LLVMFunction* translate(std::string fnName);
+    void prepare(llvm::Function*);
+    void prepare(std::string fnName);
+
+    void translate();
+
+    LLVMFunction* get(llvm::Function*);
+    LLVMFunction* get(std::string fnName);
+
+private:
+    void optimize(llvm::Module* module);
+    llvm::Function* elevateArgs(llvm::Function*);
 };
 
 } // namespace llpm

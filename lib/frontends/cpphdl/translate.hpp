@@ -14,6 +14,9 @@ class CPPHDLTranslator {
     Design& _design;
     LLVMTranslator _llvmTranslator;
 
+    std::map<std::string, CPPHDLClass*> _classes;
+    std::map<CPPHDLClass*, std::set<std::pair<std::string, llvm::Function*>>> _classMethods;
+
 public:
     CPPHDLTranslator(Design& design);
     ~CPPHDLTranslator();
@@ -25,7 +28,9 @@ public:
         _llvmTranslator.setModule(module);
     }
 
-    CPPHDLClass* translate(std::string className);
+    void prepare(std::string className);
+    void translate();
+    CPPHDLClass* get(std::string className);
 };
 
 } // namespace cpphdl

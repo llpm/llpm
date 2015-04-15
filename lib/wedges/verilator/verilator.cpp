@@ -159,6 +159,12 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         objFiles.push_back(objFile);
     }
 
+    {
+        auto bcFile = fileset.create(mod->name() + "_preverilator.bc");
+        llvm::raw_os_ostream llvmStream(bcFile->openStream());
+        llvm::WriteBitcodeToFile(mod->swModule(), llvmStream);
+    }
+
     // Load all the output objs and merge them into swModule
     llvm::Module* merged = NULL;
     string errMsg;

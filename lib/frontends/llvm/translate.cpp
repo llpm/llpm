@@ -10,11 +10,15 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Vectorize.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/LinkAllIR.h>
 #include <llvm/ADT/Triple.h>
 #include <llvm/Support/raw_os_ostream.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/CallSite.h>
 
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Target/TargetLibraryInfo.h>
@@ -40,12 +44,14 @@ void LLVMTranslator::readBitcode(std::string fileName) {
     setModule(_design.readBitcode(fileName));
 }
 
-
-
-void LLVMTranslator::setModule(llvm::Module* module) {
-    assert(module != NULL);
-
+void LLVMTranslator::optimize(llvm::Module* module) {
+    printf("Running LLVM optimizations...\n");
     llvm::legacy::PassManager MPM;
+
+    auto pref = _design.workingDir()->create("preopt.ll");
+    raw_os_ostream rawPreStream(pref->openStream());
+    MPM.add(createPrintModulePass(rawPreStream));
+    MPM.add(llvm::createVerifierPass(true));
 
     // Add an appropriate DataLayout instance for this module.
     const DataLayout *DL = module->getDataLayout();
@@ -131,31 +137,167 @@ void LLVMTranslator::setModule(llvm::Module* module) {
     MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
 // #endif
 
-
-    auto f = _design.workingDir()->create("postopt.ll");
-    raw_os_ostream rawStream(f->openStream());
-    MPM.add(createPrintModulePass(rawStream));
+    auto postf = _design.workingDir()->create("postopt.ll");
+    raw_os_ostream rawPostStream(postf->openStream());
+    MPM.add(createPrintModulePass(rawPostStream));
     MPM.add(llvm::createVerifierPass(true));
 
     MPM.run(*module);
-    f->close();
+    postf->close();
+    pref->close();
+}
 
+void LLVMTranslator::setModule(llvm::Module* module) {
+    assert(module != NULL);
+    optimize(module);
     this->_llvmModule = module;
 }
 
-LLVMFunction* LLVMTranslator::translate(llvm::Function* func) {
-    if (func == NULL)
-        throw InvalidArgument("Function cannot be NULL!");
-    return new LLVMFunction(this->_design, func);
+void LLVMTranslator::prepare(llvm::Function* func) {
+    if (_toPrepare.count(func) > 0 ||
+        _origToPrepared.find(func) != _origToPrepared.end()) {
+        // This function already prepared
+        return;
+    }
+    _toPrepare.insert(func);
+
+    // Go through function for calls, prepare them
+    for (const BasicBlock& bb: func->getBasicBlockList()) {
+        for (const Instruction& ins: bb.getInstList()) {
+            if (ins.getOpcode() == Instruction::Call) {
+                llvm::Function* f = llvm::dyn_cast<llvm::CallInst>(&ins)->getCalledFunction();
+                prepare(f);
+                _toPrepare.insert(f);
+            }
+        }
+    }
 }
 
-LLVMFunction* LLVMTranslator::translate(std::string fnName) {
+/**
+ * If functions have "byval" args, elevate them to actually passing
+ * the value without a pointer. Fix the callsites also.
+ */
+llvm::Function* LLVMTranslator::elevateArgs(llvm::Function* func) {
+    /* First determine if there are any arguments to elevate */
+    vector<llvm::Type*> argTypes;
+    set<unsigned> elevated;
+    unsigned i=0;
+    for (const Argument& arg: func->getArgumentList()) {
+        if (arg.getType()->isPointerTy() && arg.hasByValAttr()) {
+            argTypes.push_back(arg.getType()->getPointerElementType());
+            elevated.insert(i);
+        } else {
+            argTypes.push_back(arg.getType());
+        }
+        i += 1;
+    }
+
+    if (elevated.size() == 0) {
+        return func;
+    }
+    // return func;
+
+    // auto origName = func->getName();
+    // func->setName(func->getName() + "_orig");
+
+
+    /* Create a new function with elevated args and a thunk to all the
+     * old function */
+    llvm::Type* result = func->getReturnType();
+    llvm::FunctionType* ft = llvm::FunctionType::get(result, argTypes, func->isVarArg());
+    llvm::Function* NF =
+        llvm::Function::Create(ft, func->getLinkage(),
+                               func->getName() + "_elevated", _llvmModule);
+    llvm::IRBuilder<> builder(BasicBlock::Create(func->getContext(), "thunk", NF));
+    vector<llvm::Value*> args;
+    i=0;
+    for (Argument& arg: NF->getArgumentList()) {
+        if (elevated.count(i) > 0) {
+            auto alloca = builder.CreateAlloca(arg.getType(), NULL);
+            builder.CreateStore(&arg, alloca);
+            args.push_back(alloca);
+        } else {
+            args.push_back(&arg);
+        }
+        i++;
+    }
+    auto call = llvm::CallInst::Create(func, args, "", builder.GetInsertBlock());
+    if (NF->getReturnType()->isVoidTy()) {
+        builder.CreateRetVoid();
+    } else {
+        builder.CreateRet(call);
+    }
+    llvm::InlineFunctionInfo ifi;
+    auto inlined = llvm::InlineFunction(call, ifi);
+    assert(inlined);
+    printf("Created %s\n", NF->getName().str().c_str());
+
+    /* Fix the old callsites to point to the new guy */
+    for (Use& u: func->uses()) {
+        llvm::CallSite cs(u.getUser());
+        if (!cs)
+            continue;
+        assert(cs.isCall() && "Only calls (not invokes) are supported right now.");
+        llvm::CallInst* origCall = llvm::dyn_cast_or_null<llvm::CallInst>(cs.getInstruction());
+        if (origCall->getParent() == builder.GetInsertBlock())
+            // Don't replace our thunk call!
+            continue;
+        if (_toPrepare.count(origCall->getParent()->getParent()) == 0)
+            // Don't replace calls in functions we won't be converting
+            // to hardware.
+            continue;
+        assert(origCall != nullptr);
+
+        vector<llvm::Value*> callerArgs;
+        for (unsigned i=0; i<origCall->getNumArgOperands(); i++) {
+            llvm::Value* arg = origCall->getArgOperand(i);
+            if (elevated.count(i) > 0) {
+                arg = new llvm::LoadInst(arg, "", origCall);
+            }
+            callerArgs.push_back(arg);
+        }
+        llvm::CallInst* newCall = llvm::CallInst::Create(NF, callerArgs, "");
+        origCall->replaceAllUsesWith(newCall);
+        llvm::ReplaceInstWithInst(origCall, newCall);
+    }
+    return NF;
+}
+
+void LLVMTranslator::prepare(std::string fnName) {
     if (this->_llvmModule == NULL)
         throw InvalidCall("Must load a module into LLVMTranslator before translating");
     llvm::Function* func = this->_llvmModule->getFunction(fnName);
     if (func == NULL)
         throw InvalidArgument("Could not find function: " + fnName);
-    return translate(func);
+    prepare(func);
+}
+
+void LLVMTranslator::translate() {
+    for (llvm::Function* func: _toPrepare) {
+        printf("Preparing %s\n", func->getName().str().c_str());
+        llvm::Function* newFunc = elevateArgs(func);
+        _origToPrepared[func] = newFunc;
+        _origToPrepared[newFunc] = newFunc;
+    }
+    optimize(_llvmModule);
+}
+
+LLVMFunction* LLVMTranslator::get(llvm::Function* func) {
+    if (func == NULL)
+        throw InvalidArgument("Function cannot be NULL!");
+    func = _origToPrepared[func];
+    if (func == NULL)
+        throw InvalidArgument("Function must have been prepared first!");
+    return new LLVMFunction(this->_design, func);
+}
+
+LLVMFunction* LLVMTranslator::get(std::string fnName) {
+    if (this->_llvmModule == NULL)
+        throw InvalidCall("Must load a module into LLVMTranslator before translating");
+    llvm::Function* func = this->_llvmModule->getFunction(fnName);
+    if (func == NULL)
+        throw InvalidArgument("Could not find function: " + fnName);
+    return get(func);
 }
 
 } // namespace llpm

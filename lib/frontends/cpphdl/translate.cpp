@@ -19,7 +19,7 @@ CPPHDLTranslator::CPPHDLTranslator(Design& design) :
 CPPHDLTranslator::~CPPHDLTranslator() {
 }
 
-CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
+void CPPHDLTranslator::prepare(std::string className) {
     llvm::Module* lm = _llvmTranslator.getModule();
 
     llvm::StructType* classType = lm->getTypeByName("class." + className);
@@ -30,6 +30,7 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
 
     CPPHDLClass* chClass = new CPPHDLClass(
         _design, className, classType, lm);
+    _classes[className] = chClass;
 
     string fnPrefix = className + "::";
     string testStr = "test";
@@ -52,17 +53,35 @@ CPPHDLClass* CPPHDLTranslator::translate(std::string className) {
                 continue;
 
             printf("Found class member: %s\n", demangledName.c_str());
-            chClass->addMember(
-                fnName,
-                &func,
-                _llvmTranslator.translate(&func)
-                );
+            _classMethods[chClass].insert(make_pair(fnName, &func));
+            _llvmTranslator.prepare(&func);
         } else if (demangledName.find(testStr) == 0) {
             // This member is a test. Don't generate HW, but a
             // test function instead
             printf("Found test: %s\n", demangledName.c_str());
             chClass->adoptTest(&func);
         }
+    }
+}
+
+void CPPHDLTranslator::translate() {
+    _llvmTranslator.translate();
+}
+
+CPPHDLClass* CPPHDLTranslator::get(std::string className) {
+    CPPHDLClass* chClass = _classes[className];
+    if (chClass == NULL) {
+        throw InvalidArgument("Must call prepare for each class before you can get it!");
+    }
+        
+    for (std::pair<std::string, llvm::Function*> p: _classMethods[chClass]) {
+        std::string name = p.first;
+        llvm::Function* func = p.second;
+        chClass->addMember(
+            name,
+            func,
+            _llvmTranslator.get(func)
+            );
     }
 
     return chClass;
