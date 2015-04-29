@@ -159,7 +159,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         objFiles.push_back(objFile);
     }
 
-    {
+    if (mod->swModule() != nullptr) {
         auto bcFile = fileset.create(mod->name() + "_preverilator.bc");
         llvm::raw_os_ostream llvmStream(bcFile->openStream());
         llvm::WriteBitcodeToFile(mod->swModule(), llvmStream);
