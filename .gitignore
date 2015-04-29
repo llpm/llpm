@@ -14,6 +14,10 @@
 *.bc
 *.ll
 
+# OS X Crap
+.DS_Store
+._.DS_Store
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
