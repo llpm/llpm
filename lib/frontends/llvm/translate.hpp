@@ -32,7 +32,7 @@ public:
     void prepare(llvm::Function*);
     void prepare(std::string fnName);
 
-    void translate();
+    virtual void translate();
 
     LLVMFunction* get(llvm::Function*);
     LLVMFunction* get(std::string fnName);

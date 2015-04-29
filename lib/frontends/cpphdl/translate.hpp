@@ -10,9 +10,8 @@
 namespace llpm {
 namespace cpphdl {
 
-class CPPHDLTranslator {
+class CPPHDLTranslator : public LLVMTranslator {
     Design& _design;
-    LLVMTranslator _llvmTranslator;
 
     std::map<std::string, CPPHDLClass*> _classes;
     std::map<CPPHDLClass*, std::set<std::pair<std::string, llvm::Function*>>> _classMethods;
@@ -21,15 +20,8 @@ public:
     CPPHDLTranslator(Design& design);
     ~CPPHDLTranslator();
 
-    void readBitcode(std::string fileName) {
-        _llvmTranslator.readBitcode(fileName);
-    }
-    void setModule(llvm::Module* module) {
-        _llvmTranslator.setModule(module);
-    }
-
     void prepare(std::string className);
-    void translate();
+    virtual void translate();
     CPPHDLClass* get(std::string className);
 };
 

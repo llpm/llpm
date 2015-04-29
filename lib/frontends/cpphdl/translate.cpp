@@ -11,8 +11,8 @@ namespace llpm {
 namespace cpphdl {
 
 CPPHDLTranslator::CPPHDLTranslator(Design& design) :
-    _design(design),
-    _llvmTranslator(design) {
+    LLVMTranslator(design),
+    _design(design) {
     design.refinery().appendLibrary(make_shared<CPPHDLBaseLibrary>());
 }
 
@@ -20,7 +20,7 @@ CPPHDLTranslator::~CPPHDLTranslator() {
 }
 
 void CPPHDLTranslator::prepare(std::string className) {
-    llvm::Module* lm = _llvmTranslator.getModule();
+    llvm::Module* lm = getModule();
 
     llvm::StructType* classType = lm->getTypeByName("class." + className);
     if (classType == NULL) {
@@ -54,7 +54,7 @@ void CPPHDLTranslator::prepare(std::string className) {
 
             printf("Found class member: %s\n", demangledName.c_str());
             _classMethods[chClass].insert(make_pair(fnName, &func));
-            _llvmTranslator.prepare(&func);
+            LLVMTranslator::prepare(&func);
         } else if (demangledName.find(testStr) == 0) {
             // This member is a test. Don't generate HW, but a
             // test function instead
@@ -65,7 +65,7 @@ void CPPHDLTranslator::prepare(std::string className) {
 }
 
 void CPPHDLTranslator::translate() {
-    _llvmTranslator.translate();
+    LLVMTranslator::translate();
 }
 
 CPPHDLClass* CPPHDLTranslator::get(std::string className) {
@@ -80,7 +80,7 @@ CPPHDLClass* CPPHDLTranslator::get(std::string className) {
         chClass->addMember(
             name,
             func,
-            _llvmTranslator.get(func)
+            LLVMTranslator::get(func)
             );
     }
 
