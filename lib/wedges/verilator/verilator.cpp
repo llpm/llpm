@@ -318,6 +318,13 @@ unsigned numArgs(llvm::Type* type) {
     return 1;
 }
 
+llvm::Type* nthTypeOrMe(llvm::Type* type, unsigned idx) {
+    if (idx == 0 && type->isSingleValueType()) {
+        return type;
+    }
+    return nthType(type, idx);
+}
+
 llvm::Type* argType(unsigned i, llvm::Type* type) {
     if (type->isStructTy()) {
         llvm::StructType* st = llvm::dyn_cast<llvm::StructType>(type);
@@ -343,7 +350,7 @@ void writeStruct(ostream& os, llvm::Type* type, string name) {
        << "        struct {\n";
     if (!type->isVoidTy()) {
         for (unsigned arg=0; arg<args; arg++) {
-            auto argType = nthType(type, arg);
+            auto argType = nthTypeOrMe(type, arg);
             if (bitwidth(argType) > 0) {
                 auto sig = typeSig(argType, false, arg);
                 os << "            " << sig << ";\n";
@@ -698,7 +705,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
         auto args = numArgs(type);
         if (!type->isVoidTy()) {
             for (unsigned arg=0; arg<args; arg++) {
-                auto argType = nthType(type, arg);
+                auto argType = nthTypeOrMe(type, arg);
                 if (implicitPointer(argType))
                     os << boost::format(
                         "    memcpy(arg.%1%, %1%, %2%);\n")
@@ -778,7 +785,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
 
         if (!type->isVoidTy()) {
             for (unsigned arg=0; arg<args; arg++) {
-                auto argType = nthType(type, arg);
+                auto argType = nthTypeOrMe(type, arg);
                 if (implicitPointer(argType))
                     os << boost::format(
                         "    memcpy(%1%, arg.%1%, %2%);\n")
