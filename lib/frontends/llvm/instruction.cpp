@@ -13,6 +13,7 @@
 #include <libraries/core/std_library.hpp>
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
+#include <frontends/llvm/translate.hpp>
 
 using namespace std;
 
@@ -51,6 +52,8 @@ unsigned LLVMInstruction::GetNumHWOperands(llvm::Instruction* ins) {
             return 0;
         else
             return 1;
+    case llvm::Instruction::Call:
+        return llvm::dyn_cast<llvm::CallInst>(ins)->getNumArgOperands();
     default:
         return ins->getNumOperands();
     }
@@ -65,6 +68,9 @@ bool LLVMInstruction::HWIgnoresOperand(llvm::Instruction* ins, unsigned idx) {
             return true;
         else
             return idx > 0;
+    case llvm::Instruction::Call:
+        return idx >=
+            llvm::dyn_cast<llvm::CallInst>(ins)->getNumArgOperands();
     default:
         return false;
     }
@@ -593,6 +599,29 @@ public:
     }
 };
 
+LLVMCallInstruction::LLVMCallInstruction(const LLVMBasicBlock* bb,
+                                         llvm::Instruction* ins) :
+        LLVMImpureInstruction(bb, ins, &_din),
+        _din(this, GetInput(ins), "x"),
+        _dout(this, GetOutput(ins), "a"),
+        _call(this, GetInput(ins), "call"),
+        _ret(this, GetOutput(ins), "ret") { }
+
+bool LLVMCallInstruction::refine(ConnectionDB& conns) const {
+    auto inputID = new Identity(input()->type());
+    conns.remap(input(), inputID->din());
+    conns.remap(call(), inputID->dout());
+    auto outputID = new Identity(output()->type());
+    conns.remap(output(), outputID->dout());
+    conns.remap(ret(), outputID->din());
+    return true;
+}
+
+LLVMInstruction* LLVMCallInstruction::Create(
+        const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+    return new LLVMCallInstruction(bb, ins);
+}
+
 std::string LLVMMiscInstruction::print() const {
     return valuestr(_ins);
 }
@@ -693,13 +722,15 @@ std::unordered_map<unsigned, InsConstructor > Constructors = {
     {llvm::Instruction::Ret, WrapperInstruction<Identity>::Create},
     {llvm::Instruction::Br, FlowInstruction::Create},
     {llvm::Instruction::Switch, FlowInstruction::Create},
+    {llvm::Instruction::Call, LLVMCallInstruction::Create},
 
     // Memory ops
     {llvm::Instruction::Load, LLVMLoadInstruction::Create},
     {llvm::Instruction::Store, LLVMStoreInstruction::Create},
 };
 
-LLVMInstruction* LLVMInstruction::Create(const LLVMBasicBlock* bb, llvm::Instruction* ins) {
+LLVMInstruction* LLVMInstruction::Create(const LLVMBasicBlock* bb,
+                                         llvm::Instruction* ins) {
     assert(ins != NULL);
     auto f = Constructors.find(ins->getOpcode());
     if (f == Constructors.end())

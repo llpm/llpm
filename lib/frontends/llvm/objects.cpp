@@ -145,7 +145,15 @@ const std::vector<InputPort*>& LLVMImpureBasicBlock::deps(
     return inputs();
 }
 
-
+Interface* LLVMImpureBasicBlock::call(llvm::Instruction* ins) const {
+    llvm::CallInst* ci = llvm::dyn_cast_or_null<llvm::CallInst>(ins);
+    if (ci == nullptr)
+        return nullptr;
+    auto f = _call.find(ci);
+    if (f == _call.end())
+        return nullptr;
+    return f->second.get();
+}
 
 void LLVMBasicBlock::addInput(llvm::Value* v) {
     // Calling this function implies that the _original_ value v is
@@ -328,6 +336,18 @@ void LLVMImpureBasicBlock::buildIO() {
                                    llpm::name(&ins) + "_mem"));
             _function->regBBMemPort(&ins, _mem[&ins].get());
         }
+
+        if (ins.getOpcode() == llvm::Instruction::Call) {
+            llvm::CallInst* ci = llvm::dyn_cast_or_null<llvm::CallInst>(&ins);
+            assert(ci != nullptr);
+            _call.emplace(ci, make_unique<Interface>(
+                                   this,
+                                   LLVMInstruction::GetOutput(&ins),
+                                   LLVMInstruction::GetInput(&ins),
+                                   false,
+                                   llpm::name(&ins) + "_call"));
+            _function->regBBCallPort(ci, _call[ci].get());
+        }
     }
 }
 
@@ -480,9 +500,12 @@ std::vector<unsigned> LLVMEntry::ValueMap(llvm::Function* func,
     return rc;
 }
 
-LLVMFunction::LLVMFunction(llpm::Design& design, llvm::Function* func) :
+LLVMFunction::LLVMFunction(llpm::Design& design,
+                           LLVMTranslator* translator,
+                           llvm::Function* func) :
     ContainerModule(design, func->getName()),
-    _call(NULL)
+    _call(NULL),
+    _translator(translator)
 {
     build(func);
 }
@@ -499,17 +522,28 @@ void LLVMFunction::regBBMemPort(llvm::Value* val, Interface* iface) {
                            iface->name());
 }
 
+void LLVMFunction::regBBCallPort(llvm::CallInst* ci, Interface* iface) {
+    if (_callInterfaces.count(ci) != 0)
+        throw InvalidArgument("Can only register one memory port per instruction");
+    _callInterfaces[ci] =
+        addClientInterface(iface->dout(),
+                           iface->din(),
+                           iface->name());
+}
+
 void LLVMFunction::build(llvm::Function* func) {
     // First, we gotta build the blockMap
     for(auto& bb: func->getBasicBlockList()) {
-        bool touchesMemory = false;
+        bool impure = false;
         for(auto& ins: bb.getInstList()) {
             if (ins.mayReadOrWriteMemory() &&
                 !LLVMLoadInstruction::isByvalLoad(&ins))
-                touchesMemory = true;
+                impure = true;
+            if (ins.getOpcode() == llvm::Instruction::Call)
+                impure = true;
         }
 
-        if (touchesMemory) {
+        if (impure) {
             auto bbBlock = new LLVMImpureBasicBlock(this, &bb);
             _blockMap[&bb] = bbBlock;
         } else {

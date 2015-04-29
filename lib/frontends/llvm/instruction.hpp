@@ -54,6 +54,22 @@ public:
         return NULL;
     }
 
+    virtual const OutputPort* callReqPort() const {
+        return NULL;
+    }
+
+    virtual const InputPort* callRespPort() const {
+        return NULL;
+    }
+
+    virtual OutputPort* callReqPort() {
+        return NULL;
+    }
+
+    virtual InputPort* callRespPort() {
+        return NULL;
+    }
+
     virtual unsigned getNumHWOperands() const {
         return GetNumHWOperands(_ins);
     }
@@ -306,6 +322,61 @@ public:
         const LLVMBasicBlock* bb, llvm::Instruction* ins) {
         return new LLVMStoreInstruction(bb, ins);
     }
+};
+
+class LLVMCallInstruction : public LLVMImpureInstruction {
+    InputPort _din;
+    OutputPort _dout;
+    OutputPort _call;
+    InputPort  _ret;
+
+public:
+    LLVMCallInstruction(const LLVMBasicBlock* bb,
+                         llvm::Instruction* ins);
+
+    DEF_GET(call);
+    DEF_GET(ret);
+
+    virtual bool refinable() const {
+        return true;
+    }
+    virtual bool refine(ConnectionDB& conns) const;
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    virtual const OutputPort* callReqPort() const {
+        return &_call;
+    }
+
+    virtual const InputPort* callRespPort() const {
+        return &_ret;
+    }
+
+    virtual OutputPort* callReqPort() {
+        return &_call;
+    }
+
+    virtual InputPort* callRespPort() {
+        return &_ret;
+    }
+    virtual InputPort* input() {
+        return &_din;
+    }
+    virtual OutputPort* output() {
+        return &_dout;
+    }
+
+    virtual const InputPort* input() const {
+        return &_din;
+    }
+    virtual const OutputPort* output() const {
+        return &_dout;
+    }
+
+    static LLVMInstruction* Create(
+        const LLVMBasicBlock* bb, llvm::Instruction* ins);
 };
 
 } // namespace llpm

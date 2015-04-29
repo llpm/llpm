@@ -288,7 +288,7 @@ LLVMFunction* LLVMTranslator::get(llvm::Function* func) {
     func = _origToPrepared[func];
     if (func == NULL)
         throw InvalidArgument("Function must have been prepared first!");
-    return new LLVMFunction(this->_design, func);
+    return new LLVMFunction(this->_design, this, func);
 }
 
 LLVMFunction* LLVMTranslator::get(std::string fnName) {

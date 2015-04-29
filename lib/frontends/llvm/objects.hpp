@@ -9,6 +9,7 @@
 
 namespace llvm {
     class PHINode;
+    class CallInst;
 }
 
 namespace llpm {
@@ -16,6 +17,7 @@ namespace llpm {
 // Fwd defs. C++, you so silly!
 class LLVMBasicBlock;
 class LLVMControl;
+class LLVMTranslator;
 
 class LLVMEntry: public StructTwiddler {
     static llvm::Type* FunctionType(llvm::Function*);
@@ -44,11 +46,13 @@ class LLVMFunction: public ContainerModule {
     LLVMExit* _exit;
 
     Interface* _call;
+    LLVMTranslator* _translator;
 
     // Memory load request ports
     std::map<llvm::Value*, Interface*> _memInterfaces;
+    std::map<llvm::CallInst*, Interface*> _callInterfaces;
 
-    LLVMFunction(Design&, llvm::Function*);
+    LLVMFunction(Design&, LLVMTranslator*, llvm::Function*);
     void build(llvm::Function* func);
 
 public:
@@ -59,9 +63,14 @@ public:
     static llvm::Type* sanitizeArgumentType(llvm::Argument* arg);
 
     DEF_GET_NP(call);
+    DEF_GET_NP(translator);
 
     const std::map<llvm::Value*, Interface*>& mem() const {
         return _memInterfaces;
+    }
+
+    const std::map<llvm::CallInst*, Interface*>& calls() const {
+        return _callInterfaces;
     }
 
     LLVMControl* getControl(llvm::BasicBlock* bb) const {
@@ -81,6 +90,7 @@ public:
     }
 
     void regBBMemPort(llvm::Value*, Interface*);
+    void regBBCallPort(llvm::CallInst*, Interface*);
 };
 
 
@@ -175,6 +185,10 @@ public:
     virtual Interface* mem(llvm::Value*) const {
         return NULL;
     }
+
+    virtual Interface* call(llvm::Instruction*) const {
+        return NULL;
+    }
 };
 
 // Pure LLVM Basic Blocks (those without loads/stores) are treated
@@ -229,6 +243,9 @@ class LLVMImpureBasicBlock: public LLVMBasicBlock {
     // Memory load request ports
     std::map<llvm::Value*, std::unique_ptr<Interface>> _mem;
 
+    // Function call request ports
+    std::map<llvm::CallInst*, std::unique_ptr<Interface>> _call;
+
     LLVMImpureBasicBlock(LLVMFunction* func, llvm::BasicBlock* bb);
 
 public:
@@ -264,6 +281,8 @@ public:
             return NULL; 
         return f->second.get();
     }
+
+    virtual Interface* call(llvm::Instruction* ins) const;
 
     virtual DependenceRule depRule(const OutputPort* op) const;
     virtual const std::vector<InputPort*>& deps(const OutputPort*) const;

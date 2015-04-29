@@ -50,16 +50,29 @@ public:
             valueMap[&ins] = block->output();
 
             // Connect up memory ports, if any
-            auto req = block->memReqPort();
-            auto iface = lbb->mem(&ins);
-            if (req) {
-                assert(iface != NULL);
-                conns.remap(iface->dout(), req);
+            auto reqMem = block->memReqPort();
+            auto ifaceMem = lbb->mem(&ins);
+            if (reqMem) {
+                assert(ifaceMem != NULL);
+                conns.remap(ifaceMem->dout(), reqMem);
             }
-            auto resp = block->memRespPort();
-            if (resp) {
-                assert(iface != NULL);
-                conns.remap(iface->din(), resp);
+            auto respMem = block->memRespPort();
+            if (respMem) {
+                assert(ifaceMem != NULL);
+                conns.remap(ifaceMem->din(), respMem);
+            }
+
+            // Connect up call ports, if any
+            auto reqCall = block->callReqPort();
+            auto ifaceCall = lbb->call(&ins);
+            if (reqCall) {
+                assert(ifaceCall != NULL);
+                conns.remap(ifaceCall->dout(), reqCall);
+            }
+            auto respCall = block->callRespPort();
+            if (respCall) {
+                assert(ifaceCall != NULL);
+                conns.remap(ifaceCall->din(), respCall);
             }
         }
 

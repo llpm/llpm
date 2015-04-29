@@ -19,11 +19,11 @@ simple_test: simple_test.cpp simple.hpp
 
 %.bc: %.c
 	clang -c -emit-llvm ${CFLAGS} $< -o $@
-	llvm-dis-3.4 $@
+	llvm-dis $@
 
 %.bc: %.cpp
 	clang++ -c -emit-llvm ${CXXFLAGS} $< -o $@
-	llvm-dis-3.4 $@
+	llvm-dis $@
 
 clean:
 	rm -rf simple_test simple.hpp *.bc obj *.ll
