@@ -162,7 +162,7 @@ SHA256::Digest SHA256::digest() {
 
     if (!finalized) {
         finalized = false;
-        // update(sha256_padding, 64);
+        update(sha256_padding, 64);
     }
 
     Data len_end = {
@@ -173,7 +173,7 @@ SHA256::Digest SHA256::digest() {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
-    // update( len_end, 64 );
+    update( len_end, 64 );
 
     Digest digest = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
