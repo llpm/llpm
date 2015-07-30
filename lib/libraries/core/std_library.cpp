@@ -27,6 +27,7 @@ void StdLibStops(BaseLibraryStopCondition& sc) {
 
     sc.addClass<Constant>();
     sc.addClass<Never>();
+    sc.addClass<NullSink>();
     sc.addClass<BooleanLogic>();
     sc.addClass<CommunicationIntrinsic>();
 }

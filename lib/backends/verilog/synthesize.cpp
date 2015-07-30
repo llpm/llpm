@@ -788,6 +788,24 @@ public:
     }
 };
 
+class NullSinkPrinter: public VerilogSynthesizer::Printer {
+public:
+    virtual bool customLID() const {
+        return true;
+    }
+
+    bool handles(Block* b) const {
+        return dynamic_cast<NullSink*>(b) != NULL;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        NullSink* f = dynamic_cast<NullSink*>(c);
+        ctxt << boost::format(
+                    "    assign %1%_bp = 1'b0;\n")
+                        % ctxt.name(f->din());
+    }
+};
+
 class ConstantPrinter: public VerilogSynthesizer::Printer {
 public:
     bool handles(Block* b) const {
@@ -1481,6 +1499,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(make_shared<ConstantPrinter>());
     _printers.appendEntry(make_shared<NeverPrinter>());
+    _printers.appendEntry(make_shared<NullSinkPrinter>());
 
     _printers.appendEntry(make_shared<JoinPrinter>());
     _printers.appendEntry(make_shared<SelectPrinter>());

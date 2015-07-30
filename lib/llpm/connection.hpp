@@ -195,7 +195,22 @@ public:
     void connect(InputPort* i, OutputPort* o) {
         connect(o, i);
     }
+
+    /**
+     * Connects one interface to another. If the server interface is already
+     * connected to something else, an InterfaceMultiplexer is automatically
+     * created or an existing InterfaceMultiplexer is used.
+     */
     void connect(Interface*, Interface*);
+
+    /**
+     * Connects one interface to a pair of ports (an implicit interface). If
+     * the server interface is already connected to something else, an
+     * InterfaceMultiplexer is automatically created or an existing
+     * InterfaceMultiplexer is used.
+     */
+    void connect(Interface* srvr, OutputPort* op, InputPort* ip);
+
     void disconnect(OutputPort* o, InputPort* i);
     void disconnect(InputPort* i, OutputPort* o) {
         disconnect(o, i);

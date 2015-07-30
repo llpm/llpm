@@ -91,6 +91,27 @@ public:
     }
 };
 
+// A block which absorbs and destroys tokens
+class NullSink: public virtual Block {
+    InputPort   _din;
+public:
+    NullSink(llvm::Type* t) :
+        _din(this, t, "in")
+    { }
+
+    virtual bool hasState() const { return false; }
+
+    DEF_GET(din);
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
+        throw InvalidArgument("Output port does not belong to this block!");
+    }
+
+    virtual DependenceRule depRule(const OutputPort*) const {
+        throw InvalidArgument("Output port does not belong to this block!");
+    }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_LIBRARIES_CORE_MEM_INTR_HPP__
