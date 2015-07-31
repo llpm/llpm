@@ -87,6 +87,12 @@ Select::Select(unsigned N, llvm::Type* type) :
     }
 }
 
+InputPort* Select::createInput() {
+    auto ip = new InputPort(this, _dout.type());
+    _din.emplace_back(ip);
+    return ip;
+}
+
 Split::Split(const vector<llvm::Type*>& outputs) :
     _din(this, StructType::get(outputs[0]->getContext(), outputs))
 {

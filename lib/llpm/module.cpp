@@ -32,6 +32,13 @@ ContainerModule::~ContainerModule() {
 }
 
 InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
+    auto newip = createInputPort(ip->type(), name);
+    this->conns()->connect(getDriver(newip), ip);
+    return newip;
+}
+
+InputPort* ContainerModule::createInputPort(llvm::Type* ty,
+                                            std::string name) {
     if (name == "") {
         set<string> ipNames;
         for (auto currIP: inputs())
@@ -44,13 +51,12 @@ InputPort* ContainerModule::addInputPort(InputPort* ip, std::string name) {
             num++;
         }
     }
-    InputPort* extIp = new InputPort(this, ip->type(), name);
+    InputPort* extIp = new InputPort(this, ty, name);
     _ownedPorts.insert(extIp);
     boost::intrusive_ptr<DummyBlock> dummy( new DummyBlock(extIp) );
     _inputMap.insert(make_pair(extIp, dummy));
     dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
-    this->conns()->connect(dummy->dout(), ip);
     return extIp;
 }
 
@@ -67,6 +73,13 @@ void ContainerModule::removeInputPort(InputPort* ip) {
 }
 
 OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
+    auto newop = createOutputPort(op->type(), name);
+    this->conns()->connect(op, getSink(newop));
+    return newop;
+}
+
+OutputPort* ContainerModule::createOutputPort(llvm::Type* ty,
+                                              std::string name) {
     if (name == "") {
         set<string> opNames;
         for (auto currOP: outputs())
@@ -80,13 +93,12 @@ OutputPort* ContainerModule::addOutputPort(OutputPort* op, std::string name) {
         }
     }
 
-    OutputPort* extOp = new OutputPort(this, op->type(), name);
+    OutputPort* extOp = new OutputPort(this, ty, name);
     _ownedPorts.insert(extOp);
     boost::intrusive_ptr<DummyBlock> dummy( new DummyBlock(extOp) );
     _outputMap.insert(make_pair(extOp, dummy));
     dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
-    this->conns()->connect(op, dummy->din());
     return extOp;
 }
 

@@ -67,7 +67,7 @@ void SimplifyPass::runInternal(Module* m) {
                 noSinks = false;
         }
 
-        if (noSinks)
+        if (noSinks && !b->is<NullSink>())
             t.trash(b);
     }
 

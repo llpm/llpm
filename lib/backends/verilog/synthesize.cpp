@@ -299,13 +299,15 @@ void VerilogSynthesizer::writeLocalIOControl(Context& ctxt) {
         InputPort* dummyIP = mod->getSink(op);
         ctxt.namer().assignName(dummyIP, mod, ctxt.name(op, true));
         OutputPort* source = conns->findSource(dummyIP);
-        if (bitwidth(op->type()) > 0)
-            ctxt << boost::format("    assign %1% = %2%;\n")
+        if (source != nullptr) {
+            if (bitwidth(op->type()) > 0)
+                ctxt << boost::format("    assign %1% = %2%;\n")
+                            % ctxt.name(op, true)
+                            % ctxt.name(source);
+            ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
                         % ctxt.name(op, true)
                         % ctxt.name(source);
-        ctxt << boost::format("    assign %1%_valid = %2%_valid;\n")
-                    % ctxt.name(op, true)
-                    % ctxt.name(source);
+        }
     }
 
     ctxt << "\n";

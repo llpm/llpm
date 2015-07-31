@@ -146,6 +146,8 @@ public:
         // involved
         return 1.0 + log2((float)_din.size());
     }
+
+    InputPort* createInput();
 };
 
 /**

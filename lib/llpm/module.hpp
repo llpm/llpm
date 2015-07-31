@@ -231,8 +231,10 @@ protected:
     std::set<Port*>      _ownedPorts;
 
     InputPort* addInputPort(InputPort* ip, std::string name = "");
+    InputPort* createInputPort(llvm::Type* ty, std::string name = "");
     void removeInputPort(InputPort* ip);
     OutputPort* addOutputPort(OutputPort* op, std::string name = "");
+    OutputPort* createOutputPort(llvm::Type* ty, std::string name = "");
     void removeOutputPort(OutputPort* ip);
     Interface* addClientInterface(OutputPort* req,
                                   InputPort* resp,

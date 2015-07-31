@@ -218,7 +218,8 @@ void ConnectionDB::remap(const OutputPort* origPort, OutputPort* newPort) {
     find(origPort, conns);
     for(Connection& c: conns) {
         disconnect(c);
-        connect(newPort, c.sink());
+        if (newPort != nullptr)
+            connect(newPort, c.sink());
     }
 }
 
