@@ -7,6 +7,9 @@
 
 namespace llpm {
 
+// Fwd. defs
+class InterfaceMultiplexer;
+
 /**
  * Interface defines an input/output port pair. If the interface is a
  * "server" then the expectation is that one token is produced for
@@ -20,6 +23,7 @@ class Interface {
     OutputPort _dout;
     bool _server;
     std::string _name;
+    InterfaceMultiplexer* _multiplexer;
 
 public:
     Interface(Block* owner,
@@ -30,7 +34,8 @@ public:
         _din(owner, inpType, name + (server ? "_req" : "_resp")),
         _dout(owner, outType, name + (server ? "_resp" : "_req")),
         _server(server),
-        _name(name)
+        _name(name),
+        _multiplexer(nullptr)
     {
         owner->defineInterface(this);
     }
@@ -79,6 +84,8 @@ public:
     llvm::Type* reqType() const {
         return req()->type();
     }
+
+    InterfaceMultiplexer* multiplexer(ConnectionDB& conns);
 };
 
 /**

@@ -10,6 +10,14 @@
 
 namespace llpm {
 
+InterfaceMultiplexer* Interface::multiplexer(ConnectionDB& conns) {
+    if (_multiplexer == nullptr) {
+        _multiplexer = new InterfaceMultiplexer(this);
+        conns.connect(this, _multiplexer->client());
+    }
+    return _multiplexer;
+}
+
 bool InterfaceMultiplexer::refine(ConnectionDB& conns) const {
     if (_servers.size() <= 1) {
         // If we have one or zero clients, then we are totally unnecessary
