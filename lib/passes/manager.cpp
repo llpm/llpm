@@ -20,7 +20,7 @@ void PassManager::debug(Pass* p, Module* mod) {
     _design.gv()->writeModule(
         f,
         mod,
-        false,
+        true,
         "After pass " + cpp_demangle(typeid(*p).name()));
     _debugCounter[mod]++;
     f->close();
