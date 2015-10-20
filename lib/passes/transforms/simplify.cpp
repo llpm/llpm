@@ -71,6 +71,57 @@ void SimplifyPass::runInternal(Module* m) {
             t.trash(b);
     }
 
+    // Eliminate NullSinks on inputs with other connections
+    for (Block* b: blocks) {
+        if (b->is<NullSink>()) {
+            auto ns = b->as<NullSink>();
+            auto src = m->conns()->findSource(ns->din());
+            vector<InputPort*> sinks;
+            m->conns()->findSinks(src, sinks);
+            assert(sinks.size() > 0);
+            if (sinks.size() > 1)
+                t.trash(ns);
+        }
+    }
+
+    // Push NullSinks up as far as possible
+    for (Block* b: blocks) {
+        if (b->is<NullSink>()) {
+            auto ns = b->as<NullSink>();
+            auto srcP = m->conns()->findSource(ns->din());
+            if (srcP == nullptr)
+                // This means that this NS was already deleted.
+                continue;
+            auto src = srcP->owner();
+            vector<InputPort*> sinks;
+            for (auto op: src->outputs()) {
+                m->conns()->findSinks(op, sinks);
+            }
+
+            bool foundNonNS = false;
+            set<Block*> toTrash;
+            for (auto ip: sinks) {
+                if (!ip->owner()->is<NullSink>())
+                    foundNonNS = true;
+                else
+                    toTrash.insert(ip->owner());
+            }
+            
+            if (foundNonNS)
+                continue;
+
+            // src drives only NullSinks. It can be trashed and replaced with NullSinks
+            for (auto ip: src->inputs()) {
+                auto newns = new NullSink(ip->type());
+                m->conns()->remap(ip, newns->din());
+            }
+
+            for (auto b: toTrash)
+                t.trash(b);
+            t.trash(src);
+        }
+    }
+
 
     blocks.clear();
     conns->findAllBlocks(blocks);
