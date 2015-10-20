@@ -18,6 +18,7 @@ void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns,
     // Transform Registers to RTLRegs
     // TODO: something more intelligent?
     RTLReg* rr = new RTLReg(orig->type());
+    rr->name(orig->name());
     conns->remap(orig->write(), rr->write());
 
     deque< pair<InputPort*, OutputPort*> > reqs;
