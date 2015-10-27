@@ -14,6 +14,11 @@ class Transformer;
 class Wait;
 
 class SimplifyPass : public ModulePass {
+
+    void eliminateNoops(Module* mod);
+    void simplifyNullSinks(Module* mod);
+    void simplifyExtracts(Module* mod);
+
 public:
     SimplifyPass(Design& d) :
         ModulePass(d) 

@@ -12,32 +12,32 @@ using namespace std;
 
 namespace llpm {
 
-void SimplifyPass::runInternal(Module* m) {
+void SimplifyPass::eliminateNoops(Module* m) {
     Transformer t(m);
-
     ConnectionDB* conns = m->conns();
     assert(conns != NULL);
 
-    set<Block*> origBlocks;
-    conns->findAllBlocks(origBlocks);
-    unsigned origNum = origBlocks.size();
-
-    set<Block*> blocks = origBlocks;
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
 
     // Eliminate identities and other no-ops
     for (Block* b: blocks) {
+        // Identify does nothing by definition
         Identity* ib = dynamic_cast<Identity*>(b);
         if (ib)
             t.remove(ib);
 
+        // Selects with one input do nothing!
         Select* sb = dynamic_cast<Select*>(b);
         if (sb && sb->din_size() == 1)
             t.remove(sb);
 
+        // Routers with one output do nothing!
         Router* rb = dynamic_cast<Router*>(b);
         if (rb && rb->dout_size() == 1)
             t.remove(rb);
 
+        // Extracts with no selection path are probably invalid anyway
         Extract* eb = dynamic_cast<Extract*>(b);
         if (eb && eb->path().size() == 0) {
             t.remove(eb);
@@ -54,10 +54,8 @@ void SimplifyPass::runInternal(Module* m) {
                 t.replace(mb, e);
             }
         }
-    }
 
-    // Eliminate blocks which drive nothing
-    for (Block* b: blocks) {
+        // Eliminate blocks which drive nothing
         auto outputs = b->outputs();
         bool noSinks = true;
         for (auto op: outputs) {
@@ -70,6 +68,15 @@ void SimplifyPass::runInternal(Module* m) {
         if (noSinks && !b->is<NullSink>())
             t.trash(b);
     }
+}
+
+void SimplifyPass::simplifyNullSinks(Module* m) {
+    Transformer t(m);
+    ConnectionDB* conns = m->conns();
+    assert(conns != NULL);
+
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
 
     // Eliminate NullSinks on inputs with other connections
     for (Block* b: blocks) {
@@ -121,10 +128,16 @@ void SimplifyPass::runInternal(Module* m) {
             t.trash(src);
         }
     }
+}
 
+void SimplifyPass::simplifyExtracts(Module* m) {
+    Transformer t(m);
+    ConnectionDB* conns = m->conns();
+    assert(conns != NULL);
 
-    blocks.clear();
+    set<Block*> blocks;
     conns->findAllBlocks(blocks);
+
     // Find all field extracts
     map<OutputPort*, set<unsigned>> fieldsUsed;
     for (Block* b: blocks) {
@@ -173,10 +186,24 @@ void SimplifyPass::runInternal(Module* m) {
             }
         }
     }
+}
 
+void SimplifyPass::runInternal(Module* m) {
+    Transformer t(m);
+
+    ConnectionDB* conns = m->conns();
+    assert(conns != NULL);
+
+    set<Block*> origBlocks;
+    conns->findAllBlocks(origBlocks);
+    unsigned origNum = origBlocks.size();
+
+    eliminateNoops(m);
+    simplifyNullSinks(m);
+    simplifyExtracts(m);
     // TODO: Find and eliminate redundant (duplicate) blocks
 
-    blocks.clear();
+    set<Block*> blocks;
     conns->findAllBlocks(blocks);
     if (blocks.size() < origNum) 
         printf("    Simplified %s to from %u to %lu blocks\n",
@@ -185,7 +212,7 @@ void SimplifyPass::runInternal(Module* m) {
     // Apply this pass iteratively until convergence
     if (origBlocks != blocks) {
         // Did this pass do something?
-        this->run(m);
+        this->run(m); // If so, run it again!
     }
 }
 
