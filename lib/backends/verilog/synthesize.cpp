@@ -910,6 +910,45 @@ public:
     }
 };
 
+class OncePrinter: public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<Once*>(b) != NULL;
+    }
+
+    virtual bool customLID() const {
+        return true;
+    }
+
+    static std::string toString(Once* o) {
+        llvm::Constant* lc = o->value();
+        return ConstantPrinter::toString(o->dout()->type(), lc);
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        Once* f = dynamic_cast<Once*>(c);
+        if (bitwidth(f->dout()->type()) > 0)
+            ctxt << "    assign " << ctxt.name(f->dout()) << " = "
+                 << toString(f) << ";\n";
+        ctxt << "    reg " << ctxt.name(f) << "_valid;\n";
+        ctxt << "    assign " << ctxt.name(f->dout()) << "_valid = "
+                              << ctxt.name(f) << "_valid;\n";
+        ctxt << "    always@(posedge clk)\n"
+             << "    begin\n"
+             << "        if (~resetn)\n"
+             << "        begin\n"
+             << "            " << ctxt.name(f) << "_valid <= 1'b1;\n"
+             << "        end\n"
+             << "        else if (" << ctxt.name(f->dout()) << "_bp == 1'b0)\n"
+             << "        begin\n"
+             << "            " << ctxt.name(f) << "_valid <= 1'b0;\n"
+             << "        end\n"
+             << "    end\n"
+             << "\n";
+
+    }
+};
+
 class JoinPrinter: public VerilogSynthesizer::Printer {
 public:
     bool handles(Block* b) const {
@@ -1500,6 +1539,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(make_shared<IdentityOpPrinter<Wait>>());
 
     _printers.appendEntry(make_shared<ConstantPrinter>());
+    _printers.appendEntry(make_shared<OncePrinter>());
     _printers.appendEntry(make_shared<NeverPrinter>());
     _printers.appendEntry(make_shared<NullSinkPrinter>());
 

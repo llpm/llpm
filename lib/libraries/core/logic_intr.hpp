@@ -112,6 +112,52 @@ public:
     }
 };
 
+// Produces one token, once immediate after reset
+class Once: public virtual Block {
+    llvm::Constant* _value;
+    OutputPort _dout;
+public:
+    Once(llvm::Value* value) :
+        _dout(this, value->getType(), "c")
+    {
+        _value = llvm::dyn_cast<llvm::Constant>(value);
+        if (_value == NULL) {
+            throw InvalidArgument("Value passed to constant must be Constant!");
+        }
+    }
+
+    Once(llvm::Constant* value) :
+        _value(value),
+        _dout(this, value->getType(), "c")
+    { }
+
+    Once(llvm::Type* t) :
+        _value(NULL),
+        _dout(this, t, "c")
+    { }
+
+    virtual bool hasState() const { return false; }
+    virtual std::string print() const;
+
+    DEF_GET(dout);
+    DEF_GET_NP(value);
+    DEF_SET_NONULL(value);
+
+    static Once* getVoid(Design& d) {
+        return new Once(llvm::Type::getVoidTy(d.context()));
+    }
+
+    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
+        return inputs();
+    }
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == &_dout);
+        return DependenceRule(DependenceRule::AND,
+                              DependenceRule::Always);
+    }
+};
+
 } // namespace llpm
 
 #endif // __LLPM_LIBRARIES_CORE_MEM_INTR_HPP__

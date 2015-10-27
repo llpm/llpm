@@ -20,4 +20,10 @@ std::string Constant::print() const {
     return valuestr(this->_value);
 }
 
+std::string Once::print() const {
+    if (this->_value == NULL)
+        return "(null)";
+    return valuestr(this->_value);
+}
+
 } // namespace llpm
