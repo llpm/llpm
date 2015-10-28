@@ -240,6 +240,8 @@ public:
     }
 
     DEF_GET_NP(path);
+
+    virtual std::string print() const;
 };
 
 /**

@@ -141,6 +141,16 @@ Extract::Extract(llvm::Type* t, vector<unsigned> path) :
     _path(path)
 { }
 
+std::string Extract::print() const {
+    string ret;
+    for (auto p: _path) {
+        char num[50];
+        snprintf(num, 50, "%u, ", p);
+        ret = ret + num;
+    }
+    return ret;
+}
+
 llvm::Type* Multiplexer::GetInput(unsigned N, llvm::Type* type) {
     vector<llvm::Type*> types;
     types.push_back(llvm::Type::getIntNTy(type->getContext(), idxwidth(N)));
