@@ -56,6 +56,12 @@ public:
         return new Constant(llvm::Type::getVoidTy(d.context()));
     }
 
+    /**
+     * Given an output port which is indirectly constant, return an equivalent
+     * single constant.
+     */
+    static Constant* getEquivalent(OutputPort*);
+
     virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
         return inputs();
     }

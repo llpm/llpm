@@ -18,6 +18,7 @@ class SimplifyPass : public ModulePass {
     void eliminateNoops(Module* mod);
     void simplifyNullSinks(Module* mod);
     void simplifyExtracts(Module* mod);
+    void simplifyConstants(Module* mod);
 
 public:
     SimplifyPass(Design& d) :

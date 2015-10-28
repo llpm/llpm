@@ -207,6 +207,54 @@ void SimplifyPass::simplifyExtracts(Module* m) {
     }
 }
 
+void SimplifyPass::simplifyConstants(Module* m) {
+    Transformer t(m);
+    ConnectionDB* conns = m->conns();
+    assert(conns != NULL);
+
+    std::set<Port*> constPorts;
+    std::set<Block*> constBlocks;
+    queries::FindConstants(m, constPorts, constBlocks);
+    printf("In %s, following constant:\n", m->globalName().c_str());
+    for (auto b: constBlocks) {
+        printf("    %s\n", b->globalName().c_str());
+    }
+
+    set<Block*> blocks;
+    conns->findAllBlocks(blocks);
+    for (auto mop: m->outputs()) {
+        blocks.insert(m->getSink(mop)->owner());
+    }
+    for (auto block: blocks) {
+        if (constBlocks.count(block) > 0 &&
+            block->isnot<DummyBlock>())
+            continue;
+
+        for (auto ip: block->inputs()) {
+            if (constPorts.count(ip) > 0) {
+                // This input is constant. If possible, replace it with a
+                // single constant block.
+                auto op = conns->findSource(ip);
+                if (op == nullptr)
+                    continue;
+                auto newConst = Constant::getEquivalent(op);
+                if (newConst)
+                    printf("Equilvant for %s is %s (%s)\n",
+                           op->owner()->globalName().c_str(),
+                           typestr(newConst->dout()->type()).c_str(),
+                           newConst->globalName().c_str());
+                else
+                    printf("Equilvant for %s is null\n",
+                           op->owner()->globalName().c_str());
+                if (newConst != nullptr && newConst->dout() != op) {
+                    conns->disconnect(op, ip);
+                    conns->connect(newConst->dout(), ip);
+                }
+            }
+        }
+    }
+}
+
 void SimplifyPass::runInternal(Module* m) {
     Transformer t(m);
 
@@ -220,6 +268,7 @@ void SimplifyPass::runInternal(Module* m) {
     eliminateNoops(m);
     simplifyNullSinks(m);
     simplifyExtracts(m);
+    simplifyConstants(m);
     // TODO: Find and eliminate redundant (duplicate) blocks
 
     set<Block*> blocks;
