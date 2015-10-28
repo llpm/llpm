@@ -113,6 +113,7 @@ void printConns(std::ostream& os,
         auto ip = conn.sink();
 
         vector<InputPort*> sinks;
+        Block* ipFake = nullptr;
 
         auto opContainer = dynamic_cast<ContainerModule*>(op->owner());
         if (transparent && opContainer != NULL) {
@@ -126,18 +127,32 @@ void printConns(std::ostream& os,
             auto cdb = ipContainer->conns();
             auto internalSource = ipContainer->getDriver(ip);
             cdb->findSinks(internalSource, sinks);
+            if (sinks.size() == 0) {
+                vector<Block*> blocks;
+                ipContainer->blocks(blocks);
+                if (blocks.size() > 0)
+                    ipFake = blocks.front();
+            }
         } else {
             sinks = {ip};
         }
 
-        for (auto ip: sinks) {
-            if (is_hidden(op->owner(), mod) ||
-                is_hidden(ip->owner(), mod))
-                    continue;
-
+        if (sinks.size() == 0 && ipFake != nullptr) {
+            // Nothing uses value internally, show connection to subgraph instead
             os << "    " << getName(op->owner()) << " -> "
-               << getName(ip->owner()) 
-               << "[" << attrs(namer, op, ip, extra_attr) << "];\n";
+               << getName(ipFake) 
+               << "[" << attrs(namer, op, ip, extra_attr) 
+               << ",lhead=cluster_" << ip->owner()->name() << "];\n";               
+        } else {
+            for (auto ip: sinks) {
+                if (is_hidden(op->owner(), mod) ||
+                    is_hidden(ip->owner(), mod))
+                        continue;
+
+                os << "    " << getName(op->owner()) << " -> "
+                   << getName(ip->owner()) 
+                   << "[" << attrs(namer, op, ip, extra_attr) << "];\n";
+            }
         }
     }
 }
@@ -200,6 +215,7 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
     assert(conns != NULL);
 
     os << "digraph " << mod->name() << " {\n";
+    os << "    compound=true;\n";
     os << "    size=100;\n";
     os << "    labelsize=28;\n";
     os << "    label=" << quote(comment) << ";\n";
