@@ -55,6 +55,25 @@ void SimplifyPass::eliminateNoops(Module* m) {
             }
         }
 
+        // Find & replace routers with a constant route!
+        Router* rtr = dynamic_cast<Router*>(b);
+        if (rtr) {
+            auto selDriver = queries::FindSubfieldDriver(m, rtr->din(), {0});
+            if (selDriver != nullptr) {
+                auto constSel = queries::FindConstant(m, selDriver);
+                if (constSel != nullptr) {
+                    assert(constSel->getType()->isIntegerTy());
+                    auto constSelValue = constSel->getUniqueInteger();
+                    assert(constSelValue.getLimitedValue() < rtr->dout_size());
+                    auto valExtract = new Extract(rtr->din()->type(), {1});
+                    conns->remap(rtr->din(), valExtract->din());
+                    conns->remap(rtr->dout(constSelValue.getLimitedValue()),
+                                 valExtract->dout());
+                    t.trash(rtr);
+                }
+            }
+        }
+
         // Eliminate blocks which drive nothing
         auto outputs = b->outputs();
         bool noSinks = true;

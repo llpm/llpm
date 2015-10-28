@@ -52,6 +52,13 @@ void FindDependencies(const Module*,
                       std::set<OutputPort*>& deps,
                       DependenceRule& rule);
 
+// Attempt to find a single source for a particular subfield on an input port
+OutputPort* FindSubfieldDriver(const Module*,
+                               InputPort*,
+                               std::vector<unsigned> subfield);
+
+// If a port is driven by a constant, find & return that constant
+llvm::Constant* FindConstant(const Module*, Port*);
 };
 };
 

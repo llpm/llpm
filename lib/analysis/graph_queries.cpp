@@ -380,7 +380,159 @@ void FindDependencies(const Module* mod,
     rule = visitor.rule;
 }
 
+// Attempt to find a single source for a particular subfield on an input port
+OutputPort* FindSubfieldDriver(const Module* mod,
+                               InputPort* ip,
+                               std::vector<unsigned> subfield) {
+    const ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        throw InvalidArgument("Cannot analyze opaque module!");
 
+    OutputPort* candidate = nullptr;
+    set<InputPort*> seen;
+    while (true) {
+        if (seen.count(ip) > 0)
+            break;
+        seen.insert(ip);
+
+        auto driver = conns->findSource(ip);
+        if (driver == nullptr)
+            break;
+
+        if (subfield.empty())
+            candidate = driver;
+
+        auto block = driver->owner();
+
+        auto id = block->as<Identity>();
+        if (id != nullptr) {
+            ip = id->din();
+            continue;
+        }
+
+        auto wait = block->as<Wait>();
+        if (wait != nullptr) {
+            ip = wait->din();
+        }
+
+        auto join = block->as<Join>();
+        if (join != nullptr) {
+            assert(!subfield.empty());
+            unsigned idx = subfield.back();
+            subfield.pop_back();
+            assert(idx < join->din_size());
+            ip = join->din(idx);
+            continue;
+        }
+
+        auto extract = block->as<Extract>();
+        if (extract != nullptr) {
+            subfield.insert(subfield.end(),
+                            extract->path().begin(), extract->path().end());
+            ip = extract->din();
+            continue;
+        }
+
+        auto split = block->as<Split>();
+        if (split != nullptr) {
+            signed idx = -1;
+            for (unsigned i=0; i<split->dout_size(); i++) {
+                if (split->dout(i) == driver)
+                    idx = i;
+            }
+            assert(idx >= 0);
+            subfield.push_back(idx);
+            ip = split->din();
+        }
+    }
+
+    if (subfield.size() == 0)
+        return conns->findSource(ip);
+    return candidate;
+}
+
+static llvm::Constant* extractSubConstant(
+    llvm::Constant* c, std::vector<unsigned> subfield) {
+    for (unsigned idx: subfield) {
+        c = c->getAggregateElement(idx);
+        if (c == nullptr)
+            return nullptr;
+    }
+    return c;
+}
+
+// If a port is driven by a constant, find & return that constant
+llvm::Constant* FindConstant(const Module* mod, Port* port) {
+    assert(port != nullptr);
+    const ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        throw InvalidArgument("Cannot analyze opaque module!");
+
+    InputPort* ip = port->asInput();
+    OutputPort* op = port->asOutput();
+
+    std::vector<unsigned> subfield;
+    set<OutputPort*> seen;
+    while (true) {
+        if (ip != nullptr)
+            op = conns->findSource(ip);
+        if (op == nullptr ||
+            seen.count(op) > 0)
+            break;
+        seen.insert(op);
+
+        auto block = op->owner();
+
+        auto constant = block->as<Constant>();
+        if (constant != nullptr) {
+            // Yay! We found the constant!
+            return extractSubConstant(constant->value(), subfield);
+        }
+
+        auto id = block->as<Identity>();
+        if (id != nullptr) {
+            ip = id->din();
+            continue;
+        }
+
+        auto wait = block->as<Wait>();
+        if (wait != nullptr) {
+            ip = wait->din();
+        }
+
+        auto join = block->as<Join>();
+        if (join != nullptr) {
+            assert(!subfield.empty());
+            unsigned idx = subfield.back();
+            subfield.pop_back();
+            assert(idx < join->din_size());
+            ip = join->din(idx);
+            continue;
+        }
+
+        auto extract = block->as<Extract>();
+        if (extract != nullptr) {
+            subfield.insert(subfield.end(),
+                            extract->path().begin(), extract->path().end());
+            ip = extract->din();
+            continue;
+        }
+
+        auto split = block->as<Split>();
+        if (split != nullptr) {
+            signed idx = -1;
+            for (unsigned i=0; i<split->dout_size(); i++) {
+                if (split->dout(i) == op)
+                    idx = i;
+            }
+            assert(idx >= 0);
+            subfield.push_back(idx);
+            ip = split->din();
+        }
+    }
+
+    return nullptr;
+}
 
 } // namespace queries
 } // namespace llpm
