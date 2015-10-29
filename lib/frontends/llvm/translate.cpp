@@ -21,7 +21,6 @@
 #include <llvm/IR/CallSite.h>
 
 #include <llvm/Support/TargetRegistry.h>
-#include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/MC/SubtargetFeature.h>
 
@@ -52,11 +51,6 @@ void LLVMTranslator::optimize(llvm::Module* module) {
     raw_os_ostream rawPreStream(pref->openStream());
     MPM.add(createPrintModulePass(rawPreStream));
     MPM.add(llvm::createVerifierPass(true));
-
-    // Add an appropriate DataLayout instance for this module.
-    const DataLayout *DL = module->getDataLayout();
-    if (DL)
-        MPM.add(new DataLayoutPass(module));
 
     // Analysis
     MPM.add(createTypeBasedAliasAnalysisPass());

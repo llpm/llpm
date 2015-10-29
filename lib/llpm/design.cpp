@@ -205,7 +205,7 @@ llvm::Module* Design::readBitcode(std::string fnName) {
     llvmPassReg();
     llvm::SMDiagnostic Err;
     llvm::Module *mod = 
-        llvm::ParseIRFile(fnName, Err, context());
+        llvm::parseIRFile(fnName, Err, context()).release();
     _llvmModules.insert(mod);
     
     if (mod == NULL) {

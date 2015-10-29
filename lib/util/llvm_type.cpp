@@ -7,22 +7,8 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Function.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/IR/ValueHandle.h>
 
 #include <boost/format.hpp>
-
-namespace llvm {
-    // This appears to be around for no reason other than to create
-    // a typeinfo for CallbackVH. It doesn't create one in the LLVM
-    // library since LLVM is no-rtti. For some reason, however, I need
-    // the typeinfo even though I'm not directly extending CallbackVH.
-    // Probably an LLVM class I'm using is in a template or something
-    // stupid.
-    // 
-    // Anyway, LLVM is so painfully non-standard that I have to put
-    // this here to avoid linking issues.
-    void CallbackVH::anchor() {}
-}
 
 namespace llpm {
 

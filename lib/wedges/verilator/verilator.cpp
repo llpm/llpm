@@ -167,7 +167,6 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
 
     // Load all the output objs and merge them into swModule
     llvm::Module* merged = NULL;
-    string errMsg;
     for (auto f: objFiles) {
         llvm::SMDiagnostic Err;
         llvm::Module* m = mod->design().readBitcode(f->name());
@@ -175,10 +174,10 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         if (merged == NULL) {
             merged = m;
         } else {
-            llvm::Linker L(merged, false);
-            auto rc = L.linkInModule(m, &errMsg);
+            llvm::Linker L(merged);
+            auto rc = L.linkInModule(m);
             if (rc) {
-                printf("Error linking: %s\n", errMsg.c_str());
+                printf("Error linking\n");
                 assert(false);
             }
             mod->design().deleteModule(m);
@@ -187,10 +186,10 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
 
     // Link in the existing shit
     if (merged != NULL) {
-        llvm::Linker L(merged, false);
+        llvm::Linker L(merged);
         if (mod->swModule() != NULL) {
-            if (L.linkInModule(mod->swModule(), &errMsg)) {
-                printf("Error linking: %s\n", errMsg.c_str());
+            if (L.linkInModule(mod->swModule())) {
+                printf("Error linking\n");
                 assert(false);
             }
         }
