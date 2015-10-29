@@ -215,10 +215,6 @@ void SimplifyPass::simplifyConstants(Module* m) {
     std::set<Port*> constPorts;
     std::set<Block*> constBlocks;
     queries::FindConstants(m, constPorts, constBlocks);
-    printf("In %s, following constant:\n", m->globalName().c_str());
-    for (auto b: constBlocks) {
-        printf("    %s\n", b->globalName().c_str());
-    }
 
     set<Block*> blocks;
     conns->findAllBlocks(blocks);
@@ -238,14 +234,6 @@ void SimplifyPass::simplifyConstants(Module* m) {
                 if (op == nullptr)
                     continue;
                 auto newConst = Constant::getEquivalent(op);
-                if (newConst)
-                    printf("Equilvant for %s is %s (%s)\n",
-                           op->owner()->globalName().c_str(),
-                           typestr(newConst->dout()->type()).c_str(),
-                           newConst->globalName().c_str());
-                else
-                    printf("Equilvant for %s is null\n",
-                           op->owner()->globalName().c_str());
                 if (newConst != nullptr && newConst->dout() != op) {
                     conns->disconnect(op, ip);
                     conns->connect(newConst->dout(), ip);
