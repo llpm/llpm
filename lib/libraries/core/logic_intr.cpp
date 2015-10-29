@@ -45,17 +45,24 @@ static llvm::Constant* getLLVMEquivalent(OutputPort* op) {
         return block->as<Constant>()->value();
 
     if (block->is<Join>()) {
+        auto join = block->as<Join>();
         vector<llvm::Constant*> vec;
-        for (unsigned i=0; i<block->as<Join>()->din_size(); i++) {
-            auto ip = block->as<Join>()->din(i);
+        for (unsigned i=0; i<join->din_size(); i++) {
+            auto ip = join->din(i);
             auto eq = getLLVMEquivalent(ip);
             if (eq == nullptr)
                 return nullptr;
             vec.push_back(eq);
         }
-        return llvm::ConstantStruct::get(
-            llvm::dyn_cast<llvm::StructType>(op->type()),
-            vec);
+        if (join->dout()->type()->isStructTy()) {
+            return llvm::ConstantStruct::get(
+                llvm::dyn_cast<llvm::StructType>(op->type()),
+                vec);
+        } else if (join->dout()->type()->isVectorTy()) {
+            return llvm::ConstantVector::get(vec);
+        } else {
+            assert(false && "Unknown join type! Fixme or return null.");
+        }
     }
 
     if (block->is<Identity>()) {
