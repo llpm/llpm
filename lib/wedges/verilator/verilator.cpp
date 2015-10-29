@@ -28,7 +28,8 @@ static const char* verilatorGlobalOpts =
     "--cc -sv --stats --compiler clang -O3 --trace --assert --x-assign unique";
 
 static const char* verilatedCppOpts = 
-    "-DVL_PRINTF=printf -DVM_TRACE=1 -DVM_COVERAGE=0 -fbracket-depth=4096";
+    "-DVL_PRINTF=printf -DVM_TRACE=1 -DVM_COVERAGE=0 -fbracket-depth=4096"
+    " -Wno-undefined-bool-conversion";
 
 static const std::vector<std::string> externalFiles = {
     // Verilator crap
