@@ -89,6 +89,8 @@ static llvm::Constant* getLLVMEquivalent(OutputPort* op) {
     if (block->is<Split>()) {
         auto s = block->as<Split>();
         auto c = getLLVMEquivalent(s->din());
+        if (c == nullptr)
+            return nullptr;
         for (unsigned i=0; i<s->dout_size(); i++) {
             if (op == s->dout(i)) {
                 return c->getAggregateElement(i);

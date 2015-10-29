@@ -427,8 +427,8 @@ OutputPort* FindSubfieldDriver(const Module* mod,
 
         auto extract = block->as<Extract>();
         if (extract != nullptr) {
-            subfield.insert(subfield.end(),
-                            extract->path().begin(), extract->path().end());
+            const auto& path = extract->path();
+            subfield.insert(subfield.end(), path.begin(), path.end());
             ip = extract->din();
             continue;
         }
