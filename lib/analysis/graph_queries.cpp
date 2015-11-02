@@ -380,6 +380,50 @@ void FindDependencies(const Module* mod,
     rule = visitor.rule;
 }
 
+struct ConsumerFindingVisitor : public Visitor<OIEdge> {
+    bool first = true;
+    set<InputPort*> consumers;
+    boost::function<bool(Block*)> ignoreBlock;
+
+    Terminate visit(const ConnectionDB*,
+                    const PathTy& path)
+    {
+        if (first) {
+            consumers.clear();
+            first = false;
+        }
+        if (ignoreBlock(path.endPort()->owner()))
+            return TerminatePath;
+        return Continue;
+    }
+
+    Terminate pathEnd(const ConnectionDB*,
+                      const PathTy& path)
+    {
+        if (ignoreBlock(path.endPort()->owner()))
+            return TerminatePath;
+        consumers.insert(path.endPort());
+        return Continue;
+    }
+};
+
+// Given an output port, find all ports which may depend on it
+void FindConsumers(const Module* mod,
+                   OutputPort* op,
+                   std::set<InputPort*>& consumers,
+                   boost::function<bool(Block*)> ignoreBlock)
+{
+    const ConnectionDB* conns = mod->conns();
+    if (conns == NULL)
+        throw InvalidArgument("Cannot analyze opaque module!");
+
+    ConsumerFindingVisitor visitor;
+    visitor.ignoreBlock = ignoreBlock;
+    GraphSearch<ConsumerFindingVisitor, DFS> search(conns, visitor);
+    search.go(vector<OutputPort*>{op});
+    consumers.swap(visitor.consumers);
+}
+
 // Attempt to find a single source for a particular subfield on an input port
 OutputPort* FindSubfieldDriver(const Module* mod,
                                InputPort* ip,

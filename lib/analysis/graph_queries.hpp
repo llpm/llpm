@@ -52,6 +52,12 @@ void FindDependencies(const Module*,
                       std::set<OutputPort*>& deps,
                       DependenceRule& rule);
 
+// Given an output port, find all ports which may depend on it
+void FindConsumers(const Module*,
+                   OutputPort*,
+                   std::set<InputPort*>& consumers,
+                   boost::function<bool(Block*)> ignoreBlock);
+
 // Attempt to find a single source for a particular subfield on an input port
 OutputPort* FindSubfieldDriver(const Module*,
                                InputPort*,
