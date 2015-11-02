@@ -114,8 +114,8 @@ bool ControlRegion::BlockAllowed(Block* b) {
          b->firing() != DependenceRule::AND) {
         return false;
     }
-    if (b->is<Latch>())
-        // Don't allow Latches for now
+    if (b->is<Latch>() || b->is<PipelineRegister>())
+        // Don't allow Latches and PRegs for now
         return false;
     return true;
 }
