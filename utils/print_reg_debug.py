@@ -17,17 +17,19 @@ f = file(sys.argv[1])
 
 def show_cycle(cycle):
     f.seek(0)
-    currText = ""
+    currText = []
     print(chr(27) + "[2J")
     for line in f.readlines():
         cycTxt = line.split("]")[0].strip("[")
+        reg = line.split("]")[1].split(",")[0].strip()
         thisCyc = int(cycTxt);
         if thisCyc < cycle:
             continue
         if thisCyc > cycle:
             break
-        currText += line
-    print currText
+        currText.append( (reg, line.strip()) )
+    currText.sort()
+    print "\n".join(map(lambda x: x[1], currText))
 
 currCycle = 0
 for line in f.readlines():
