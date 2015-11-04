@@ -4,6 +4,7 @@
 #include <llpm/module.hpp>
 #include <llpm/control_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
+#include <libraries/synthesis/fork.hpp>
 #include <util/transform.hpp>
 #include <util/llvm_type.hpp>
 #include <analysis/graph.hpp>
@@ -30,34 +31,45 @@ void PipelineDependentsPass::runInternal(Module* mod) {
             numNormalOutputs <= 1)
             continue;
 
-#if 0
         if (block->is<Split>()) {
+            auto split = block->as<Split>();
+            auto origInput = t.conns()->findSource(split->din());
             // if this block is a "split" we can resolve the non-tied
             // inputs by replacing it with some extracts instead.
-            if (block->as<Split>()->refineToExtracts(*t.conns()))
-                continue;
-        }
-#endif
+            auto extracts = split->refineToExtracts(*t.conns());
+            auto fork = new Fork(block->as<Split>()->din()->type(), false);
+            t.conns()->connect(origInput, fork->din());
+            for (auto e: extracts) {
+                t.conns()->disconnect(origInput, e->din());
+                t.conns()->connect(fork->createOutput(), e->din());
+            }
 
-        // Since this block has dependent outputs, all of them better
-        // be connected to pipeline regs!
+            continue;
+        }
+
+        // Blocks cannot have dependent outputs for synthesis. To create a
+        // single output, join the dependent outputs then fork it to the
+        // consumers.
+        vector<llvm::Type*> tyVec;
+        for (auto op: block->outputs()) {
+            tyVec.push_back(op->type());
+        }
+        auto join = new Join(tyVec);
+        auto fork = new Fork(join->dout()->type(), false);
+        t.conns()->connect(join->dout(), fork->din());
+        unsigned i=0;
         for (auto op: block->outputs()) {
             set<InputPort*> sinks;
-            PipelineRegister* preg = NULL;
             t.conns()->findSinks(op, sinks);
-            for (auto sink: sinks)
-                preg = sink->owner()->as<PipelineRegister>();
-            if (preg == NULL) {
-                preg = new PipelineRegister(op);
-                t.conns()->connect(op, preg->din());
-            }
+            t.conns()->connect(op, join->din(i));
+            auto extr = new Extract(join->dout()->type(), {i});
+            t.conns()->connect(fork->createOutput(), extr->din());
 
             for (auto sink: sinks) {
-                if (sink->owner()->isnot<PipelineRegister>()) {
-                    t.conns()->disconnect(op, sink);
-                    t.conns()->connect(preg->dout(), sink);
-                }
+                t.conns()->disconnect(op, sink);
+                t.conns()->connect(extr->dout(), sink);
             }
+            i++;
         }
     }
 }

@@ -14,6 +14,9 @@
 
 namespace llpm {
 
+// Fwd defs
+class Extract;
+
 class CommunicationIntrinsic: public virtual Block {
 protected:
     virtual bool hasState() const {
@@ -218,10 +221,11 @@ public:
     }
 
     virtual bool refine(ConnectionDB& conns) const {
-        return refineToExtracts(conns);
+        auto rc = refineToExtracts(conns);
+        return true; 
     }
 
-    virtual bool refineToExtracts(ConnectionDB& conns) const;
+    virtual std::vector<Extract*> refineToExtracts(ConnectionDB& conns) const;
 };
 
 /**

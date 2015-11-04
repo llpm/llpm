@@ -115,15 +115,17 @@ Split::Split(llvm::Type* input) :
 }
 
 
-bool Split::refineToExtracts(ConnectionDB& conns) const {
+vector<Extract*> Split::refineToExtracts(ConnectionDB& conns) const {
     vector<InputPort*> einputs;
+    vector<Extract*> ret;
     for (unsigned i=0; i<_dout.size(); i++) {
         auto e = new Extract(din()->type(), {i});
         einputs.push_back(e->din());
         conns.remap(_dout[i].get(), e->dout());
+        ret.push_back(e);
     }
     conns.remap(din(), einputs);
-    return true;
+    return ret;
 }
 
 llvm::Type* Extract::GetOutput(llvm::Type* t, std::vector<unsigned> path) {
