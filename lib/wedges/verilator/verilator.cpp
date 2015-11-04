@@ -42,6 +42,8 @@ static const std::vector<std::string> externalFiles = {
     "/verilator/share/verilator/include/verilated_syms.h",
     "/verilator/share/verilator/include/verilated.cpp",
     "/verilator/share/verilator/include/verilated_vcd_c.cpp",
+    "/support/backends/verilog/verilator_extra.h",
+    "/support/backends/verilog/verilator_extra.cpp"
 };
 
 
@@ -90,6 +92,12 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         auto cpy = fileset.copy(Directories::executablePath() + f);
         myFiles.insert(cpy);
     }
+
+    // Add some extra lines to verilated.h
+    auto vf = fileset.create("verilated.h");
+    auto vff = vf->openFile("a");
+    fprintf(vff, "\n#include \"verilator_extra.h\"\n");
+    vf->close();
 
     for (auto f: myFiles) {
         auto ext = f->ext();

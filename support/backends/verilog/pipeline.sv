@@ -11,6 +11,7 @@ module PipelineReg_DoubleWidth(clk, resetn,
     d, d_valid, d_bp,
     q, q_valid, q_bp);
 
+parameter Name = "";
 parameter Width = 8;
 
 input wire clk;
@@ -87,6 +88,10 @@ begin
             end
         end
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid1, ", ", data1, ", ",
+                                 valid2, ", ", data2, ");");
+    `endif
 end
 
 endmodule
@@ -96,6 +101,7 @@ module PipelineReg_DoubleWidth_NoData(
     d_valid, d_bp,
     q_valid, q_bp);
 
+parameter Name = "";
 parameter Width = 8;
 
 input wire clk;
@@ -161,6 +167,10 @@ begin
             end
         end
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid1, ", (unsigned int)", 0, ", ",
+                                 valid2, ", (unsigned int)", 0, ");");
+    `endif
 end
 
 endmodule
@@ -171,6 +181,7 @@ module PipelineReg_SingleStore(clk, resetn,
     d, d_valid, d_bp,
     q, q_valid, q_bp);
 
+parameter Name = "";
 parameter Width = 8;
 
 input wire clk;
@@ -216,6 +227,9 @@ begin
             data  <= d;
         end 
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid1, ", ", data1, ");");
+    `endif
 end
 
 endmodule
@@ -267,6 +281,9 @@ begin
             valid <= 1'b1;
         end 
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid, ", (unsigned int)", 0, ");");
+    `endif
 end
 
 endmodule
@@ -306,6 +323,9 @@ begin
             data <= d;
         end
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", 0, ", ", data, ");");
+    `endif
 end
 
 endmodule
@@ -317,6 +337,7 @@ module Latch(clk, resetn,
     d, d_valid, d_bp,
     q, q_valid, q_bp);
 
+parameter Name = "";
 parameter Width = 8;
 
 input wire clk;
@@ -362,6 +383,9 @@ begin
             data  <= d;
         end 
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid, ", ", data, ");");
+    `endif
 end
 
 endmodule
@@ -371,6 +395,7 @@ module Latch_NoData(clk, resetn,
     d_valid, d_bp,
     q_valid, q_bp);
 
+parameter Name = "";
 parameter Width = 8;
 
 input wire clk;
@@ -410,6 +435,9 @@ begin
             valid <= 1'b1;
         end 
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid, ", (unsigned int)", 0, ");");
+    `endif
 end
 
 endmodule

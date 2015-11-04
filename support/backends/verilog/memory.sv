@@ -9,6 +9,7 @@ module RTLReg(clk, resetn,
     write_resp_valid, write_resp_bp,
     read, read_valid);
 
+parameter Name = "";
 parameter Width = 8;
 
 input wire clk;
@@ -61,6 +62,7 @@ module BlockRAM_2RW (clk, resetn,
     port1_req, port1_req_valid, port1_req_bp,
     port1_resp, port1_resp_valid, port1_resp_bp);
 
+parameter Name = "";
 parameter Width = 8;
 parameter Depth = 8;
 parameter AddrWidth = 8;

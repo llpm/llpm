@@ -1463,6 +1463,7 @@ struct PipelineRegAttr: public AttributePrinter {
 
     void operator()(VerilogSynthesizer::Context& ctxt,
                     PipelineRegister* r) {
+        print(ctxt, "Name", "\"" + ctxt.name(r, false) + "\"", false);
         print(ctxt, "Width", bitwidth(r->din()->type()), true);
     }
 
@@ -1501,6 +1502,7 @@ struct LatchAttr: public AttributePrinter {
 
     void operator()(VerilogSynthesizer::Context& ctxt,
                     Latch* l) {
+        print(ctxt, "Name", "\"" + ctxt.name(l) + "\"" , false);
         print(ctxt, "Width", bitwidth(l->din()->type()), true);
     }
 };
