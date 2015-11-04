@@ -16,8 +16,10 @@
 #include <llpm/exceptions.hpp>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem/operations.hpp>
 
 namespace po = boost::program_options;
+namespace fs = boost::filesystem;
 
 namespace llpm {
 
@@ -258,11 +260,9 @@ public:
             if (f->name() == dst)
                 return f;
         }
-        if (exists(newName))
+        if (exists(dst))
             unlink(dst.c_str());
-        int rc = link(fn.c_str(), dst.c_str());
-        if (rc != 0)
-            throw SysError("Copying file to working set");
+        fs::copy_file(fn, dst);
         return create(newName);
     }
 };
