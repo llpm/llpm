@@ -52,21 +52,21 @@ void debug_reg(
     counter[name]++;
     if (debug_output != NULL) {
         if (valid1 && valid2) {
-            fprintf(debug_output, "[%lu] %30s, %25s, %25s\n",
+            fprintf(debug_output, "[%6lu] %30s, %25s, %25s\n",
                     counter[name], name.c_str(),
                     toString(data1).c_str(),
                     toString(data2).c_str());
         } else if (valid1) {
-            fprintf(debug_output, "[%lu] %30s, %25s\n",
+            fprintf(debug_output, "[%6lu] %30s, %25s\n",
                     counter[name], name.c_str(),
                     toString(data1).c_str());
         } else if (valid2) {
-            fprintf(debug_output, "[%lu] %30s, %25s, %25s\n",
+            fprintf(debug_output, "[%6lu] %30s, %25s, %25s\n",
                     counter[name], name.c_str(),
                     "", 
                     toString(data2).c_str());
         } else {
-            fprintf(debug_output, "[%lu] %30s\n",
+            fprintf(debug_output, "[%6lu] %30s\n",
                     counter[name], name.c_str());
         }
         fflush(debug_output);
