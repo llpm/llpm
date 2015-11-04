@@ -17,7 +17,19 @@ static string toString(unsigned long i) {
 
 static string toString(unsigned int i) {
     char buf[64];
-    snprintf(buf, 64, "0x%x", i);
+    snprintf(buf, 64, "0x%x", (unsigned int)i);
+    return buf;
+}
+
+static string toString(unsigned short i) {
+    char buf[64];
+    snprintf(buf, 64, "0x%x", (unsigned int)i);
+    return buf;
+}
+
+static string toString(unsigned char i) {
+    char buf[64];
+    snprintf(buf, 64, "0x%x", (unsigned int)i);
     return buf;
 }
 
@@ -97,4 +109,6 @@ void debug_reg(
 
 INSTANTIATE_DEBUG_REG(unsigned long);
 INSTANTIATE_DEBUG_REG(unsigned int);
+INSTANTIATE_DEBUG_REG(unsigned short);
+INSTANTIATE_DEBUG_REG(unsigned char);
 INSTANTIATE_DEBUG_REG(unsigned int*);

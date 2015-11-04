@@ -52,8 +52,11 @@ while True:
     sys.stdout.flush()
 
     if key == 13:
-        currCycle = int(cmdBuffer)
-        show_cycle(currCycle)
+        try:
+            currCycle = int(cmdBuffer)
+            show_cycle(currCycle)
+        except:
+            pass
         cmdBuffer = ""
     elif key == 3:
         break
