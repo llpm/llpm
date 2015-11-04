@@ -59,6 +59,7 @@ begin
         begin
             valid1 <= valid2;
             data1  <= data2;
+            valid2 <= 1'b0;
         end
         else if (incoming && !outgoing)
         begin
@@ -143,6 +144,7 @@ begin
         if (outgoing && !incoming)
         begin
             valid1 <= valid2;
+            valid2 <= 1'b0;
         end
         else if (incoming && !outgoing)
         begin
