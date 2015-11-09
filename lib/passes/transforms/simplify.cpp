@@ -55,6 +55,61 @@ void SimplifyPass::eliminateNoops(Module* m) {
             }
         }
 
+        // Find splits driven by joins and replace with wait
+        Split* s = dynamic_cast<Split*>(b);
+        if (s) {
+            auto driver = t.conns()->findSource(s->din());
+            auto join = driver->owner()->as<Join>();
+            if (join) {
+                assert(s->dout_size() == join->din_size());
+                for (unsigned i=0; i<join->din_size(); i++) {
+                    auto w = new Wait(join->din(i)->type());
+                    auto joinDriver = t.conns()->findSource(join->din(i));
+                    if (joinDriver) {
+                        t.conns()->connect(joinDriver, w->din());
+                        w->newControl(t.conns(), join->dout());
+                        vector<InputPort*> sSinks;
+                        t.conns()->findSinks(s->dout(i), sSinks);
+                        for (auto sink: sSinks) {
+                            t.conns()->disconnect(s->dout(i), sink);
+                            t.conns()->connect(w->dout(), sink);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Find extracts driven by joins and replace with wait
+        Extract* e = dynamic_cast<Extract*>(b);
+        if (e) {
+            auto driver = t.conns()->findSource(e->din());
+            auto join = driver->owner()->as<Join>();
+            if (join) {
+                auto idx = e->path().front();
+                assert(idx < join->din_size());
+                auto w = new Wait(join->din(idx)->type());
+                auto joinDriver = t.conns()->findSource(join->din(idx));
+                if (joinDriver) {
+                    if (e->path().size() == 1) {
+                        t.conns()->connect(joinDriver, w->din());
+                    } else {
+                        auto path = e->path();
+                        path.erase(path.begin());
+                        auto newE = new Extract(joinDriver->type(), path);
+                        t.conns()->connect(joinDriver, newE->din());
+                        t.conns()->connect(newE->dout(), w->din());
+                    }
+                    w->newControl(t.conns(), join->dout());
+                    vector<InputPort*> sSinks;
+                    t.conns()->findSinks(e->dout(), sSinks);
+                    for (auto sink: sSinks) {
+                        t.conns()->disconnect(e->dout(), sink);
+                        t.conns()->connect(w->dout(), sink);
+                    }
+                }
+            }
+        }
+
         // Find & replace routers with a constant route!
         Router* rtr = dynamic_cast<Router*>(b);
         if (rtr) {
