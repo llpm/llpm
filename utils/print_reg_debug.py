@@ -18,7 +18,6 @@ f = file(sys.argv[1])
 def show_cycle(cycle):
     f.seek(0)
     currText = []
-    print(chr(27) + "[2J")
     for line in f.readlines():
         cycTxt = line.split("]")[0].strip("[")
         reg = line.split("]")[1].split(",")[0].strip()
@@ -29,6 +28,7 @@ def show_cycle(cycle):
             break
         currText.append( (reg, line.strip()) )
     currText.sort()
+    print(chr(27) + "[2J")
     print "\n".join(map(lambda x: x[1], currText))
 
 currCycle = 0
