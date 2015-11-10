@@ -327,12 +327,21 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
         blocks.insert(mod->getSink(op)->owner());
     }
 
+    // Track block names for sanity checking
+    std::map<std::string, Block*> blockNames;
+
     ctxt << "/*********\n"
          << "   Signal forward defs\n"
          << " *********/\n"
          << "\n";
         
     for (Block* b: blocks) {
+        string bname = ctxt.primBlockName(b);
+        auto bnF = blockNames.find(bname);
+        assert(bnF == blockNames.end() ||
+               bnF->second == b);
+        blockNames[bname] = b;
+
         const vector<Printer*>& possible_printers = _printers(b);
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
         if (possible_printers.size() == 0) {

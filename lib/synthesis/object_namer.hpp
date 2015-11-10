@@ -19,8 +19,8 @@ class OutputPort;
 class ObjectNamer : boost::noncopyable {
     uint64_t anonBlockCounter;
     std::set< std::pair<Module*, std::string> > _existingNames;
-    std::map<Block*, std::string> _blockNames;
-    std::map<Port*, std::string> _portNames;
+    std::map< std::pair<Module*, Block*>, std::string> _blockNames;
+    std::map< std::pair<Module*, Port*>, std::string> _portNames;
 
 public:
     ObjectNamer() :
