@@ -1,6 +1,9 @@
 #include "constant.hpp"
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/logic_intr.hpp>
+#include <libraries/core/std_library.hpp>
+
+#include <llvm/IR/Constants.h>
 
 #include <set>
 
@@ -37,10 +40,59 @@ llvm::Constant* EvalConstant(const ConnectionDB* conns,
     auto b = op->owner();
 
     if (b->is<Constant>()) {
-        return b->as<Constant>()->value();
+        auto c = b->as<Constant>()->value();
+        if (c->getType()->isIntegerTy()) {
+            auto i = c->getUniqueInteger();
+            i = i.sextOrTrunc(64);
+            c = llvm::ConstantInt::get(c->getType()->getContext(), i);
+        }
+        return c;
     }
     if (b->is<Identity>()) {
         return EvalConstant(conns, b->as<Identity>()->din(), seen);
+    }
+    if (b->is<Join>()) {
+        auto j = b->as<Join>();
+        std::vector<llvm::Constant*> ins;
+        for (unsigned i=0; i<j->din_size(); i++) {
+            auto c = EvalConstant(conns, j->din(i), seen);
+            if (c == nullptr) {
+                c = llvm::Constant::getNullValue(j->din(i)->type());
+            }
+            ins.push_back(c);
+        }
+        auto retType = j->dout()->type();
+        if (retType->isStructTy()) {
+            return llvm::ConstantStruct::getAnon(ins);
+        }
+        if (retType->isVectorTy()) {
+            return llvm::ConstantVector::get(ins);
+        }
+        return nullptr;
+    }
+
+    if (b->is<Function>()) {
+        auto f = b->as<Function>();
+        auto cin = EvalConstant(conns, f->din(), seen);
+
+        if (b->is<IntAddition>()) {
+            llvm::APInt sum(64, 0, true);
+            for (unsigned i=0; i<cin->getType()->getNumContainedTypes(); i++) {
+                sum += cin->getAggregateElement(i)->getUniqueInteger();
+            }
+            sum = sum.sextOrTrunc(64);
+            return llvm::ConstantInt::get(f->dout()->type()->getContext(), sum);
+        }
+        if (b->is<IntSubtraction>()) {
+            llvm::APInt sum(64, 0, true);
+            for (unsigned i=0; i<cin->getType()->getNumContainedTypes(); i++) {
+                if (i == 0)
+                    sum += cin->getAggregateElement(i)->getUniqueInteger();
+                else
+                    sum -= cin->getAggregateElement(i)->getUniqueInteger();
+            }
+            return llvm::ConstantInt::get(f->dout()->type()->getContext(), sum);
+        }
     }
 
     return nullptr;
