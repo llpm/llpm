@@ -25,7 +25,15 @@ void ConnectionDB::registerBlock(BlockP block) {
     if (_blockUseCounts.find(block) == _blockUseCounts.end()) {
         _newBlocks.insert(block);
     }
+    auto oldModule = block->module();
     block->module(_module);
+    if (oldModule != nullptr &&
+        oldModule != _module && 
+        oldModule->name() != "" &&
+        block->name() != "")
+    {
+        block->name(oldModule->name() + "_" + block->name());
+    }
 
     uint64_t& count = _blockUseCounts[block];
     count += 1;

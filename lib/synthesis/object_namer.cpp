@@ -48,10 +48,16 @@ std::string ObjectNamer::primBlockName(Block* b, Module* ctxt) {
             if (b->history().src() == BlockHistory::Refinement &&
                 b->history().hasSrcBlock()) {
                 base = primBlockName(b->history().srcBlock(), ctxt) + "p";
+                if (base.find("anonBlock") == 0)
+                    base = "";
             } else if (b->history().src() == BlockHistory::Optimization &&
                        b->history().hasSrcBlock()) {
                 base = primBlockName(b->history().srcBlock(), ctxt) + "o";
-            } else {
+                if (base.find("anonBlock") == 0)
+                    base = "";
+            }
+
+            if (base == "") {
                 base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
             }
         } else {
