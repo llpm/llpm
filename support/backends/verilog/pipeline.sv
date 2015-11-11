@@ -242,6 +242,8 @@ module PipelineStageController(
     vout_valid, vout_bp,
     ce_valid);
 
+parameter Name = "";
+
 input wire clk;
 input wire resetn;
 
@@ -300,6 +302,7 @@ module PipelineReg_Slave(
     q);
 
 parameter Width = 8;
+parameter Name = "";
 
 input wire clk;
 input wire resetn;
