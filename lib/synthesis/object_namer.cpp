@@ -67,10 +67,11 @@ std::string ObjectNamer::primBlockName(Block* b, Module* ctxt) {
 
         size_t ctr = 0;
         string orig_base = base;
-        while (_existingNames.count(std::make_pair(ctxt, base))) {
+        while (_existingNames.count(std::make_pair(ctxt, base)) > 0 ||
+               _existingNames.count(std::make_pair(nullptr, base)) > 0) {
             base = str(boost::format("%1%_%2%") % orig_base % ++ctr);
         }
-        _existingNames.insert(make_pair(b->module(), base));
+        _existingNames.insert(make_pair(ctxt, base));
     }
     return base;
 }
