@@ -111,6 +111,7 @@ void FormControlRegionPass::runInternal(Module* mod) {
 
 bool ControlRegion::BlockAllowed(Block* b) {
     if (!b->outputsTied() ||
+         b->outputsSeparate() ||
          b->firing() != DependenceRule::AND) {
         return false;
     }

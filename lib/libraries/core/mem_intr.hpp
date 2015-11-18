@@ -35,8 +35,8 @@ public:
     }
 
     virtual DependenceRule depRule(const OutputPort*) const {
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
+        return DependenceRule(DependenceRule::OR,
+                              DependenceRule::Maybe);
     }
 
     virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
