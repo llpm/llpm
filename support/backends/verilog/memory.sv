@@ -47,6 +47,9 @@ begin
             data <= write_req;
         end
     end
+    `ifdef verilator
+    $c("debug_reg(", Name, ", ", valid, ", ", data, ");");
+    `endif
 end
 
 endmodule

@@ -1370,6 +1370,8 @@ public:
         if (bitwidth(s->dout()->type()) == 0) {
             style += "NoData";
         }
+
+        assert(s->din_size() > 0);
  
         if (bitwidth(s->dout()->type()) > 0) {
             ctxt << boost::format("    wire [%1%:0] %2%_input_combined [%3%:0];\n") 
@@ -1552,8 +1554,10 @@ public:
         }
 
         ctxt << boost::format("    %1% # (\n") % style
-             << boost::format("        .Width(%1%)\n") 
+             << boost::format("        .Width(%1%),\n") 
                              % typeBW
+             << boost::format("        .Name(\"%1%\")\n")
+                             % ctxt.name(rr, true)
              << boost::format("    ) %1% (\n") % ctxt.name(rr)
              <<               "        .clk(clk),\n"
              <<               "        .resetn(resetn),\n";

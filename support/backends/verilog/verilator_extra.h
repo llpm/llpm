@@ -14,10 +14,31 @@ void debug_reg(
 
 template<typename T>
 void debug_reg(
+    unsigned long long reg_name,
+    CData valid1,
+    T data1,
+    CData valid2,
+    T data2
+) {
+    debug_reg((WData*)&reg_name, valid1, data1, valid2, data2);
+}
+
+template<typename T>
+void debug_reg(
     WData* reg_name,
     CData valid1,
     T data1
 );
+
+template<typename T>
+static void debug_reg(
+    unsigned long long reg_name,
+    CData valid1,
+    T data1
+) {
+    debug_reg((WData*)&reg_name, valid1, data1);
+}
+
 
 void start_debug(FILE* f);
 void close_debug();

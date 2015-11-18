@@ -22,6 +22,8 @@ class ObjectNamer : boost::noncopyable {
     std::map< std::pair<Module*, Block*>, std::string> _blockNames;
     std::map< std::pair<Module*, Port*>, std::string> _portNames;
 
+    std::string historicalName(Block* b);
+
 public:
     ObjectNamer() :
         anonBlockCounter(0)

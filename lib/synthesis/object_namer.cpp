@@ -41,26 +41,26 @@ static std::string sanitize(std::string s) {
     return s;
 }
 
+std::string ObjectNamer::historicalName(Block* b) {
+    if (b->name() != "")
+        return b->name();
+    if (b->history().src() == BlockHistory::Refinement &&
+        b->history().hasSrcBlock()) {
+        return historicalName(b->history().srcBlock()) + "r";
+    } else if (b->history().src() == BlockHistory::Optimization &&
+               b->history().hasSrcBlock()) {
+        return historicalName(b->history().srcBlock()) + "o";
+    }
+
+    return str(boost::format("anonBlock%1%") % ++anonBlockCounter);
+}
+
 std::string ObjectNamer::primBlockName(Block* b, Module* ctxt) {
     std::string& base = _blockNames[make_pair(ctxt, b)];
     if (base == "") {
         base = b->name();
         if (base == "") {
-            if (b->history().src() == BlockHistory::Refinement &&
-                b->history().hasSrcBlock()) {
-                base = primBlockName(b->history().srcBlock(), ctxt) + "p";
-                if (base.find("anonBlock") == 0)
-                    base = "";
-            } else if (b->history().src() == BlockHistory::Optimization &&
-                       b->history().hasSrcBlock()) {
-                base = primBlockName(b->history().srcBlock(), ctxt) + "o";
-                if (base.find("anonBlock") == 0)
-                    base = "";
-            }
-
-            if (base == "") {
-                base = str(boost::format("anonBlock%1%") % ++anonBlockCounter);
-            }
+            base = historicalName(b);
         } else {
             base = sanitize(base);
         }
