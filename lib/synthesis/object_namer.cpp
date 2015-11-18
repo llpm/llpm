@@ -12,7 +12,8 @@ using namespace std;
 namespace llpm {
 
 static std::string addContext(std::string base, Block* b, Module* ctxt) {
-    assert(ctxt != NULL);
+    if (ctxt == nullptr)
+        return base;
     std::string name = base;
     Module* mod = b->module();
     while (b != ctxt && mod != ctxt && mod != NULL) {

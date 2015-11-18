@@ -303,6 +303,8 @@ bool ControlRegion::add(Block* b, const std::set<Port*>&) {
         return false;
     }
 
+    // Set the block to this owner, skipping registration checks
+    b->module(this);
     for (OutputPort* op: b->outputs()) {
 
         auto f = internalizedInputs.find(op);

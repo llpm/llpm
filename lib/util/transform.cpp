@@ -5,7 +5,7 @@ using namespace std;
 namespace llpm {
 
 void Transformer::remove(Block* b) {
-    if (b->module() != _mod) {
+    if (b->module() != nullptr && b->module() != _mod) {
         throw InvalidArgument("This transformer can only operation on blocks in its module");
     }
 
@@ -37,7 +37,7 @@ void Transformer::remove(Block* b) {
 }
 
 void Transformer::trash (Block* b) {
-    if (b->module() != _mod) {
+    if (b->module() != nullptr && b->module() != _mod) {
         throw InvalidArgument("This transformer can only operation on blocks in its module");
     }
 
@@ -61,7 +61,7 @@ void Transformer::trash (Block* b) {
 }
 
 void Transformer::replace(Block* b, Block* with) {
-    if (b->module() != _mod) {
+    if (b->module() != nullptr && b->module() != _mod) {
         throw InvalidArgument("This transformer can only operation on blocks in its module");
     }
 

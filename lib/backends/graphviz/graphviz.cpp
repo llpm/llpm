@@ -183,6 +183,11 @@ void printBlock(std::ostream& os,
                 Block* block,
                 bool transparent)
 {
+    if (block->module() == nullptr)
+        // Don't print de-registered blocks. Really, they shouldn't even be
+        // here!
+        return;
+
     ContainerModule* cm = dynamic_cast<ContainerModule*>(block);
     if (transparent && cm != NULL) {
         os << boost::format("    subgraph cluster_%1% {\n"

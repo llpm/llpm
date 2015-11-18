@@ -49,7 +49,7 @@ protected:
 
     BlockHistory _history;
 
-    Block(): _module(NULL) { }
+    Block(): _module(nullptr) { }
 
     friend class InputPort;
     friend class OutputPort;
@@ -90,8 +90,6 @@ public:
         return _module;
     }
     void module(Module* m) {
-        if (m == NULL)
-            throw InvalidArgument("Module cannot be NULL!");
         _module = m;
     }
 

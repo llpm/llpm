@@ -54,6 +54,7 @@ InputPort* ContainerModule::createInputPort(llvm::Type* ty,
     InputPort* extIp = new InputPort(this, ty, name);
     _ownedPorts.insert(extIp);
     boost::intrusive_ptr<DummyBlock> dummy( new DummyBlock(extIp) );
+    dummy->module(this);
     _inputMap.insert(make_pair(extIp, dummy));
     dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
@@ -96,6 +97,7 @@ OutputPort* ContainerModule::createOutputPort(llvm::Type* ty,
     OutputPort* extOp = new OutputPort(this, ty, name);
     _ownedPorts.insert(extOp);
     boost::intrusive_ptr<DummyBlock> dummy( new DummyBlock(extOp) );
+    dummy->module(this);
     _outputMap.insert(make_pair(extOp, dummy));
     dummy->name(name + "_dummy");
     conns()->blacklist(dummy);
@@ -123,12 +125,14 @@ Interface* ContainerModule::addClientInterface(
     _ownedInterfaces.insert(iface);
 
     boost::intrusive_ptr<DummyBlock> opdummy ( new DummyBlock(iface->dout()) );
+    opdummy->module(this);
     _outputMap.emplace(iface->dout(), opdummy);
     opdummy->name(name + "_opdummy");
     conns()->blacklist(opdummy);
     conns()->connect(req, opdummy->din());
 
     boost::intrusive_ptr<DummyBlock> ipdummy ( new DummyBlock(iface->din()) );
+    ipdummy->module(this);
     _inputMap.emplace(iface->din(), ipdummy);
     ipdummy->name(name + "_ipdummy");
     conns()->blacklist(ipdummy);
@@ -143,12 +147,14 @@ Interface* ContainerModule::addServerInterface(
     _ownedInterfaces.insert(iface);
 
     boost::intrusive_ptr<DummyBlock> opdummy ( new DummyBlock(iface->dout()) );
+    opdummy->module(this);
     _outputMap.emplace(iface->dout(), opdummy);
     opdummy->name(name + "_opdummy");
     conns()->blacklist(opdummy);
     conns()->connect(resp, opdummy->din());
 
     boost::intrusive_ptr<DummyBlock> ipdummy ( new DummyBlock(iface->din()) );
+    ipdummy->module(this);
     _inputMap.emplace(iface->din(), ipdummy);
     ipdummy->name(name + "_ipdummy");
     conns()->blacklist(ipdummy);

@@ -26,6 +26,11 @@ void ConnectionDB::registerBlock(BlockP block) {
         _newBlocks.insert(block);
     }
     auto oldModule = block->module();
+    if (oldModule != nullptr && oldModule != _module) {
+        throw InvalidArgument("Cannot register block which was "
+                              "previously registered and not de-registered!");
+    }
+
     block->module(_module);
     if (oldModule != nullptr &&
         oldModule != _module && 
@@ -44,6 +49,9 @@ void ConnectionDB::deregisterBlock(BlockP block) {
     uint64_t& count = _blockUseCounts[block];
     assert(count >= 1);
     count -= 1;
+    if (count == 0) {
+        block->module(nullptr);
+    }
 }
 
 void ConnectionDB::findSinks(const OutputPort* op,
@@ -245,6 +253,15 @@ void ConnectionDB::removeBlock(Block* b) {
 }
 
 void ConnectionDB::update(const ConnectionDB& newdb) {
+    // First, update the module info for all incoming blocks
+    std::set<Block*> blocks;
+    newdb.findAllBlocks(blocks);
+    for (auto b: blocks) {
+        if (newdb.isblacklisted(b))
+            continue;
+        b->module(_module);
+    }
+
     for (const auto& c: newdb._sourceIdx) {
         if (newdb.isblacklisted(c.first->ownerP()) ||
             newdb.isblacklisted(c.second->ownerP()))
