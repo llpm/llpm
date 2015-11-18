@@ -32,6 +32,11 @@ void SimplifyPass::eliminateNoops(Module* m) {
         if (sb && sb->din_size() == 1)
             t.remove(sb);
 
+        if (sb && sb->din_size() == 0) {
+            auto never = new Never(sb->dout()->type());
+            t.conns()->remap(sb->dout(), never->dout());
+        }
+
         // Routers with one output do nothing!
         Router* rb = dynamic_cast<Router*>(b);
         if (rb && rb->dout_size() == 1)
