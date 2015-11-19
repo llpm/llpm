@@ -125,10 +125,16 @@ void SimplifyPass::eliminateNoops(Module* m) {
                     assert(constSel->getType()->isIntegerTy());
                     auto constSelValue = constSel->getUniqueInteger();
                     assert(constSelValue.getLimitedValue() < rtr->dout_size());
+                    auto never = new Never(rtr->dout(0)->type());
                     auto valExtract = new Extract(rtr->din()->type(), {1});
                     conns->remap(rtr->din(), valExtract->din());
                     conns->remap(rtr->dout(constSelValue.getLimitedValue()),
                                  valExtract->dout());
+                    for (unsigned i=0; i<rtr->dout_size(); i++) {
+                        if (i != constSelValue) {
+                            conns->remap(rtr->dout(i), never->dout());
+                        }
+                    }
                     t.trash(rtr);
                 }
             }
