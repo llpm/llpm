@@ -92,7 +92,7 @@ public:
         _changeCounter(0)
     { }
 
-    DEF_GET(module);
+    DEF_GET_NP(module);
     DEF_GET_NP(changeCounter);
 
     /**
