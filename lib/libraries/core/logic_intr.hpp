@@ -159,8 +159,8 @@ public:
 
     virtual DependenceRule depRule(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
+        return DependenceRule(DependenceRule::Custom,
+                              DependenceRule::Maybe);
     }
 };
 
