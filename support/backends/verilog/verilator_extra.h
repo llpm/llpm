@@ -20,7 +20,24 @@ void debug_reg(
     CData valid2,
     T data2
 ) {
-    debug_reg((WData*)&reg_name, valid1, data1, valid2, data2);
+    char name[9];
+    *(unsigned long long*)name = reg_name;
+    name[8] = 0;
+    debug_reg((WData*)name, valid1, data1, valid2, data2);
+}
+
+template<typename T>
+void debug_reg(
+    unsigned int reg_name,
+    CData valid1,
+    T data1,
+    CData valid2,
+    T data2
+) {
+    char name[5];
+    *(unsigned int*)name = reg_name;
+    name[4] = 0;
+    debug_reg((WData*)name, valid1, data1, valid2, data2);
 }
 
 template<typename T>
@@ -36,7 +53,22 @@ static void debug_reg(
     CData valid1,
     T data1
 ) {
-    debug_reg((WData*)&reg_name, valid1, data1);
+    char name[9];
+    *(unsigned long long*)name = reg_name;
+    name[8] = 0;
+    debug_reg((WData*)name, valid1, data1);
+}
+
+template<typename T>
+static void debug_reg(
+    unsigned int reg_name,
+    CData valid1,
+    T data1
+) {
+    char name[5];
+    *(unsigned int*)name = reg_name;
+    name[4] = 0;
+    debug_reg((WData*)name, valid1, data1);
 }
 
 
