@@ -271,6 +271,51 @@ public:
 };
 
 /**
+ * Selects one of N inputs and outputs it. Non-selected messages are
+ * backpressured until they get selected
+ * Input data type:
+ *   idx : Log2 (#  inputs)
+ *   din array: Input N
+ */
+class IdxSelect: public CommunicationIntrinsic {
+    std::vector<std::unique_ptr<InputPort>> _din;
+    InputPort _idx;
+    OutputPort _dout;
+
+public:
+    IdxSelect(unsigned N, llvm::Type* type);
+    virtual ~IdxSelect() { }
+
+    DEF_UNIQ_ARRAY_GET(din);
+    DEF_GET(idx);
+    DEF_GET(dout);
+
+    virtual bool hasState() const {
+        return false;
+    }
+
+    virtual float logicalEffortFunc() const {
+        return 1.0 + log2((float)(din_size()));
+    }
+
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        assert(op == dout());
+        return DependenceRule(DependenceRule::Custom,
+                              DependenceRule::Always);
+    }
+
+    virtual bool outputsSeparate() const {
+        return false;
+    }
+
+    virtual const std::vector<InputPort*>&
+            deps(const OutputPort* op) const {
+        assert(op == dout());
+        return inputs();
+    }
+};
+
+/**
  * Sends a single input to one of N outputs.
  * Input data type:
  *   { sel: Log2 (# outputs), Input Data }

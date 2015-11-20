@@ -165,6 +165,16 @@ Multiplexer::Multiplexer(unsigned N, llvm::Type* type) :
     Function(GetInput(N, type), type)
 { }
 
+IdxSelect::IdxSelect(unsigned N, llvm::Type* type) :
+    _idx(this, llvm::Type::getIntNTy(type->getContext(), idxwidth(N)), "idx"),
+    _dout(this, type, "dout")
+{
+    for (unsigned i = 0; i<N; i++) {
+        auto name = str(boost::format("din%1%") % i);
+        _din.emplace_back(new InputPort(this, type, name));
+    }
+}
+
 llvm::Type* Router::GetInput(unsigned N, llvm::Type* type) {
     return llvm::StructType::get(
         type->getContext(),

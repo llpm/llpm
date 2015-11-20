@@ -24,6 +24,7 @@ namespace llpm {
 // Verilog libraries
 static const vector<string> externalFiles {
     "/support/backends/verilog/select.sv",
+    "/support/backends/verilog/idx_select.sv",
     "/support/backends/verilog/pipeline.sv",
     "/support/backends/verilog/memory.sv",
     "/support/backends/verilog/fork.sv",
@@ -1415,6 +1416,95 @@ public:
              << boost::format("    ) %1% (\n") % ctxt.name(c)
              <<               "        .clk(clk),\n"
              <<               "        .resetn(resetn),\n";
+            
+        if (bitwidth(s->dout()->type()) > 0) { 
+             ctxt << boost::format("        .x(%1%_input_combined), \n") % ctxt.name(s)
+                  << boost::format("        .a(%1%), \n") % ctxt.name(s->dout());
+        }
+        ctxt << boost::format("        .x_valid(%1%_valids), \n") % ctxt.name(s)
+             << boost::format("        .x_bp(%1%_bp), \n") % ctxt.name(s)
+
+             << boost::format("        .a_valid(%1%_valid), \n") % ctxt.name(s->dout())
+             << boost::format("        .a_bp(%1%_bp) \n") % ctxt.name(s->dout())
+             <<               "    );\n"
+             ;
+
+        for (unsigned i=0; i<s->din_size(); i++) {
+
+                 ctxt << boost::format("    assign %3%_bp = %1%_bp[%2%];\n")
+                            % ctxt.name(s)
+                            % i
+                            % ctxt.name(s->din(i))
+                ;
+        }
+    }
+};
+
+class IdxSelectPrinter: public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<IdxSelect*>(b) != NULL;
+    }
+
+    virtual bool customLID() const {
+        return true;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        IdxSelect* s = dynamic_cast<IdxSelect*>(c);
+        std::string style = "LLPM_IdxSelect";
+        if (bitwidth(s->dout()->type()) == 0) {
+            style += "NoData";
+        }
+
+        assert(s->din_size() > 0);
+ 
+        if (bitwidth(s->dout()->type()) > 0) {
+            ctxt << boost::format("    wire [%1%:0] %2%_input_combined [%3%:0];\n") 
+                                % (bitwidth(s->dout()->type()) - 1)
+                                % ctxt.name(s)
+                                % (s->din_size() - 1);
+        }
+
+        ctxt << boost::format("    wire %1%_valids[%2%:0];\n") 
+                            % ctxt.name(s)
+                            % (s->din_size() - 1)
+             << boost::format("    wire %1%_bp[%2%:0];\n") 
+                            % ctxt.name(s)
+                            % (s->din_size() - 1)
+            ;
+        for (unsigned i=0; i<s->din_size(); i++) {
+            if (bitwidth(s->dout()->type()) > 0) {
+                ctxt << boost::format("    assign %1%_input_combined[%2%] = %3%;\n")
+                                % ctxt.name(s)
+                                % i
+                                % ctxt.name(s->din(i));
+            }
+            ctxt << boost::format("    assign %1%_valids[%2%] = %3%_valid;\n")
+                            % ctxt.name(s)
+                            % i
+                            % ctxt.name(s->din(i))
+#if 0
+                 << boost::format("    assign %3%_bp = %1%_bp[%2%];\n")
+                            % ctxt.name(s)
+                            % i
+                            % ctxt.name(s->din(i))
+#endif
+                ;
+        }
+
+        ctxt << boost::format("    %1% # (\n") % style
+             << boost::format("        .Width(%1%),\n") % bitwidth(s->dout()->type())
+             << boost::format("        .NumInputs(%1%), \n") % s->din_size()
+             << boost::format("        .CLog2NumInputs(%1%)\n") 
+                        % std::max((unsigned)1, (unsigned)ceil(log2(s->din_size())))
+             << boost::format("    ) %1% (\n") % ctxt.name(c)
+             <<               "        .clk(clk),\n"
+             <<               "        .resetn(resetn),\n"
+             << boost::format("        .idx(%1%),\n"
+                              "        .idx_valid(%1%_valid),\n"
+                              "        .idx_bp(%1%_bp),\n")
+                        % ctxt.name(s->idx());
 
         if (bitwidth(s->dout()->type()) > 0) { 
              ctxt << boost::format("        .x(%1%_input_combined), \n") % ctxt.name(s)
@@ -1783,6 +1873,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
 
     _printers.appendEntry(make_shared<JoinPrinter>());
     _printers.appendEntry(make_shared<SelectPrinter>());
+    _printers.appendEntry(make_shared<IdxSelectPrinter>());
     _printers.appendEntry(make_shared<SplitPrinter>());
     _printers.appendEntry(make_shared<ExtractPrinter>());
     _printers.appendEntry(make_shared<ForkPrinter>());
