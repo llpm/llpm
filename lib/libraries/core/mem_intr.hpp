@@ -16,8 +16,6 @@ class Memory : public Block {
     llvm::Type* _type;
     Interface _write;
     Interface _read;
-    std::vector<InputPort*> _writeDeps;
-    std::vector<InputPort*> _readDeps;
 
     llvm::Type* GetWriteReq(llvm::Type* dt, llvm::Type* idx);
     llvm::Type* GetReadReq(llvm::Type* dt, llvm::Type* idx);

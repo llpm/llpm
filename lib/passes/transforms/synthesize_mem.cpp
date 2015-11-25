@@ -19,10 +19,11 @@ void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns,
     // TODO: something more intelligent?
     RTLReg* rr = new RTLReg(orig->type());
     rr->name(orig->name());
-    conns->remap(orig->write(), rr->write());
 
-    deque< pair<InputPort*, OutputPort*> > reqs;
-    Interface* client = conns->findClient(orig->read());
+    Interface* client;
+
+    // Remap read ports to RTL native read ports
+    client = conns->findClient(orig->read());
     if (client) {
         InterfaceMultiplexer* im = 
             dynamic_cast<InterfaceMultiplexer*>(client->owner());
@@ -36,6 +37,24 @@ void SynthesizeMemoryPass::synthesizeReg(ConnectionDB* conns,
             conns->remap(orig->read(), rr->newRead());
         }
     }
+
+    // Remap write ports to RTL native write ports
+    client = conns->findClient(orig->write());
+    if (client) {
+        InterfaceMultiplexer* im = 
+            dynamic_cast<InterfaceMultiplexer*>(client->owner());
+        if (im) {
+            for (unsigned i=0; i<im->servers_size(); i++) {
+                Interface* imServer = im->servers(i);
+                conns->remap(imServer, rr->newWrite());
+            }
+            conns->removeBlock(im);
+        } else {
+            conns->remap(orig->read(), rr->newWrite());
+        }
+    }
+
+    // Remove original register block
     conns->removeBlock(orig);
 }
 

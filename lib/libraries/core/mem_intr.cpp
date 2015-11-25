@@ -11,10 +11,7 @@ Memory::Memory(llvm::Type* datatype, llvm::Type* idxType) :
     _write(this, GetWriteReq(datatype, idxType),
            llvm::Type::getVoidTy(datatype->getContext()), true, "write"),
     _read(this, GetReadReq(datatype, idxType), datatype, true, "read")
-{
-    _writeDeps = {_write.din()};
-    _readDeps = {_read.din()};
-}
+{ }
 
 llvm::Type* Memory::GetWriteReq(llvm::Type* dt, llvm::Type* idx) {
     if (idx->isVoidTy())

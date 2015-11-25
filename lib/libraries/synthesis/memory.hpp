@@ -6,30 +6,35 @@
 namespace llpm {
 
 /**
- * In RTL, a register has one write port and an output that
- * continuously outputs the value which the register contains.
+ * In RTL, a register has an arbitrary number of write ports and an arbitrary
+ * number of read ports. Neither reads nor writes ever block. When multiple
+ * simultaneous writes occur, one is arbitrarily selected to occur, the others
+ * are thrown away.
  */
 class RTLReg : public Block {
     llvm::Type* _type;
-    Interface _write;
+    std::vector<std::unique_ptr<Interface>> _write;
     std::vector<std::unique_ptr<Interface>> _read;
 
 public:
     RTLReg(llvm::Type* datatype);
 
     DEF_GET_NP(type);
-    DEF_GET(write);
+    DEF_UNIQ_ARRAY_GET(write);
     DEF_UNIQ_ARRAY_GET(read);
 
     virtual bool hasState() const {
         return true;
     }
 
+    Interface* newWrite();
     Interface* newRead();
 
     virtual DependenceRule deps(const OutputPort* op) const {
-        if (op == _write.dout())
-            return DependenceRule(DependenceRule::AND_FireOne, {_write.din()});
+        for (const auto& write: _write) {
+            if (write->dout() == op)
+                return DependenceRule(DependenceRule::AND_FireOne, {write->din()});
+        }
         for (const auto& read: _read) {
             if (read->dout() == op)
                 return DependenceRule(DependenceRule::AND_FireOne, {read->din()});
@@ -42,9 +47,7 @@ public:
     }
 
     virtual float logicalEffort(const InputPort* ip, const OutputPort*) const {
-        if (ip == _write.din())
-            return 0.5;
-        return 0.1;
+        return 0.25;
     }
 };
 

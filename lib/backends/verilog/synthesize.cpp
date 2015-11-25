@@ -1615,11 +1615,31 @@ public:
     
         if (typeBW > 0) {
             ctxt << boost::format(
-                    "    wire [%2%:0] %1%_dout;\n"
-                    "    wire         %1%_valid;\n")
+                    "    wire [%2%:0] %1%_dout;\n")
                         % ctxt.name(rr)
                         % (typeBW - 1);
         }
+
+        if (bitwidth(rr->type()) > 0) {
+            ctxt << boost::format("    wire [%1%:0] %2%_write_reqs[%3%:0];\n") 
+                                % (bitwidth(rr->type()) - 1)
+                                % ctxt.name(rr)
+                                % (rr->write_size() - 1);
+        }
+
+        ctxt << boost::format("    wire %1%_write_req_valids[%2%:0];\n") 
+                            % ctxt.name(rr)
+                            % (rr->write_size() - 1)
+             << boost::format("    wire %1%_write_req_bps[%2%:0];\n") 
+                            % ctxt.name(rr)
+                            % (rr->write_size() - 1);
+
+        ctxt << boost::format("    wire %1%_write_resp_valids[%2%:0];\n") 
+                            % ctxt.name(rr)
+                            % (rr->write_size() - 1)
+             << boost::format("    wire %1%_write_resp_bps[%2%:0];\n") 
+                            % ctxt.name(rr)
+                            % (rr->write_size() - 1);
 
         for (unsigned i=0; i<rr->read_size(); i++) {
             Interface* readif = rr->read(i);
@@ -1632,16 +1652,44 @@ public:
                         % ctxt.name(resp);
             } 
             ctxt << boost::format(
-                "    assign %1%_valid = %2%_valid && %3%_valid;\n"
+                "    assign %1%_valid = %2%_valid;\n"
                 "    assign %2%_bp    = %1%_bp;\n")
                     % ctxt.name(resp)
+                    % ctxt.name(req);
+        }
+
+        for (unsigned i=0; i<rr->write_size(); i++) {
+            Interface* writeif = rr->write(i);
+            OutputPort* resp = writeif->dout();
+            InputPort*  req  = writeif->din();
+            if (bitwidth(rr->type()) > 0) {
+                ctxt << boost::format(
+                    "    assign %1%_write_reqs[%3%] = %2%;\n")
+                        % ctxt.name(rr)
+                        % ctxt.name(req)
+                        % i;
+            } 
+            ctxt << boost::format(
+                "    assign %1%_write_req_valids[%3%] = %2%_valid;\n"
+                "    assign %2%_bp = %1%_write_req_bps[%3%];\n")
+                    % ctxt.name(rr)
                     % ctxt.name(req)
-                    % ctxt.name(rr);
+                    % i;
+            ctxt << boost::format(
+                "    assign %2%_valid = %1%_write_resp_valids[%3%];\n"
+                "    assign %1%_write_resp_bps[%3%]     = %2%_bp;\n")
+                    % ctxt.name(rr)
+                    % ctxt.name(resp)
+                    % i;
         }
 
         ctxt << boost::format("    %1% # (\n") % style
              << boost::format("        .Width(%1%),\n") 
                              % typeBW
+             << boost::format("        .NumWrites(%1%),\n") 
+                             % rr->write_size()
+             << boost::format("        .CLog2NumWrites(%1%),\n") 
+                        % std::max((unsigned)1, (unsigned)ceil(log2(rr->write_size())))
              << boost::format("        .Name(\"%1%\")\n")
                              % ctxt.name(rr, true)
              << boost::format("    ) %1% (\n") % ctxt.name(rr)
@@ -1649,19 +1697,15 @@ public:
              <<               "        .resetn(resetn),\n";
 
         if (typeBW) {
-            ctxt << boost::format("        .write_req(%2%), \n"
+            ctxt << boost::format("        .write_reqs(%1%_write_reqs), \n"
                                   "        .read(%1%_dout), \n")
-                            % ctxt.name(rr)
-                            % ctxt.name(rr->write()->din());
+                            % ctxt.name(rr);
         }
-        ctxt << boost::format("        .write_req_valid(%2%_valid), \n"
-                              "        .write_req_bp(%2%_bp), \n"
-                              "        .write_resp_valid(%3%_valid),\n"
-                              "        .write_resp_bp(%3%_bp),\n"
-                              "        .read_valid(%1%_valid) \n")
+        ctxt << boost::format("        .write_req_valids(%1%_write_req_valids), \n"
+                              "        .write_req_bps(%1%_write_req_bps), \n"
+                              "        .write_resp_valids(%1%_write_resp_valids),\n"
+                              "        .write_resp_bps(%1%_write_resp_bps)\n")
                              % ctxt.name(rr)
-                             % ctxt.name(rr->write()->din())
-                             % ctxt.name(rr->write()->dout())
              <<               "    );\n";
     }
 };

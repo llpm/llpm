@@ -9,8 +9,7 @@ using namespace std;
 namespace llpm {
 
 RTLReg::RTLReg(llvm::Type* dt) :
-    _type(dt),
-    _write(this, dt, llvm::Type::getVoidTy(dt->getContext()), true, "write")
+    _type(dt)
 { }
 
 Interface* RTLReg::newRead() {
@@ -21,6 +20,17 @@ Interface* RTLReg::newRead() {
                     true,
                     str(boost::format("read%1%") % _read.size()));
     _read.emplace_back(iface);
+    return iface;
+}
+
+Interface* RTLReg::newWrite() {
+    auto iface = new Interface(
+                    this,
+                    _type,
+                    llvm::Type::getVoidTy(_type->getContext()),
+                    true,
+                    str(boost::format("write%1%") % _write.size()));
+    _write.emplace_back(iface);
     return iface;
 }
 

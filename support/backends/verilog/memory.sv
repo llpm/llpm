@@ -5,50 +5,65 @@
 `default_nettype none
 
 module RTLReg(clk, resetn,
-    write_req, write_req_valid, write_req_bp,
-    write_resp_valid, write_resp_bp,
-    read, read_valid);
+    write_reqs, write_req_valids, write_req_bps,
+    write_resp_valids, write_resp_bps,
+    read);
 
 parameter Name = "";
 parameter Width = 8;
+parameter NumWrites = 1;
+parameter CLog2NumWrites = 1;
+parameter ResetValue = {Width{1'bx}};
 
 input wire clk;
 input wire resetn;
 
-input wire [Width-1:0] write_req;
-input wire             write_req_valid;
-output wire            write_req_bp;
+input wire [Width-1:0] write_reqs       [NumWrites-1:0];
+input wire             write_req_valids [NumWrites-1:0];
+output wire            write_req_bps    [NumWrites-1:0];
 
-output wire write_resp_valid;
-input  wire write_resp_bp;
+output wire write_resp_valids [NumWrites-1:0];
+input  wire write_resp_bps    [NumWrites-1:0];
 
 output wire [Width-1:0] read;
-output wire             read_valid;
-
-
-reg             valid;
 reg [Width-1:0] data;
 
 assign read = data;
-assign read_valid = 1'b1;
 
-assign write_req_bp = write_resp_bp;
-assign write_resp_valid = write_req_valid;
+assign write_req_bps = write_resp_bps;
+assign write_resp_valids = write_req_valids;
+
+reg has_valid_write;
+reg [CLog2NumWrites-1:0] write_select;
+
+integer i;
+always@(*)
+begin
+    write_select = {CLog2NumWrites{1'bx}};
+    has_valid_write = 1'b0;
+    for (i=0; i<NumWrites; i = i + 1)
+    begin
+        if (write_req_valids[i] && ! write_resp_bps[i])
+        begin
+            write_select = i[CLog2NumWrites-1:0];
+            has_valid_write = 1'b1;
+        end
+    end
+end
 
 always@(posedge clk)
 begin
     if(~resetn)
     begin
-        valid <= 1'b0;
+        data <= ResetValue;
     end else begin
-        if (write_req_valid && ~write_req_bp)
+        if (has_valid_write)
         begin
-            valid <= 1'b1;
-            data <= write_req;
+            data <= write_reqs[write_select];
         end
     end
     `ifdef verilator
-    $c("debug_reg(", Name, ", ", valid, ", ", data, ");");
+    $c("debug_reg(", Name, ", 1, ", data, ");");
     `endif
 end
 
