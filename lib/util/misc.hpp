@@ -2,6 +2,7 @@
 #define __LLPM_UTIL_MISC_HPP__
 
 #include <string>
+#include <vector>
 
 namespace llpm {
 
@@ -10,6 +11,10 @@ inline std::string cpp_demangle(const std::string& name) {
     return cpp_demangle(name.c_str());
 }
 
+template<typename T>
+std::vector<const T*> constCopy(std::vector<T*> vec) {
+    return std::vector<const T*>(vec.begin(), vec.end());
+}
 /**
  * How many bits does it take to store an index into N things?
  */

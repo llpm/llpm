@@ -21,7 +21,6 @@ Interface* RTLReg::newRead() {
                     true,
                     str(boost::format("read%1%") % _read.size()));
     _read.emplace_back(iface);
-    _readRespDeps[iface->dout()] = {iface->din()};
     return iface;
 }
 
@@ -41,7 +40,6 @@ BlockRAM::BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts) :
         auto iface = new Interface(this, reqType, respType, true,
                                    str(boost::format("port%1%") % i));
         _ports.emplace_back(iface);
-        _deps[iface->dout()] = {iface->din()};
     }
 }
 

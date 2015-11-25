@@ -29,24 +29,13 @@ public:
         return false;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(std::find(outputs().begin(), outputs().end(), op)
                != outputs().end());
         if (op == _client.dout())
-            return DependenceRule(DependenceRule::Custom,
-                                  DependenceRule::Maybe);
+            return DependenceRule(DependenceRule::Custom, inputs());
         else
-            return DependenceRule(DependenceRule::AND,
-                                  DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
-        assert(std::find(outputs().begin(), outputs().end(), op)
-               != outputs().end());
-        if (op == _client.dout())
-            return inputs();
-        else
-            return _clientDinArr;
+            return DependenceRule(DependenceRule::Custom, _clientDinArr);
     }
 };
 

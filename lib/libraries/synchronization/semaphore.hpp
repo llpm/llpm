@@ -30,16 +30,9 @@ public:
         return true;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == _wait.dout());
-        return DependenceRule(DependenceRule::Custom,
-                              DependenceRule::Maybe);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == _wait.dout());
-        return inputs();
+        return DependenceRule(DependenceRule::Custom, inputs());
     }
 };
 

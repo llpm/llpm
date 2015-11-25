@@ -12,7 +12,7 @@ template<typename Path>
 Terminate Visitor<Path>::next(
         const ConnectionDB*,
         const PathTy& path,
-        std::vector<typename PathTy::SrcPortTy*>& out)
+        std::vector<const typename PathTy::SrcPortTy*>& out)
 {
     _visits += 1;
     // if ((_visits % 25000) == 0 && _visits > 0) {
@@ -20,7 +20,7 @@ Terminate Visitor<Path>::next(
                // _visits, conns->size());
     // }
     Block* b = path.endPort()->owner();
-    std::set<typename PathTy::SrcPortTy*> setOut;
+    std::set<const typename PathTy::SrcPortTy*> setOut;
     b->deps(path.endPort(), setOut);
     out.insert(out.end(), setOut.begin(), setOut.end());
     return Continue;
@@ -46,7 +46,7 @@ bool Path<SrcPort, DstPort>::contains(Block* b) const {
 template<typename SrcPort,
          typename DstPort>
 bool Path<SrcPort, DstPort>::hasCycle() const {
-    std::set< std::pair<SrcPort*, DstPort*> > seen;
+    std::set< std::pair<const SrcPort*, const DstPort*> > seen;
     for (const auto& pp: _path) {
         if (seen.count(pp) != 0)
             return true;
@@ -57,10 +57,10 @@ bool Path<SrcPort, DstPort>::hasCycle() const {
 
 template<typename SrcPort,
          typename DstPort>
-std::vector< std::pair<SrcPort*, DstPort*> >
+std::vector< std::pair<const SrcPort*, const DstPort*> >
 Path<SrcPort, DstPort>::extractCycle() const {
-    std::set< std::pair<SrcPort*, DstPort*> > seen;
-    std::pair<SrcPort*, DstPort*> crux;
+    std::set< std::pair<const SrcPort*, const DstPort*> > seen;
+    std::pair<const SrcPort*, const DstPort*> crux;
     for (const auto& pp: _path) {
         if (seen.count(pp) != 0) {
             crux = pp;
@@ -70,7 +70,7 @@ Path<SrcPort, DstPort>::extractCycle() const {
     }
 
     bool hitCrux = false;
-    std::vector< std::pair<SrcPort*, DstPort*> > cycle;
+    std::vector< std::pair<const SrcPort*, const DstPort*> > cycle;
     for (const auto& pp: _path) {
         if (!hitCrux) {
             if (pp == crux)

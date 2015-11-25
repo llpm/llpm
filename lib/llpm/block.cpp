@@ -17,7 +17,7 @@ bool Block::refine(std::vector<Block*>& blocks) {
 
 float Block::maxLogicalEffort(OutputPort* op) const {
     float max = 0.0;
-    for (auto ip: op->deps()) {
+    for (auto ip: op->deps().inputs) {
         float le = logicalEffort(ip, op);
         if (le > max)
             max = le;
@@ -36,21 +36,17 @@ string Block::globalName() const {
 // Upon what conditions does a block accept inputs and execute?
 // This routine only works properly when all the outputs have the same
 // dependence rules.
-DependenceRule::InputType Block::firing() const {
+DependenceRule::DepType Block::firing() const {
     if (outputs().size() == 0)
-        return DependenceRule::OR;
+        return DependenceRule::Custom;
 
     auto output1 = outputs()[0];
-    const std::vector<InputPort*>& canon = deps(output1);
-    const DependenceRule drCanon = depRule(output1);
+    auto dr = deps(output1);
     for (auto&& output: outputs()) {
-        auto dr = depRule(output);
-        auto odeps = deps(output);
-        if (dr != drCanon || odeps != canon)
-            return DependenceRule::Custom;
+        dr = dr + deps(output);
     }
 
-    return drCanon.inputType();
+    return dr.depType;
 }
 
 // False if this block has multiple outputs and their dependences
@@ -60,34 +56,23 @@ bool Block::outputsTied() const {
     if (outputs().size() <= 1)
         return true;
 
-    std::set<InputPort*> deps;
-    DependenceRule       rule;
-    for (unsigned i=0; i<outputs().size(); i++) {
-        auto output = outputs()[i];
-        const auto& dvec = this->deps(output);
-        set<InputPort*> mydeps(dvec.begin(), dvec.end());
-        auto myrule = this->depRule(output);
-        if (i == 0) {
-            rule = myrule;
-            deps.swap(mydeps);
-        } else {
-            if (mydeps != deps ||
-                myrule != rule)
-                return false;
-        }
+    auto output1 = outputs()[0];
+    auto dr = deps(output1);
+    for (auto&& output: outputs()) {
+        dr = dr + deps(output);
     }
 
-    return rule.outputType() == DependenceRule::Always;
+    return dr.depType == DependenceRule::AND_FireOne;
 }
 
-void Block::deps(const OutputPort* op, std::set<InputPort*>& ret) const {
-    auto depsVec = deps(op);
+void Block::deps(const OutputPort* op, std::set<const InputPort*>& ret) const {
+    auto depsVec = deps(op).inputs;
     ret.insert(depsVec.begin(), depsVec.end());
 }
 
-void Block::deps(const InputPort* ip, std::set<OutputPort*>& ret) const {
+void Block::deps(const InputPort* ip, std::set<const OutputPort*>& ret) const {
     for(OutputPort* op: outputs()) {
-        auto depsVec = deps(op);
+        auto depsVec = deps(op).inputs;
         if (find(depsVec.begin(), depsVec.end(), ip) != depsVec.end())
             ret.insert(op);
     }

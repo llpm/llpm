@@ -30,18 +30,12 @@ public:
         return false;
     }
 
-    virtual DependenceRule depRule(const OutputPort*) const {
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
+    virtual DependenceRule deps(const OutputPort*) const {
+        return DependenceRule(DependenceRule::AND_FireOne, inputs());
     }
 
     virtual bool outputsSeparate() const {
         return true;
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort*) const {
-        return inputs();
     }
 
     virtual std::string print() const {
@@ -50,7 +44,7 @@ public:
         return "";
     }
 
-    float logicalEffort(InputPort*, OutputPort*) const {
+    float logicalEffort(const InputPort*, const OutputPort*) const {
         if (_virt)
             return 0.0;
         return std::log2((float)_dout.size());

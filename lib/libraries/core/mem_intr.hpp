@@ -34,18 +34,12 @@ public:
         return true;
     }
 
-    virtual DependenceRule depRule(const OutputPort*) const {
-        return DependenceRule(DependenceRule::OR,
-                              DependenceRule::Maybe);
-    }
-
-    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         if (op == _write.dout())
-            return _writeDeps;
+            return DependenceRule(DependenceRule::AND_FireOne, {_write.din()});
         else if (op == _read.dout())
-            return _readDeps;
-        else
-            assert(false);
+            return DependenceRule(DependenceRule::AND_FireOne, {_read.din()});
+        assert(false && "OP don't belong!");
     }
 };
 
@@ -74,7 +68,7 @@ public:
 
     DEF_GET_NP(depth);
 
-    float logicalEffort(InputPort*, OutputPort*) const {
+    float logicalEffort(const InputPort*, const OutputPort*) const {
         return 10.0;
     }
 };

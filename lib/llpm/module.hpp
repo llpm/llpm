@@ -250,12 +250,8 @@ protected:
     Cache<bool> _hasCycle;
     bool _hasCycleCompute() const;
 
-    struct Deps {
-        DependenceRule rule;
-        std::vector<InputPort*> deps;
-    };
-    CacheMap<const OutputPort*, Deps> _deps;
-    Deps _findDeps(const OutputPort*) const;
+    CacheMap<const OutputPort*, DependenceRule> _deps;
+    DependenceRule _findDeps(const OutputPort*) const;
 
 public:
     ContainerModule(Design& design, std::string name) :
@@ -335,8 +331,7 @@ public:
                                     Refinery::StopCondition* sc = NULL);
 
     virtual bool outputsSeparate() const;
-    virtual DependenceRule depRule(const OutputPort* op) const;
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual DependenceRule deps(const OutputPort* op) const;
 };
 
 } // namespace llpm

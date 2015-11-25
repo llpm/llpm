@@ -112,7 +112,7 @@ void FormControlRegionPass::runInternal(Module* mod) {
 bool ControlRegion::BlockAllowed(Block* b) {
     if (!b->outputsTied() ||
          b->outputsSeparate() ||
-         b->firing() != DependenceRule::AND) {
+         b->firing() != DependenceRule::AND_FireOne) {
         return false;
     }
     if (b->is<Latch>() || b->is<PipelineRegister>())
@@ -167,7 +167,7 @@ bool ControlRegion::canGrow(InputPort* ip) {
     vector<InputPort*> sinks;
     _conns.findSinks(driver, sinks);
     for (auto sink: sinks) {
-        if (sink->owner()->firing() != DependenceRule::AND)
+        if (sink->owner()->firing() != DependenceRule::AND_FireOne)
             return false;
     }
     return true;
@@ -286,7 +286,7 @@ bool ControlRegion::add(Block* b, const std::set<Port*>&) {
 
         // Must not create additional back pressure bits with CR
         if (foundAsSink && !foundAsDriver &&
-            b->firing() != DependenceRule::AND) {
+            b->firing() != DependenceRule::AND_FireOne) {
             // printf("is select\n");
             return false;
         }
@@ -380,7 +380,7 @@ typedef Edge<InputPort, OutputPort> IOEdge;
 
 struct IOEdgeVisitor : public Visitor<IOEdge> {
     set<InputPort*> deps;
-    map<OutputPort*, InputPort*> inputDrivers;
+    map<const OutputPort*, InputPort*> inputDrivers;
 
     IOEdgeVisitor(const ContainerModule* cm) {
         for (auto ip: cm->inputs())
@@ -390,7 +390,7 @@ struct IOEdgeVisitor : public Visitor<IOEdge> {
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
                     const IOEdge& edge) {
-        OutputPort* current = edge.endPort();
+        const OutputPort* current = edge.endPort();
         auto f = inputDrivers.find(current);
         if (f != inputDrivers.end())
             deps.insert(f->second);
@@ -414,7 +414,7 @@ void ControlRegion::validityCheck() const {
     set<Block*> blocks;
     _conns.findAllBlocks(blocks);
     for (auto b: blocks) {
-        assert(b->firing() == DependenceRule::AND);
+        assert(b->firing() == DependenceRule::AND_FireOne);
         assert(b->outputsTied());
         assert(!b->outputsSeparate());
     }
@@ -482,13 +482,8 @@ bool ControlRegion::refine(ConnectionDB& conns) const {
 }
 
 
-const std::vector<InputPort*>&
-    ControlRegion::deps(const OutputPort*) const {
-    return inputs();
-}
-
-DependenceRule ControlRegion::depRule(const OutputPort*) const {
-    return DependenceRule(DependenceRule::AND, DependenceRule::Always);
+DependenceRule ControlRegion::deps(const OutputPort*) const {
+    return DependenceRule(DependenceRule::AND_FireOne, inputs());
 }
 
 struct PipelineDepthVisitor : public Visitor<OIEdge> {
@@ -529,7 +524,7 @@ struct PipelineDepthVisitor : public Visitor<OIEdge> {
     Terminate next(
             const ConnectionDB*,
             const OIEdge& edge,
-            std::vector<OutputPort*>& out) {
+            std::vector<const OutputPort*>& out) {
         _visits += 1;
         Block* b = edge.endPort()->owner();
         out.insert(out.end(), b->outputs().begin(), b->outputs().end());
@@ -541,9 +536,12 @@ struct PipelineDepthVisitor : public Visitor<OIEdge> {
         if (conns == NULL)
             return;
 
+        vector<const OutputPort*> initConst;
+
         vector<OutputPort*> init;
         cr->internalDrivers(init);
         for (auto op: init) {
+            initConst.push_back(op);
             stats[op->owner()].visits = op->owner()->inputs().size();
         }
 
@@ -552,12 +550,12 @@ struct PipelineDepthVisitor : public Visitor<OIEdge> {
 
         for (auto b: blocks) {
             if (b->inputs().size() == 0) {
-                init.insert(init.end(), b->outputs().begin(), b->outputs().end());
+                initConst.insert(initConst.end(), b->outputs().begin(), b->outputs().end());
             }
         }
 
         GraphSearch<PipelineDepthVisitor, BFS> search(conns, *this);
-        search.go(init);
+        search.go(initConst);
         assert(stats.size() >= blocks.size());
     }
 };
@@ -571,7 +569,7 @@ void ControlRegion::schedule() {
 
     Transformer t(this);
 
-    set<Port*> constPorts;
+    set<const Port*> constPorts;
     set<Block*> constBlocks;
     queries::FindConstants(this, constPorts, constBlocks);
 

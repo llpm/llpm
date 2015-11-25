@@ -76,8 +76,7 @@ public:
         return true;
     }
 
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
-    virtual DependenceRule depRule(const OutputPort* op) const;
+    virtual DependenceRule deps(const OutputPort* op) const;
 
     /// How many clock cycles does it take to compute this CR?
     unsigned clocks();

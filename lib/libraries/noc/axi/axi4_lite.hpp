@@ -91,8 +91,7 @@ public:
         return false;
     }
 
-    virtual DependenceRule depRule(const OutputPort*) const;
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual DependenceRule deps(const OutputPort*) const;
 
     virtual bool refinable() const {
         return true;

@@ -31,7 +31,7 @@ public:
 
 class PipelineFrequencyPass: public Pass {
     Time _maxDelay;
-    std::map<OutputPort*, Time> _modOutDelays;
+    std::map<const OutputPort*, Time> _modOutDelays;
 
     friend struct DelayVisitor;
     bool runOnModule(Module* mod, Time initTime);

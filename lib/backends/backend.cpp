@@ -6,15 +6,15 @@ using namespace std;
 
 namespace llpm {
 
-Time Backend::latency(InputPort* ip, OutputPort* op) const {
+Time Backend::latency(const InputPort* ip, const OutputPort* op) const {
     assert(ip->owner() == op->owner());
     // Drastic oversimplification: estimate the latency as the
     // "logical effort" in nanoseconds
     return Time::ns(ip->owner()->logicalEffort(ip, op));
 }
 
-Time Backend::maxLatency(OutputPort* op) const {
-    const vector<InputPort*>& inputs = op->deps();
+Time Backend::maxLatency(const OutputPort* op) const {
+    const auto& inputs = op->deps().inputs;
     Time maxT;
     for (auto ip: inputs) {
         Time t = latency(ip, op);

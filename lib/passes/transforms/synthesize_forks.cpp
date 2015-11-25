@@ -42,7 +42,7 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         // Don't add forks to CRs
         return;
 
-    set<Port*> constPorts;
+    set<const Port*> constPorts;
     set<Block*> constBlocks;
     queries::FindConstants(mod, constPorts, constBlocks);
 
@@ -93,7 +93,7 @@ void SynthesizeForksPass::runInternal(Module* mod) {
     // pipeline regsiters or deadlock could occur.
     unsigned recombinedForks = 0;
     for (auto fork: realForks) {
-        vector<set<InputPort*>> consumers;
+        vector<set<const InputPort*>> consumers;
         for (auto op: fork->outputs()) {
             consumers.push_back({});
             queries::FindConsumers(mod, op, consumers.back(), &isPipelineReg);

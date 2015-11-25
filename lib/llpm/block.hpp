@@ -118,7 +118,7 @@ public:
      * This routine only works properly when all the outputs have the
      * same dependence rules. If not, it returns "Custom"
      */
-    DependenceRule::InputType firing() const;
+    DependenceRule::DepType firing() const;
 
     /**
      * When one output fires, do all of them them? If so, this method
@@ -141,22 +141,20 @@ public:
     /**
      * Find the dependence rule for an output port 
      */
-    virtual DependenceRule depRule(const OutputPort*) const = 0;
-    /**
-     * Find all of the inputs upon which an output depends.
-     */
-    virtual const std::vector<InputPort*>&
-        deps(const OutputPort*) const = 0;
+    virtual DependenceRule deps(const OutputPort* op) const {
+        return DependenceRule(DependenceRule::Custom,
+                              inputs());
+    }
 
     /**
      * Calls the above and inserts into a set
      */
-    virtual void deps(const OutputPort*, std::set<InputPort*>&) const;
+    virtual void deps(const OutputPort*, std::set<const InputPort*>&) const;
     /**
      * Based on the above deps function, find all of the output ports
      * which an input may affect 
      */
-    virtual void deps(const InputPort*, std::set<OutputPort*>&) const;
+    virtual void deps(const InputPort*, std::set<const OutputPort*>&) const;
 
     /**
      * What is the logical effort expended in getting a token from
@@ -167,7 +165,7 @@ public:
      * is some good way to formalize this (like the Sutherland's
      * logical effort in VLSI design), but we're not doing that yet.
      */
-    virtual float logicalEffort(InputPort*, OutputPort*) const {
+    virtual float logicalEffort(const InputPort*, const OutputPort*) const {
         return 0.0;
     }
 
@@ -313,20 +311,14 @@ public:
     }
 
 
-    float logicalEffort(InputPort*, OutputPort*) const {
+    float logicalEffort(const InputPort*, const OutputPort*) const {
         return logicalEffortFunc();
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
+        return DependenceRule(DependenceRule::AND_FireOne,
+                              {&_din});
     }
 };
 

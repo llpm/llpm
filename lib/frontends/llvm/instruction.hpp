@@ -128,8 +128,7 @@ protected:
     std::vector<InputPort*> _inputVec;
 
 public:
-    virtual DependenceRule depRule(const OutputPort* op) const;
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual DependenceRule deps(const OutputPort* op) const;
 };
 
 class LLVMConstant : public LLVMImpureInstruction, public Constant {
@@ -157,11 +156,7 @@ public:
         return false;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
-        return Constant::depRule(op);
-    }
-
-    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         return Constant::deps(op);
     }
 };

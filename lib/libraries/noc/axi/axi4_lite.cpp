@@ -76,22 +76,14 @@ void AXI4LiteSlaveAdapter::connect(ConnectionDB* conns, OutputPort* op) {
     assignPort(sink);
 }
 
-DependenceRule AXI4LiteSlaveAdapter::depRule(const OutputPort* op) const {
+DependenceRule AXI4LiteSlaveAdapter::deps(const OutputPort* op) const {
     if (op == readData()) {
-        return DependenceRule(DependenceRule::Custom, DependenceRule::Maybe);
+        return DependenceRule(DependenceRule::Custom, _readInputs);
     }
     if (op == writeResp()) {
-        return DependenceRule(DependenceRule::AND, DependenceRule::Always);
+        return DependenceRule(DependenceRule::AND_FireOne, _writeInputs);
     }
-    return DependenceRule(DependenceRule::AND, DependenceRule::Maybe);
-}
-
-const std::vector<InputPort*>&
-AXI4LiteSlaveAdapter::deps(const OutputPort* op) const {
-    if (op == readData()) {
-        return _readInputs;
-    }
-    return _writeInputs;
+    return DependenceRule(DependenceRule::Custom, inputs());
 }
 
 void AXI4LiteSlaveAdapter::assignPort(Port* port) {

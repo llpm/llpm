@@ -127,22 +127,11 @@ llvm::Type* LLVMInstruction::GetOutput(llvm::Instruction* ins) {
     }
 }
 
-DependenceRule LLVMImpureInstruction::depRule(
+DependenceRule LLVMImpureInstruction::deps(
     const OutputPort* op) const {
     assert(std::find(outputs().begin(), outputs().end(), op)
            != outputs().end());
-    return DependenceRule(DependenceRule::AND, DependenceRule::Always);
-}
-
-const std::vector<InputPort*>& LLVMImpureInstruction::deps(
-    const OutputPort* op) const {
-    assert(std::find(outputs().begin(), outputs().end(), op)
-           != outputs().end());
-    if (op == output())
-        return inputs();
-    else if (op == memReqPort())
-        return _inputVec;
-    assert(false && "Unknown port!");
+    return DependenceRule(DependenceRule::Custom, inputs());
 }
 
 template<typename Inner>

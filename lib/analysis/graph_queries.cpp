@@ -2,6 +2,7 @@
 
 #include <llpm/block.hpp>
 #include <llpm/module.hpp>
+#include <util/misc.hpp>
 #include <libraries/core/interface.hpp>
 #include <libraries/core/logic_intr.hpp>
 #include <analysis/graph.hpp>
@@ -16,7 +17,7 @@ namespace queries {
 
 typedef Edge<InputPort, OutputPort> IOEdge;
 struct DominatorVisitor : public Visitor<IOEdge> {
-    std::set<OutputPort*> dominators;
+    std::set<const OutputPort*> dominators;
 
     Terminate visit(const ConnectionDB*,
                     const IOEdge& edge) {
@@ -26,8 +27,8 @@ struct DominatorVisitor : public Visitor<IOEdge> {
 };
 
 void FindDominators(const ConnectionDB* conns,
-                    const vector<InputPort*>& b,
-                    std::set<OutputPort*>& dominators)
+                    const vector<const InputPort*>& b,
+                    std::set<const OutputPort*>& dominators)
 {
     DominatorVisitor visitor;
     GraphSearch<DominatorVisitor, DFS> search(conns, visitor);
@@ -37,8 +38,8 @@ void FindDominators(const ConnectionDB* conns,
 void FindDominators(const ConnectionDB* conns,
                     Block* b,
                     std::set<Block*>& dominators) {
-    std::set<OutputPort*> opDoms;
-    FindDominators(conns, b->inputs(), opDoms);
+    std::set<const OutputPort*> opDoms;
+    FindDominators(conns, constCopy(b->inputs()), opDoms);
     for (auto op: opDoms)
         dominators.insert(op->owner());
 }
@@ -51,7 +52,7 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
     bool foundOR;
     bool foundCycle;
 
-    map<InputPort*, bool> requiresSource;
+    map<const InputPort*, bool> requiresSource;
 
     TokenAnalysisVisitor(const Port* source) :
         source(source),
@@ -70,17 +71,16 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
                 requiresSource[edge.first] = true;
                 requires = true;
             } else {
-                OutputPort* op = edge.second;
-                auto dr = op->depRule();
-                auto deps = op->deps();
+                const OutputPort* op = edge.second;
+                auto dr = op->deps();
                 // Assumption: requiresSource[x] defaults to 'false' when key
                 // x is not an entry
-                if (dr.inputType() == DependenceRule::AND) {
-                    for (auto dep: deps) {
+                if (dr.depType == DependenceRule::AND_FireOne) {
+                    for (auto dep: dr.inputs) {
                         requires |= requiresSource[dep];
                     }
                 } else {
-                    for (auto dep: deps) {
+                    for (auto dep: dr.inputs) {
                         requires &= requiresSource[dep];
                     }
                 }
@@ -91,15 +91,15 @@ struct TokenAnalysisVisitor : public Visitor<IOPath> {
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB* conns,
                     const IOPath& path) {
-        OutputPort* current = path.endPort();
+        const OutputPort* current = path.endPort();
         Block* block = current->owner();
         auto pathCycle = path.hasCycle();
         if (block->hasCycle() || pathCycle) {
             foundCycle = true;
         }
 
-        auto dr = current->depRule();
-        if (dr.inputType() != DependenceRule::AND) {
+        auto dr = current->deps();
+        if (dr.depType != DependenceRule::AND_FireOne) {
             // Include both OR and Custom
             foundOR = true;
         }
@@ -172,12 +172,12 @@ bool CouldReorderTokens(Interface* iface) {
 }
 
 struct CycleFindingVisitor: public Visitor<OIEdge> {
-    std::vector<Connection> stackVec;
-    std::set<OutputPort*> stackSet;
+    std::vector<OIEdge> stackVec;
+    std::set<const OutputPort*> stackSet;
     boost::function<bool(Block*)> ignoreBlock;
     unsigned visits = 0;
 
-    std::vector<Connection> cycle;
+    std::vector<OIEdge> cycle;
 
     // Visit a vertex in the graph
     Terminate visit(const ConnectionDB*,
@@ -195,17 +195,17 @@ struct CycleFindingVisitor: public Visitor<OIEdge> {
 
     Terminate next(const ConnectionDB* conns,
                    const OIEdge& edge, 
-                   std::vector<OutputPort*>& deps)
+                   std::vector<const OutputPort*>& deps)
     {
         Visitor<OIEdge>::next(conns, edge, deps);
         for (auto dep: deps) {
             if (stackSet.find(dep) != stackSet.end()) {
                 auto stackIter = stackVec.begin();
-                while (stackIter->source() != dep &&
+                while (stackIter->first != dep &&
                        stackIter != stackVec.end())
                     stackIter++;
                 assert(stackIter != stackVec.end());
-                cycle = vector<Connection>(stackIter, stackVec.end());
+                cycle = vector<OIEdge>(stackIter, stackVec.end());
                 return TerminateSearch;
             }
         }
@@ -214,7 +214,7 @@ struct CycleFindingVisitor: public Visitor<OIEdge> {
 
     Terminate pop(const ConnectionDB*) {
         assert(stackVec.size() > 0);
-        stackSet.erase(stackVec.back().source());
+        stackSet.erase(stackVec.back().first);
         stackVec.pop_back();
         return Continue;
     }
@@ -234,7 +234,7 @@ bool BlockCycleExists(const ConnectionDB* conns,
 
 bool FindCycle(Module* mod,
                boost::function<bool(Block*)> ignoreBlock,
-               std::vector< Connection >& cycle) {
+               std::vector< std::pair<const OutputPort*, const InputPort*> >& cycle) {
     CycleFindingVisitor visitor;
     visitor.ignoreBlock = ignoreBlock;
     ConnectionDB* conns = mod->conns();
@@ -253,7 +253,10 @@ bool FindCycle(Module* mod,
            // mod->name().c_str());
 
     if (visitor.cycle.size() > 0) {
-        cycle = visitor.cycle;
+        cycle.clear();
+        for (auto edge: visitor.cycle) {
+            cycle.push_back(edge);
+        }
         return true;
     }
     return false;
@@ -261,8 +264,8 @@ bool FindCycle(Module* mod,
 
 struct ConstFindingVisitor : public Visitor<OIEdge> {
     set<Block*> constBlocks;
-    set<Port*> constPorts;
-    set<InputPort*> seenIP;
+    set<const Port*> constPorts;
+    set<const InputPort*> seenIP;
 
     map<Block*, unsigned> numConstInputs;
 
@@ -299,7 +302,7 @@ struct ConstFindingVisitor : public Visitor<OIEdge> {
 
 // Find all edges and blocks which are driven entirely by Constants
 void FindConstants(Module* mod,
-                   std::set<Port*>& constPorts,
+                   std::set<const Port*>& constPorts,
                    std::set<Block*>& constBlocks)
 {
     ConnectionDB* conns = mod->conns();
@@ -341,17 +344,17 @@ void FindConstants(Module* mod,
 struct DepFindingVisitor : public Visitor<IOEdge> {
     bool first = true;
     DependenceRule rule;
-    set<OutputPort*> deps;
+    set<const OutputPort*> deps;
 
     Terminate visit(const ConnectionDB*,
                     const PathTy& path)
     {
         if (first) {
-            rule = path.endPort()->depRule();
+            rule = path.endPort()->deps();
             deps.clear();
             first = false;
         } else {
-            rule = rule + path.endPort()->depRule();
+            rule = rule + path.endPort()->deps();
         }
         return Continue;
     }
@@ -366,7 +369,7 @@ struct DepFindingVisitor : public Visitor<IOEdge> {
 
 void FindDependencies(const Module* mod,
                       InputPort* ip,
-                      std::set<OutputPort*>& deps,
+                      std::set<const OutputPort*>& deps,
                       DependenceRule& rule)
 {
     const ConnectionDB* conns = mod->conns();
@@ -382,7 +385,7 @@ void FindDependencies(const Module* mod,
 
 struct ConsumerFindingVisitor : public Visitor<OIEdge> {
     bool first = true;
-    set<InputPort*> consumers;
+    set<const InputPort*> consumers;
     boost::function<bool(Block*)> ignoreBlock;
 
     Terminate visit(const ConnectionDB*,
@@ -410,7 +413,7 @@ struct ConsumerFindingVisitor : public Visitor<OIEdge> {
 // Given an output port, find all ports which may depend on it
 void FindConsumers(const Module* mod,
                    OutputPort* op,
-                   std::set<InputPort*>& consumers,
+                   std::set<const InputPort*>& consumers,
                    boost::function<bool(Block*)> ignoreBlock)
 {
     const ConnectionDB* conns = mod->conns();

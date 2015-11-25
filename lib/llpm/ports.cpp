@@ -60,11 +60,7 @@ OutputPort::OutputPort(
 
 OutputPort::~OutputPort() { }
 
-DependenceRule OutputPort::depRule() const {
-    return owner()->depRule(this);
-}
-
-const std::vector<InputPort*>& OutputPort::deps() const {
+DependenceRule OutputPort::deps() const {
     return owner()->deps(this);
 }
 

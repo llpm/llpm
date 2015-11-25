@@ -13,8 +13,6 @@ class RTLReg : public Block {
     llvm::Type* _type;
     Interface _write;
     std::vector<std::unique_ptr<Interface>> _read;
-    std::map<const OutputPort*, std::vector<InputPort*>> _readRespDeps;
-    std::vector<InputPort*> _writeRespDeps = {_write.din()};
 
 public:
     RTLReg(llvm::Type* datatype);
@@ -29,20 +27,13 @@ public:
 
     Interface* newRead();
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         if (op == _write.dout())
-            return DependenceRule(DependenceRule::AND,
-                                  DependenceRule::Always);
-        // Assume it's the read port otherwise
-        return DependenceRule(DependenceRule::Custom,
-                              DependenceRule::Maybe);
-    }
-
-    virtual const std::vector<InputPort*>& deps(
-            const OutputPort* op) const {
-        if (op == _write.dout())
-            return _writeRespDeps;
-        return _readRespDeps.find(op)->second;
+            return DependenceRule(DependenceRule::AND_FireOne, {_write.din()});
+        for (const auto& read: _read) {
+            if (read->dout() == op)
+                return DependenceRule(DependenceRule::AND_FireOne, {read->din()});
+        }
         assert(false);
     }
 
@@ -50,7 +41,7 @@ public:
         return true;
     }
 
-    virtual float logicalEffort(InputPort* ip, OutputPort*) const {
+    virtual float logicalEffort(const InputPort* ip, const OutputPort*) const {
         if (ip == _write.din())
             return 0.5;
         return 0.1;
@@ -70,7 +61,6 @@ class BlockRAM : public Block {
     llvm::Type* _type;
     unsigned _depth;
     std::vector<std::unique_ptr<Interface>> _ports;
-    std::map<const OutputPort*, std::vector<InputPort*> > _deps;
 
 public:
     BlockRAM(llvm::Type* ty, unsigned depth, unsigned numPorts);
@@ -83,21 +73,20 @@ public:
         return true;
     }
 
-    virtual DependenceRule depRule(const OutputPort*) const {
-        return DependenceRule(DependenceRule::OR,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-        deps(const OutputPort* op) const {
-            return _deps.find(op)->second;
+    virtual DependenceRule depRule(const OutputPort* op) const {
+        for (const auto& port: _ports) {
+            if (op == port->dout())
+                return DependenceRule(DependenceRule::AND_FireOne,
+                                      {port->din()});
+        }
+        assert(false && "OP doesn't belong!");
     }
 
     virtual bool outputsSeparate() const {
         return true;
     }
 
-    virtual float logicalEffort(InputPort*, OutputPort*) const {
+    virtual float logicalEffort(const InputPort*, const OutputPort*) const {
         return 1.0;
     }
 };

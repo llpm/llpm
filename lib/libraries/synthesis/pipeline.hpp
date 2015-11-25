@@ -50,14 +50,8 @@ public:
         return false;
     }
 
-    virtual DependenceRule depRule(const OutputPort*) const {
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort*) const {
-        return inputs();
+    virtual DependenceRule deps(const OutputPort*) const {
+        return DependenceRule(DependenceRule::AND_FireOne, inputs());
     }
 };
 
@@ -91,16 +85,9 @@ public:
 
     void controller(ConnectionDB*, PipelineStageController*);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
+        return DependenceRule(DependenceRule::AND_FireOne, inputs());
     }
 };
 
@@ -129,19 +116,12 @@ public:
     DEF_GET(dout);
     DEF_GET_NP(source);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
+        return DependenceRule(DependenceRule::AND_FireOne, inputs());
     }
 
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
-    }
-
-    virtual float logicalEffort(InputPort*, OutputPort*) const {
+    virtual float logicalEffort(const InputPort*, const OutputPort*) const {
         return 0.5;
     }
 };

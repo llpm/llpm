@@ -62,14 +62,9 @@ public:
      */
     static Constant* getEquivalent(OutputPort*);
 
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
-        return inputs();
-    }
-
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
+        return DependenceRule(DependenceRule::AND_FireOne);
     }
 };
 
@@ -86,14 +81,9 @@ public:
 
     DEF_GET(dout);
 
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
-        return inputs();
-    }
-
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Maybe);
+        return DependenceRule(DependenceRule::Custom);
     }
 };
 
@@ -109,11 +99,7 @@ public:
 
     DEF_GET(din);
 
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
-        throw InvalidArgument("Output port does not belong to this block!");
-    }
-
-    virtual DependenceRule depRule(const OutputPort*) const {
+    virtual DependenceRule deps(const OutputPort*) const {
         throw InvalidArgument("Output port does not belong to this block!");
     }
 };
@@ -142,7 +128,7 @@ public:
         _dout(this, t, "c")
     { }
 
-    virtual bool hasState() const { return false; }
+    virtual bool hasState() const { return true; }
     virtual std::string print() const;
 
     DEF_GET(dout);
@@ -153,14 +139,9 @@ public:
         return new Once(llvm::Type::getVoidTy(d.context()));
     }
 
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const {
-        return inputs();
-    }
-
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::Custom,
-                              DependenceRule::Maybe);
+        return DependenceRule(DependenceRule::Custom);
     }
 };
 

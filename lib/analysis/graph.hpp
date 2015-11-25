@@ -48,7 +48,7 @@ struct Visitor {
     // Find the src ports exposed by the vertex we are visiting.
     Terminate next(const ConnectionDB*,
                    const PathTy& path, 
-                   std::vector<typename PathTy::SrcPortTy*>&);
+                   std::vector<const typename PathTy::SrcPortTy*>&);
 
     // Called when a path will not grow longer -- when a block has no
     // inputs, essentially
@@ -57,25 +57,25 @@ struct Visitor {
 };
 
 template<typename SrcPort, typename DstPort>
-class Edge : public std::pair<SrcPort*, DstPort*> {
+class Edge : public std::pair<const SrcPort*, const DstPort*> {
 public:
-    typedef SrcPort SrcPortTy;
-    typedef DstPort DstPortTy;
+    typedef const SrcPort SrcPortTy;
+    typedef const DstPort DstPortTy;
 
     Edge() { }
 
-    Edge(SrcPort* src, DstPort* dst):
-        std::pair<SrcPort*, DstPort*>(src, dst)
+    Edge(const SrcPort* src, const DstPort* dst):
+        std::pair<const SrcPort*, const DstPort*>(src, dst)
     { }
 
-    Edge push(SrcPort* src, DstPort* dst) const {
+    Edge push(const SrcPort* src, const DstPort* dst) const {
         return Edge(src, dst);
     }
 
-    std::pair<SrcPort*, DstPort*> end() const {
+    std::pair<const SrcPort*, const DstPort*> end() const {
         return *this;
     }
-    DstPort* endPort() const {
+    const DstPort* endPort() const {
         return this->second;
     }
 };
@@ -89,27 +89,27 @@ typedef Edge<Port, Port>            GenericEdge;
 template<typename SrcPort, typename DstPort>
 class VisitPort {
 public:
-    typedef SrcPort SrcPortTy;
-    typedef DstPort DstPortTy;
+    typedef const SrcPort SrcPortTy;
+    typedef const DstPort DstPortTy;
 
 protected:
-    DstPort* _dst;
+    const DstPort* _dst;
 
 public:
     VisitPort() { }
 
-    VisitPort(SrcPort*, DstPort* dst):
+    VisitPort(const SrcPort*, const DstPort* dst):
         _dst(dst)
     { }
 
-    VisitPort push(SrcPort* src, DstPort* dst) const {
+    VisitPort push(const SrcPort* src, const DstPort* dst) const {
         return VisitPort(src, dst);
     }
 
-    DstPort* end() const {
+    const DstPort* end() const {
         return _dst;
     }
-    DstPort* endPort() const {
+    const DstPort* endPort() const {
         return _dst;
     }
 
@@ -127,31 +127,31 @@ typedef VisitPort<InputPort, OutputPort> VisitOutputPort;
 
 template<typename SrcPort, typename DstPort>
 class Path {
-    std::vector< std::pair<SrcPort*, DstPort*> > _path;
+    std::vector< std::pair<const SrcPort*, const DstPort*> > _path;
 
 public:
-    typedef SrcPort SrcPortTy;
-    typedef DstPort DstPortTy;
+    typedef const SrcPort SrcPortTy;
+    typedef const DstPort DstPortTy;
 
     Path() { }
 
-    Path(SrcPort* src, DstPort* dst) {
+    Path(const SrcPort* src, const DstPort* dst) {
         _path.push_back(std::make_pair(src, dst));
     }
 
-    Path(const Path* p, SrcPort* src, DstPort* dst) :
+    Path(const Path* p, const SrcPort* src, const DstPort* dst) :
         _path(p->_path) {
         _path.push_back(std::make_pair(src, dst));
     }
 
-    Path push(SrcPort* sp, DstPort* dp) const {
+    Path push(const SrcPort* sp, const DstPort* dp) const {
         return Path(this, sp, dp);
     }
 
-    std::pair<SrcPort*, DstPort*> end() const {
+    std::pair<const SrcPort*, const DstPort*> end() const {
         return _path.back();
     }
-    DstPort* endPort() const {
+    const DstPort* endPort() const {
         return end().second;
     }
 
@@ -159,7 +159,7 @@ public:
         _path.pop_back();
     }
 
-    const std::vector< std::pair<SrcPort*, DstPort*> >& raw() const {
+    const std::vector< std::pair<const SrcPort*, const DstPort*> >& raw() const {
         return _path;
     }
 
@@ -172,7 +172,7 @@ public:
     bool contains(Connection c) const;
     unsigned countPipelineDepth() const;
 
-    std::vector< std::pair<SrcPort*, DstPort*> > extractCycle() const;
+    std::vector< std::pair<const SrcPort*, const DstPort*> > extractCycle() const;
 
     bool operator==(const Path& p) const {
         return _path == p._path;

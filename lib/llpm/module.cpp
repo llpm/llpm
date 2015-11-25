@@ -230,9 +230,8 @@ bool ContainerModule::_hasCycleCompute() const {
     return queries::BlockCycleExists(&_conns, init);
 }
 
-DependenceRule ContainerModule::depRule(const OutputPort* op) const {
-    const Deps& deps = _deps(op);
-    return deps.rule;
+DependenceRule ContainerModule::deps(const OutputPort* op) const {
+    return _deps(op);
 }
 
 bool ContainerModule::outputsSeparate() const {
@@ -251,23 +250,18 @@ bool ContainerModule::outputsSeparate() const {
     }
     return true;
 }
-const std::vector<InputPort*>& ContainerModule::deps(
-    const OutputPort* op) const {
-    const Deps& deps = _deps(op);
-    return deps.deps;
-}
 
-ContainerModule::Deps ContainerModule::_findDeps(
+DependenceRule ContainerModule::_findDeps(
         const OutputPort* op) const {
-    Deps ret;
+    DependenceRule ret;
     auto internalSink = getSink(op);
-    set<OutputPort*> depSet;
-    queries::FindDependencies(this, internalSink, depSet, ret.rule);
+    set<const OutputPort*> depSet;
+    queries::FindDependencies(this, internalSink, depSet, ret);
     for (auto depDriver: depSet) {
         auto dummy = depDriver->owner()->as<DummyBlock>();
         if (dummy != NULL) {
             auto extIP = dummy->modPort()->asInput();
-            ret.deps.push_back(extIP);
+            ret.inputs.push_back(extIP);
         }
     }
     return ret;

@@ -163,7 +163,7 @@ public:
     /**
      * Is thie block visible to clients?
      */
-    bool isInternalDriver(OutputPort* op) const {
+    bool isInternalDriver(const OutputPort* op) const {
         return _blacklist.count(op->ownerP()) > 0;
     }
 
@@ -252,6 +252,10 @@ public:
     }
 
     void findSinks(const OutputPort* op,
+                   std::vector<const InputPort*>& out) const;
+    void findSinks(const OutputPort* op,
+                   std::set<const InputPort*>& out) const;
+    void findSinks(const OutputPort* op,
                    std::vector<InputPort*>& out) const;
     void findSinks(const OutputPort* op,
                    std::set<InputPort*>& out) const;
@@ -270,6 +274,18 @@ public:
             out.push_back(c.source());
     }
     void find(const OutputPort* ip, std::vector<InputPort*>& out) const {
+        std::vector<Connection> ret;
+        find(ip, ret);
+        for (auto&& c: ret) {
+            out.push_back(c.sink());
+        }
+    }
+    void find(const InputPort* ip, std::vector<const OutputPort*>& out) const {
+        Connection c;
+        if (find(ip, c))
+            out.push_back(c.source());
+    }
+    void find(const OutputPort* ip, std::vector<const InputPort*>& out) const {
         std::vector<Connection> ret;
         find(ip, ret);
         for (auto&& c: ret) {

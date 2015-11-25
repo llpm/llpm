@@ -182,12 +182,7 @@ public:
 
     virtual void validityCheck() const;
 
-    virtual DependenceRule depRule(const OutputPort*) const {
-        // This module has no ports!
-        assert(false);
-    }
-    virtual const std::vector<InputPort*>&
-        deps(const OutputPort*) const {
+    virtual DependenceRule deps(const OutputPort*) const {
         // This module has no ports!
         assert(false);
     }

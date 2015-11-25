@@ -721,13 +721,9 @@ void VerilogSynthesizer::print(Context& ctxt, Block* b)
             std::string joinOp;
             std::string terminator;
             switch (b->firing()) {
-            case DependenceRule::AND:
+            case DependenceRule::AND_FireOne:
                 joinOp = "&";
                 terminator = "1'b1";
-                break;
-            case DependenceRule::OR:
-                joinOp = "|";
-                terminator = "1'b0";
                 break;
             case DependenceRule::Custom:
                 assert(printer->customLID() &&

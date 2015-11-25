@@ -64,20 +64,22 @@ void SimplifyPass::eliminateNoops(Module* m) {
         Split* s = dynamic_cast<Split*>(b);
         if (s) {
             auto driver = t.conns()->findSource(s->din());
-            auto join = driver->owner()->as<Join>();
-            if (join) {
-                assert(s->dout_size() == join->din_size());
-                for (unsigned i=0; i<join->din_size(); i++) {
-                    auto w = new Wait(join->din(i)->type());
-                    auto joinDriver = t.conns()->findSource(join->din(i));
-                    if (joinDriver) {
-                        t.conns()->connect(joinDriver, w->din());
-                        w->newControl(t.conns(), join->dout());
-                        vector<InputPort*> sSinks;
-                        t.conns()->findSinks(s->dout(i), sSinks);
-                        for (auto sink: sSinks) {
-                            t.conns()->disconnect(s->dout(i), sink);
-                            t.conns()->connect(w->dout(), sink);
+            if (driver) {
+                auto join = driver->owner()->as<Join>();
+                if (join) {
+                    assert(s->dout_size() == join->din_size());
+                    for (unsigned i=0; i<join->din_size(); i++) {
+                        auto w = new Wait(join->din(i)->type());
+                        auto joinDriver = t.conns()->findSource(join->din(i));
+                        if (joinDriver) {
+                            t.conns()->connect(joinDriver, w->din());
+                            w->newControl(t.conns(), join->dout());
+                            vector<InputPort*> sSinks;
+                            t.conns()->findSinks(s->dout(i), sSinks);
+                            for (auto sink: sSinks) {
+                                t.conns()->disconnect(s->dout(i), sink);
+                                t.conns()->connect(w->dout(), sink);
+                            }
                         }
                     }
                 }
@@ -278,7 +280,7 @@ void SimplifyPass::simplifyConstants(Module* m) {
     ConnectionDB* conns = m->conns();
     assert(conns != NULL);
 
-    std::set<Port*> constPorts;
+    std::set<const Port*> constPorts;
     std::set<Block*> constBlocks;
     queries::FindConstants(m, constPorts, constBlocks);
 
@@ -496,8 +498,8 @@ void SimplifyWaits::runInternal(Module* mod) {
 
 struct SimplifyWaitsVisitor: public Visitor<VisitOutputPort> {
     unsigned pass = 1;
-    std::set<OutputPort*> allDominators; 
-    std::set<OutputPort*> initPoints;
+    std::set<const OutputPort*> allDominators; 
+    std::set<const OutputPort*> initPoints;
 
     Terminate visit(const ConnectionDB*,
                     const VisitOutputPort& edge)
@@ -507,9 +509,8 @@ struct SimplifyWaitsVisitor: public Visitor<VisitOutputPort> {
             allDominators.insert(op);
         }
 
-        auto rule = op->depRule();
-        if (rule.inputType() != DependenceRule::AND ||
-            rule.outputType() != DependenceRule::Always ||
+        auto rule = op->deps();
+        if (rule.depType != DependenceRule::AND_FireOne ||
             op->owner()->is<Constant>())
             return TerminatePath;
         return Continue;
@@ -549,7 +550,7 @@ void SimplifyWaits::collectControls(
         t.conns()->remap(wait->dout(), newWait->dout());
 
         for (auto op: visitor.initPoints) {
-            newWait->newControl(t.conns(), op);
+            newWait->newControl(t.conns(), (OutputPort*)op);
         }
     }
 }

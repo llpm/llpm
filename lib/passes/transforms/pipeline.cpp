@@ -179,23 +179,23 @@ void PipelineCyclesPass::runInternal(Module* mod) {
     // breaking them starting with the most common edges in cycles --
     // breaking those edges simultaneously breaks the most cycles!
     //
-    vector<Connection> cycle;
+    std::vector< std::pair<const OutputPort*, const InputPort*> > cycle;
     while (queries::FindCycle(mod, &isPipelineReg, cycle)) {
         FlowVisitor fvisitor;
         fvisitor.run(mod);
 
-        Connection toBreak = cycle[rand() % cycle.size()];
+        auto toBreak = cycle[rand() % cycle.size()];
         float maxFlow = 0;
-        for (Connection c: cycle) {
-            float flow = fvisitor.edgeFlow(c.source());
+        for (auto c: cycle) {
+            float flow = fvisitor.edgeFlow(c.first);
             if (flow > maxFlow) {
                 maxFlow = flow;
                 toBreak = c;
             }
         }
 
-        auto preg = new PipelineRegister(toBreak.source());
-        t.insertAfter(toBreak.source(), preg);
+        auto preg = new PipelineRegister(toBreak.first);
+        t.insertAfter((OutputPort*)toBreak.first, preg);
         // printf("    preg at: %s -> %s\n",
                // toBreak.source()->owner()->globalName().c_str(),
                // toBreak.sink()->owner()->globalName().c_str());
@@ -251,9 +251,9 @@ struct DelayVisitor : public Visitor<OIEdge> {
     PipelineFrequencyPass* pipePass;
     Backend* backend;
     Time period;
-    map<OutputPort*, Stats> delays;
-    set<OutputPort*> pipeline;
-    set<Port*> constPorts;
+    map<const OutputPort*, Stats> delays;
+    set<const OutputPort*> pipeline;
+    set<const Port*> constPorts;
     set<Block*> constBlocks;
 
     DelayVisitor(PipelineFrequencyPass* pass, Backend* b, Time period) :
@@ -262,7 +262,7 @@ struct DelayVisitor : public Visitor<OIEdge> {
         period(period)
     { }
 
-    Time edgeDelay(OutputPort* op) {
+    Time edgeDelay(const OutputPort* op) {
         if (pipeline.count(op) > 0 || constPorts.count(op) > 0)
             return Time();
         Stats& s = delays[op];
@@ -282,14 +282,14 @@ struct DelayVisitor : public Visitor<OIEdge> {
         Time delay = edgeDelay(edge.end().first);
 
         // Add the routing delay
-        delay += backend->latency(edge.end());
+        delay += backend->latency(edge.end().second, edge.end().first);
 
         if (delay >= period) {
             pipeline.insert(edge.end().first);
             delay = Time();
         }
 
-        set<OutputPort*> deps;
+        set<const OutputPort*> deps;
         edge.endPort()->owner()->deps(edge.endPort(), deps);
 
         for (auto op: deps) {
@@ -354,7 +354,7 @@ bool PipelineFrequencyPass::runOnModule(Module* mod, Time initTime) {
             // Don't pipeline things with no consumer
             continue;
         auto preg = new PipelineRegister(op);
-        t.insertAfter(op, preg);
+        t.insertAfter((OutputPort*)op, preg);
     }
 
     if (mod->is<ControlRegion>() && dv.pipeline.size() > 0) {

@@ -97,7 +97,6 @@ class InterfaceMultiplexer : public Block {
     Interface _client;
 
     std::vector<std::unique_ptr<Interface>> _servers;
-    std::vector<InputPort*> _clientDinArr;
 
 public:
     InterfaceMultiplexer(Interface* iface) :
@@ -109,30 +108,15 @@ public:
                 "Can only multiplex a server interface!");
         }
         this->name(iface->name() + "mux");
-        _clientDinArr = {_client.din()};
     }
 
     DEF_GET(client);
     DEF_UNIQ_ARRAY_GET(servers);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(std::find(outputs().begin(), outputs().end(), op)
                != outputs().end());
-        if (op == _client.dout())
-            return DependenceRule(DependenceRule::Custom,
-                                  DependenceRule::Maybe);
-        else
-            return DependenceRule(DependenceRule::AND,
-                                  DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>& deps(const OutputPort* op) const {
-        assert(std::find(outputs().begin(), outputs().end(), op)
-               != outputs().end());
-        if (op == _client.dout())
-            return inputs();
-        else
-            return _clientDinArr;
+        return DependenceRule(DependenceRule::Custom, inputs());
     }
 
     Interface* createServer() {

@@ -20,7 +20,7 @@ class ObjectNamer : boost::noncopyable {
     uint64_t anonBlockCounter;
     std::set< std::pair<Module*, std::string> > _existingNames;
     std::map< std::pair<Module*, Block*>, std::string> _blockNames;
-    std::map< std::pair<Module*, Port*>, std::string> _portNames;
+    std::map< std::pair<Module*, const Port*>, std::string> _portNames;
 
     std::string historicalName(Block* b);
 
@@ -33,10 +33,10 @@ public:
 
     virtual std::string primBlockName(Block* b, Module* ctxt);
     virtual std::string getName(Block* b, Module* ctxt, bool ignore=false);
-    virtual std::string getName(InputPort* p, Module* ctxt, bool io=false);
-    virtual std::string getName(OutputPort* p, Module* ctxt, bool io=false);
+    virtual std::string getName(const InputPort* p, Module* ctxt, bool io=false);
+    virtual std::string getName(const OutputPort* p, Module* ctxt, bool io=false);
 
-    virtual void assignName(Port* p, Module* ctxt, std::string name);
+    virtual void assignName(const Port* p, Module* ctxt, std::string name);
 
     virtual void reserveName(std::string name, Module* ctxt) {
         _existingNames.insert(make_pair(ctxt, name));

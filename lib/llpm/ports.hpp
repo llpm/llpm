@@ -7,6 +7,8 @@
 #include <boost/intrusive_ptr.hpp>
 #include <llvm/IR/Type.h>
 
+#include <initializer_list>
+
 namespace llpm {
 
 class Block;
@@ -94,40 +96,60 @@ public:
 struct DependenceRule {
     friend class OutputPort;
 public:
-    enum InputType {
-        AND,
-        OR,
+    typedef llvm::SmallVector<const InputPort*, 2> InputVec;
+
+    enum DepType {
+        AND_FireOne,
         Custom
     };
 
-    enum OutputType {
-        Always,
-        Maybe
-    };
-
-protected:
-    InputType       _inputType;
-    OutputType      _outputType;
-
 public:
+    DepType depType;
+    InputVec inputs;
+
     DependenceRule() :
-        _inputType(Custom),
-        _outputType(Maybe)
+        depType(Custom)
     { }
 
-    DependenceRule(InputType inpTy,
-                   OutputType outTy) :
-        _inputType(inpTy),
-        _outputType(outTy) { }
+    DependenceRule(DepType ty) :
+        depType(ty)
+    { }
 
-    DEF_GET_NP(inputType);
-    DEF_GET_NP(outputType);
-    DEF_SET(inputType);
-    DEF_SET(outputType);
+    template<unsigned N>
+    DependenceRule(DepType ty,
+                   llvm::SmallVector<InputPort*, N> inputs) :
+        depType(ty),
+        inputs(inputs.begin(), inputs.end())
+    { }
+
+    DependenceRule(DepType ty,
+                   std::vector<InputPort*> inputs) :
+        depType(ty),
+        inputs(inputs.begin(), inputs.end())
+    { }
+
+    DependenceRule(DepType ty,
+                   std::initializer_list<const InputPort*> inputs) :
+        depType(ty),
+        inputs(inputs)
+    { }
+
+    template<unsigned N>
+    DependenceRule(DepType ty,
+                   llvm::SmallVector<const InputPort*, N> inputs) :
+        depType(ty),
+        inputs(inputs.begin(), inputs.end())
+    { }
+
+    DependenceRule(DepType ty,
+                   std::vector<const InputPort*> inputs) :
+        depType(ty),
+        inputs(inputs.begin(), inputs.end())
+    { }
 
     bool operator==(const DependenceRule& dr) const {
-        return dr._inputType == this->_inputType &&
-               dr._outputType == this->_outputType;
+        return dr.depType == this->depType &&
+               dr.inputs == this->inputs;
     }
 
     bool operator!=(const DependenceRule& dr) const {
@@ -135,16 +157,11 @@ public:
     }
 
     DependenceRule operator+(const DependenceRule& dr) const {
-        DependenceRule ret;
-        if (dr._inputType == _inputType)
-            ret._inputType = _inputType;
-        else
-            ret._inputType = Custom;
+        if (*this == dr)
+            return *this;
 
-        if (dr._outputType == _outputType)
-            ret._outputType = _outputType;
-        else
-            ret._outputType = Maybe;
+        DependenceRule ret(Custom, this->inputs);
+        ret.inputs.append(dr.inputs.begin(), dr.inputs.end());
         return ret;
     }
 };
@@ -168,8 +185,7 @@ public:
     OutputPort(const OutputPort&) = delete;
     OutputPort* operator=(const OutputPort&) = delete;
 
-    DependenceRule depRule() const;
-    const std::vector<InputPort*>& deps() const;
+    DependenceRule deps() const;
 
     /**
      * Things receiving data often need only one component of said

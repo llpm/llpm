@@ -87,7 +87,7 @@ static bool isPipelineReg(Block* b) {
 }
 
 void CheckCyclesPass::runInternal(Module* m) {
-    std::vector<Connection> cycle;
+    std::vector< std::pair<const OutputPort*, const InputPort*> > cycle;
     auto found = queries::FindCycle(m, &isPipelineReg, cycle);
     if (found) {
         auto& namer = m->design().namer();
@@ -95,8 +95,8 @@ void CheckCyclesPass::runInternal(Module* m) {
                m->name().c_str());
         for (auto c: cycle) {
             printf("    %s -> %s\n",
-                    namer.getName(c.source(), m).c_str(),
-                    namer.getName(c.sink(), m).c_str());
+                    namer.getName(c.first, m).c_str(),
+                    namer.getName(c.second, m).c_str());
         }
     }
 }

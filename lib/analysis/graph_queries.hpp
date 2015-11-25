@@ -15,8 +15,8 @@ void FindDominators(const ConnectionDB* conns,
                     std::set<Block*>& dominators);
 
 void FindDominators(const ConnectionDB* conns,
-                    const std::vector<InputPort*>& b,
-                    std::set<OutputPort*>& dominators);
+                    const std::vector<const InputPort*>& b,
+                    std::set<const OutputPort*>& dominators);
 
 
 /* Analyze the sources and ordering of tokens between a source and a sink. 
@@ -39,23 +39,23 @@ bool CouldReorderTokens(Interface*);
 // Finds a cycle in module while ignoring some connections
 bool FindCycle(Module*,
                boost::function<bool(Block*)> ignoreBlock,
-               std::vector< Connection >& cycle);
+               std::vector< std::pair<const OutputPort*, const InputPort*> >& cycle);
 
 // Find all edges and blocks which are driven entirely by Constants
 void FindConstants(Module*,
-                   std::set<Port*>& edges,
+                   std::set<const Port*>& edges,
                    std::set<Block*>& blocks);
 
 // Given an input port, find all the outputs upon which it may depend
 void FindDependencies(const Module*,
                       InputPort*,
-                      std::set<OutputPort*>& deps,
+                      std::set<const OutputPort*>& deps,
                       DependenceRule& rule);
 
 // Given an output port, find all ports which may depend on it
 void FindConsumers(const Module*,
                    OutputPort*,
-                   std::set<InputPort*>& consumers,
+                   std::set<const InputPort*>& consumers,
                    boost::function<bool(Block*)> ignoreBlock);
 
 // Attempt to find a single source for a particular subfield on an input port

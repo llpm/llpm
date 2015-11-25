@@ -55,16 +55,10 @@ public:
     DEF_GET(dout);
     DEF_UNIQ_ARRAY_GET(controls);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
+        return DependenceRule(DependenceRule::AND_FireOne,
+                              inputs());
     }
 
     InputPort* newControl(llvm::Type*);
@@ -103,16 +97,10 @@ public:
     DEF_UNIQ_ARRAY_GET(din);
     DEF_GET(dout);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
+        return DependenceRule(DependenceRule::AND_FireOne,
+                              inputs());
     }
 
     static Join* get(ConnectionDB&, const std::vector<OutputPort*>&);
@@ -132,19 +120,13 @@ public:
     DEF_UNIQ_ARRAY_GET(din);
     DEF_GET(dout);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::OR,
-                              DependenceRule::Always);
+        return DependenceRule(DependenceRule::Custom,
+                              inputs());
     }
 
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
-    }
-
-    float logicalEffort(InputPort*, OutputPort*) const {
+    float logicalEffort(const InputPort*, const OutputPort*) const {
         // Since this'll become a multiplexer, there's a little effort
         // involved
         return 1.0 + log2((float)_din.size());
@@ -168,19 +150,13 @@ public:
     DEF_UNIQ_ARRAY_GET(din);
     DEF_GET(dout);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::OR,
-                              DependenceRule::Always);
+        return DependenceRule(DependenceRule::Custom,
+                              inputs());
     }
 
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
-    }
-
-    float logicalEffort(InputPort*, OutputPort*) const {
+    float logicalEffort(const InputPort*, const OutputPort*) const {
         // Since this'll become a multiplexer, there's a little effort
         // involved
         return 1.0 + log2((float)_din.size());
@@ -202,18 +178,11 @@ public:
     DEF_GET(din);
     DEF_UNIQ_ARRAY_GET(dout);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(std::find_if(_dout.begin(), _dout.end(),
                          RawEqualTo<const OutputPort>(op)) != _dout.end());
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(std::find_if(_dout.begin(), _dout.end(),
-                         RawEqualTo<const OutputPort>(op)) != _dout.end());
-        return inputs();
+        return DependenceRule(DependenceRule::AND_FireOne,
+                              inputs());
     }
 
     virtual bool refinable() const {
@@ -298,20 +267,14 @@ public:
         return 1.0 + log2((float)(din_size()));
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == dout());
         return DependenceRule(DependenceRule::Custom,
-                              DependenceRule::Always);
+                              inputs());
     }
 
     virtual bool outputsSeparate() const {
         return false;
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == dout());
-        return inputs();
     }
 };
 
@@ -332,25 +295,18 @@ public:
     DEF_GET(din);
     DEF_UNIQ_ARRAY_GET(dout);
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(std::find_if(_dout.begin(), _dout.end(),
                          RawEqualTo<const OutputPort>(op)) != _dout.end());
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Maybe);
+        return DependenceRule(DependenceRule::Custom,
+                              inputs());
     }
 
     virtual bool outputsSeparate() const {
         return true;
     }
 
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(std::find_if(_dout.begin(), _dout.end(),
-                         RawEqualTo<const OutputPort>(op)) != _dout.end());
-        return inputs();
-    }
-
-    float logicalEffort(InputPort*, OutputPort*) const {
+    float logicalEffort(const InputPort*, const OutputPort*) const {
         return 1.0 + log2((float)_dout.size());
     }
 };

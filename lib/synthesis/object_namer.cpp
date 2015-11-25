@@ -27,7 +27,7 @@ static std::string addContext(std::string base, Block* b, Module* ctxt) {
     return name;
 }
 
-void ObjectNamer::assignName(Port* p, Module* ctxt, std::string name) {
+void ObjectNamer::assignName(const Port* p, Module* ctxt, std::string name) {
     _portNames[make_pair(ctxt, p)] = name;
     _existingNames.insert(make_pair(ctxt, name));
 }
@@ -80,7 +80,7 @@ std::string ObjectNamer::getName(Block* b, Module* ctxt, bool) {
     return addContext(base, b, ctxt);
 }
 
-std::string ObjectNamer::getName(InputPort* p, Module* ctxt, bool io) {
+std::string ObjectNamer::getName(const InputPort* p, Module* ctxt, bool io) {
     if (io)
         return p->name();
 
@@ -106,7 +106,7 @@ std::string ObjectNamer::getName(InputPort* p, Module* ctxt, bool io) {
     return addContext(base, p->owner(), ctxt);
 }
 
-std::string ObjectNamer::getName(OutputPort* p, Module* ctxt, bool io) {
+std::string ObjectNamer::getName(const OutputPort* p, Module* ctxt, bool io) {
     if (io)
         return p->name();
 

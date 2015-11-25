@@ -29,12 +29,12 @@ public:
      * same block? Ideally, this returns an accurate time based on layout
      * information, but an estimate is more realistic.
      */
-    virtual Time latency(InputPort*, OutputPort*) const;
+    virtual Time latency(const InputPort*, const OutputPort*) const;
 
     /**
      * What is the longest latency to this output port?
      */
-    Time maxLatency(OutputPort*) const;
+    Time maxLatency(const OutputPort*) const;
 
     /**
      * What is the maximum latency for a signal to propagate a connection?

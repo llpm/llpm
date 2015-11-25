@@ -219,16 +219,9 @@ public:
         Function::resetTypes(input, output);
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND,
-                              DependenceRule::Always);
-    }
-
-    virtual const std::vector<InputPort*>&
-            deps(const OutputPort* op) const {
-        assert(op == &_dout);
-        return inputs();
+        return DependenceRule(DependenceRule::AND_FireOne, inputs());
     }
 };
 
@@ -284,8 +277,7 @@ public:
 
     virtual Interface* call(llvm::Instruction* ins) const;
 
-    virtual DependenceRule depRule(const OutputPort* op) const;
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual DependenceRule deps(const OutputPort* op) const;
 };
 
 // LLVMBasicBlocks are connected via LLVMControl blocks. Separating
@@ -331,8 +323,7 @@ public:
     InputPort* addPredecessor(LLVMControl* pred, std::vector<llvm::Value*>& inputData);
     InputPort* entryPort(std::vector<llvm::Value*>& inputData);
 
-    virtual DependenceRule depRule(const OutputPort* op) const;
-    virtual const std::vector<InputPort*>& deps(const OutputPort*) const;
+    virtual DependenceRule deps(const OutputPort* op) const;
 };
 
 } // namespace llpm
