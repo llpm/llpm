@@ -61,9 +61,8 @@ std::string ObjectNamer::primBlockName(Block* b, Module* ctxt) {
         base = b->name();
         if (base == "") {
             base = historicalName(b);
-        } else {
-            base = sanitize(base);
         }
+        base = sanitize(base);
 
         size_t ctr = 0;
         string orig_base = base;
