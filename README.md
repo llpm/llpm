@@ -1,7 +1,9 @@
-LLPM
+LLPM -- CPPHDL Branch
 ====
 
-Low Level Physical Machine framework
+Low Level Physical Machine framework with CPPHDL. This branch is the last which
+contains CPPHDL code. This stuff is more or less dead and has been removed from
+the master. If there is interest in reviving it, a new repo should be created.
 
 
 Building LLPM
