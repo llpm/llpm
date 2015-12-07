@@ -22,13 +22,17 @@ I think the following are required, though this list may be missing a few:
 
 Next, LLPM relies on two submodules which are build out-of-band. First, fetch
 and build them:
+```
 $ git submodule init
 $ git submodule update
 $ ./build_llvm.sh
 $ ./build_verilator.sh
+```
 
 Finally, you should be able to build llpm:
+```
 $ scons
+```
 
 
 LLPM Status
