@@ -43,6 +43,11 @@ public:
      */
     virtual Time latency(Connection) const;
 
+    /**
+     * Are we compiling for a synchronous (clocked) execution substrate?
+     */
+    virtual bool synchronous() const = 0;
+
     virtual void writeModule(FileSet& dir,
                              Module* mod,
                              std::set<FileSet::File*>& files) = 0;

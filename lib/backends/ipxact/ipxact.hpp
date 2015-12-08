@@ -72,6 +72,10 @@ public:
         return _verilog.primitiveStops();
     }
 
+    virtual bool synchronous() const {
+        return _verilog.synchronous();
+    }
+
     virtual void writeModule(FileSet& dir,
                              Module* mod,
                              std::set<FileSet::File*>& files);

@@ -140,6 +140,10 @@ public:
     virtual Refinery::StopCondition* primitiveStops() {
         return &_stops;
     }
+
+    virtual bool synchronous() const {
+        return true;
+    }
 };
 
 } // namespace llpm
