@@ -3,6 +3,7 @@
 #include <llpm/connection.hpp>
 #include <llpm/module.hpp>
 #include <llpm/control_region.hpp>
+#include <llpm/scheduled_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 #include <libraries/synthesis/fork.hpp>
 #include <util/transform.hpp>
@@ -15,7 +16,8 @@ using namespace std;
 namespace llpm {
 
 void PipelineDependentsPass::runInternal(Module* mod) {
-    if (mod->is<ControlRegion>())
+    if (mod->is<ControlRegion>() ||
+        mod->is<ScheduledRegion>() )
         // Output rules do not apply within control regions.
         return;
 
@@ -30,6 +32,12 @@ void PipelineDependentsPass::runInternal(Module* mod) {
         if (block->outputsSeparate() ||
             numNormalOutputs <= 1)
             continue;
+
+        if (block->is<ScheduledRegion>()) {
+            // ScheduledRegions do wacky things with their inputs and outputs.
+            // Let them handle it.
+            continue;
+        }
 
         if (block->is<Split>()) {
             auto split = block->as<Split>();
@@ -74,8 +82,9 @@ void PipelineDependentsPass::runInternal(Module* mod) {
     }
 }
 
-static bool isPipelineReg(Block* b) {
-    return b->is<PipelineRegister>();
+static bool breaksCycle(Block* b) {
+    return b->is<PipelineRegister>() ||
+           b->is<ScheduledRegion>();
 }
 
 struct FlowVisitor : public Visitor<OIEdge> {
@@ -161,7 +170,8 @@ struct FlowVisitor : public Visitor<OIEdge> {
 };
 
 void PipelineCyclesPass::runInternal(Module* mod) {
-    if (mod->is<ControlRegion>())
+    if (mod->is<ControlRegion>() ||
+        mod->is<ScheduledRegion>() )
         // Never insert registers within a CR
         return;
 
@@ -180,7 +190,7 @@ void PipelineCyclesPass::runInternal(Module* mod) {
     // breaking those edges simultaneously breaks the most cycles!
     //
     std::vector< std::pair<const OutputPort*, const InputPort*> > cycle;
-    while (queries::FindCycle(mod, &isPipelineReg, cycle)) {
+    while (queries::FindCycle(mod, &breaksCycle, cycle)) {
         FlowVisitor fvisitor;
         fvisitor.run(mod);
 
@@ -207,7 +217,8 @@ void PipelineCyclesPass::runInternal(Module* mod) {
 }
 
 void LatchUntiedOutputs::runInternal(Module* mod) {
-    if (mod->is<ControlRegion>())
+    if (mod->is<ControlRegion>() ||
+        mod->is<ScheduledRegion>() )
         // Never insert registers within a CR
         return;
 
@@ -219,7 +230,7 @@ void LatchUntiedOutputs::runInternal(Module* mod) {
     set<Block*> blocks;
     t.conns()->findAllBlocks(blocks);
     for (auto b: blocks) {
-        if (b->outputsTied())
+        if (b->outputsTied() || b->outputs().size() <= 1)
             continue;
 
         // If the outputs aren't tied, a latch may be necessary

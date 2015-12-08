@@ -3,6 +3,7 @@
 #include <llpm/module.hpp>
 #include <libraries/synthesis/fork.hpp>
 #include <llpm/control_region.hpp>
+#include <llpm/scheduled_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 #include <analysis/graph_queries.hpp>
 
@@ -38,7 +39,8 @@ void SynthesizeForksPass::runInternal(Module* mod) {
     if (conns == NULL)
         return;
 
-    if (mod->is<ControlRegion>())
+    if (mod->is<ControlRegion>() ||
+        mod->is<ScheduledRegion>() )
         // Don't add forks to CRs
         return;
 
@@ -67,6 +69,10 @@ void SynthesizeForksPass::runInternal(Module* mod) {
         // Blocks contained in control regions don't require actual
         // forks since they share valid and backpressure signals
         if (mod->is<ControlRegion>())
+            virt = true;
+
+        if (op->owner()->is<ScheduledRegion>() &&
+            op->owner()->as<ScheduledRegion>()->internalOutputs().count(op) > 0)
             virt = true;
 
         auto fork = new Fork(op->type(), virt);

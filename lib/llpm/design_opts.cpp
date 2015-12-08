@@ -9,6 +9,7 @@
 #include <passes/transforms/refine.hpp>
 #include <passes/analysis/checks.hpp>
 #include <libraries/core/tags.hpp>
+#include <llpm/scheduled_region.hpp>
 
 #include <backends/verilog/synthesize.hpp>
 #include <backends/ipxact/ipxact.hpp>
@@ -69,7 +70,10 @@ void Design::buildOpts() {
         ("clk", value<float>()->default_value(-1.0)
                               ->required(),
             "Pipeline the design targeting this clock frequency, in MHz")
-        ("control_regions", value<bool>()->default_value(true)
+        ("schedule", value<bool>()->default_value(true)
+                                         ->required(),
+            "Controls whether or not scheduled regions are built")
+        ("control_regions", value<bool>()->default_value(false)
                                          ->required(),
             "Controls whether or not control regions are built")
     ;
@@ -121,7 +125,11 @@ void Design::notify(variables_map& vm) {
     // optimizations()->append<CanonicalizeInputs>();
     // optimizations()->append<SimplifyWaits>();
     // optimizations()->append<SimplifyPass>();
-
+    //
+    if (vm["schedule"].as<bool>()) {
+        optimizations()->append<SimplifyPass>();
+        optimizations()->append<FormScheduledRegionPass>();
+    }
     if (vm["control_regions"].as<bool>()) {
         optimizations()->append<SimplifyPass>();
         optimizations()->append<FormControlRegionPass>();

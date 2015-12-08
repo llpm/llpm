@@ -4,6 +4,7 @@
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
 #include <llpm/control_region.hpp>
+#include <llpm/scheduled_region.hpp>
 #include <libraries/synthesis/pipeline.hpp>
 #include <analysis/graph_queries.hpp>
 #include <libraries/core/logic_intr.hpp>
@@ -44,7 +45,8 @@ void CheckConnectionsPass::runInternal(Module* m) {
 }
 
 void CheckOutputsPass::runInternal(Module* m) {
-    if (m->is<ControlRegion>())
+    if (m->is<ControlRegion>() ||
+        m->is<ScheduledRegion>() )
         // Output rules do not apply within control regions.
         return;
 
