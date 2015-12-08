@@ -56,9 +56,11 @@ public:
 
     InputPort* asInput();
     const InputPort* asInput() const;
+    virtual bool isInput() const = 0;
 
     OutputPort* asOutput();
     const OutputPort* asOutput() const;
+    virtual bool isOutput() const = 0;
 
     unsigned num() const;
 };
@@ -88,6 +90,14 @@ public:
      */
     Join* join(ConnectionDB& conns);
     InputPort* join(ConnectionDB& conns, unsigned idx);
+
+    bool isInput() const {
+        return true;
+    }
+
+    bool isOutput() const {
+        return false;
+    }
 };
 
 /**
@@ -194,6 +204,14 @@ public:
      */
     Split* split(ConnectionDB& conns);
     OutputPort* split(ConnectionDB& conns, unsigned idx);
+
+    bool isInput() const {
+        return false;
+    }
+
+    bool isOutput() const {
+        return true;
+    }
 };
 
 
