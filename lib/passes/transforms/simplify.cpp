@@ -142,6 +142,31 @@ void SimplifyPass::eliminateNoops(Module* m) {
             }
         }
 
+        // Find & replace IdxSelects with a constant route!
+        auto idxSel = b->as<IdxSelect>();
+        if (idxSel) {
+            auto selDriver = t.conns()->findSource(idxSel->idx());
+            if (selDriver != nullptr) {
+                auto constSel = queries::FindConstant(m, selDriver);
+                if (constSel != nullptr) {
+                    assert(constSel->getType()->isIntegerTy());
+                    auto constSelValue = constSel->getUniqueInteger();
+                    t.conns()->disconnect(selDriver, idxSel->idx());
+                    for (unsigned i=0; i<idxSel->din_size(); i++) {
+                        auto dataSource = t.conns()->findSource(idxSel->din(i));
+                        t.conns()->disconnect(dataSource, idxSel->din(i));
+                        if (i == constSelValue) {
+                            t.conns()->remap(idxSel->dout(), dataSource);
+                        } else {
+                            auto ns = new NullSink(idxSel->dout()->type());
+                            t.conns()->connect(dataSource, ns->din());
+                        }
+                    }
+                    t.trash(idxSel);
+                }
+            }
+        }
+
         // Eliminate blocks which drive nothing
         auto outputs = b->outputs();
         bool noSinks = true;
