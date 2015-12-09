@@ -68,6 +68,9 @@ static std::string attrs(ObjectNamer& namer, Block* b,
     if (dynamic_cast<PipelineRegister*>(b)) {
         a["shape"] = "rectangle";
         a["label"] = "\"reg " + namer.getName(b, b->module()) + "\"";
+    } else if (b->is<DummyBlock>()) {
+        a["label"] = "\"\\=\"";
+        a["shape"] = "circle";
     } else {
         a["shape"] = "component";
         a["label"] = label(namer, b);
@@ -120,6 +123,9 @@ void printConns(std::ostream& os,
             auto cdb = opContainer->conns();
             auto internalSink = opContainer->getSink(op);
             op = cdb->findSource(internalSink);
+            if (op->owner()->is<DummyBlock>()) {
+                op = internalSink->owner()->as<DummyBlock>()->dout();
+            }
         }
 
         auto ipContainer = dynamic_cast<ContainerModule*>(ip->owner());
@@ -133,6 +139,12 @@ void printConns(std::ostream& os,
                 if (blocks.size() > 0)
                     ipFake = blocks.front();
             }
+            
+            for (auto sink: sinks) {
+                if (sink->owner()->is<DummyBlock>()) {
+                    sink = internalSource->owner()->as<DummyBlock>()->din();
+                }
+            }
         } else {
             sinks = {ip};
         }
@@ -145,8 +157,9 @@ void printConns(std::ostream& os,
                << ",lhead=cluster_" << ip->owner()->name() << "];\n";               
         } else {
             for (auto ip: sinks) {
-                if (is_hidden(op->owner(), mod) ||
-                    is_hidden(ip->owner(), mod))
+                if ((is_hidden(op->owner(), mod) || 
+                     is_hidden(ip->owner(), mod)) && 
+                    conns != mod->conns() )
                         continue;
 
                 os << "    " << getName(op->owner()) << " -> "
@@ -203,8 +216,16 @@ void printBlock(std::ostream& os,
         }
         printConns(os, namer, mod, cm->conns(),
                    {{"style", "dashed"}}, transparent);
-        os << "    }\n";
 
+        for (auto extOut: cm->outputs()) {
+            auto sink = cm->getSink(extOut);
+            auto source = cm->conns()->findSource(sink);
+            if (is_hidden(source->owner(), mod)) {
+                printBlock(os, namer, mod, sink->owner(), transparent);
+            }
+        }
+
+        os << "    }\n";
     } else {
         std::map<std::string, std::string> ea;
         os << "        " << getName(block)
