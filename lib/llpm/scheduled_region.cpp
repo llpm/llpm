@@ -576,7 +576,6 @@ void ScheduledRegion::checkOptFinalize() {
     set<Block*> blocks;
     _conns.findAllBlocks(blocks);
     for (auto b: blocks) {
-#if 0
         if (b->is<Wait>()) {
             auto w = b->as<Wait>();
             OutputPort* source = _conns.findSource(w->din());
@@ -597,7 +596,6 @@ void ScheduledRegion::checkOptFinalize() {
             }
             _conns.removeBlock(w);
         }
-#endif
 
         if (b->is<Fork>()) {
             auto f = b->as<Fork>();
