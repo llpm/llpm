@@ -288,11 +288,13 @@ bool ScheduledRegion::add(const Port* port,
     // when we finalize construction.)
     _members.insert(port);
 
+#if 0
     printf("   Added %s (%p, %s) to %s\n",
            b->globalName().c_str(),
            b,
            cpp_demangle(typeid(*b).name()).c_str(),
            name().c_str());
+#endif
 
     if (port->isOutput()) {
         addDrivers(port->asOutput());
@@ -475,28 +477,127 @@ void ScheduledRegion::absorb() {
     }
 }
 
+unsigned ScheduledRegion::stepNumber(const Port* p) {
+    auto f = _executionOrder.find(p);
+    if (f != _executionOrder.end())
+        return f->second;
+
+    unsigned step;
+    if (p->owner() == this) {
+        if (p->isInput()) {
+            auto ip = (InputPort*)p->asInput();
+            if (_externalInputs.count(ip) > 0) {
+                step = 0;
+            } else if (_internalInputs.count(ip) > 0) {
+                auto source = module()->conns()->findSource(ip);
+                step = stepNumber(source);
+            } else {
+                assert(false && "Cannot resolve port type!");
+            }
+        } else {
+            assert(p->isOutput());
+            auto intip = getSink(p->asOutput());
+            step = stepNumber(intip);
+        }
+    } else if (p->owner()->is<DummyBlock>()) {
+        if (p->isOutput()) {
+            assert(p->owner()->module() == this);
+            auto extip = findExternalPortFromDriver(p->asOutput());
+            if (extip != nullptr) {
+                step = stepNumber(extip);
+            } else {
+                step = stepNumber(p->owner()->as<DummyBlock>()->din());
+            }
+        } else {
+            assert(p->isInput());
+            auto source = conns()->findSource(p->asInput());
+            if (source == nullptr)
+                step = 0;
+            else
+                step = stepNumber(source);
+        }
+    } else {
+        assert(_members.count(p) > 0 ||
+               p->owner()->module() == this);
+        auto conns = p->owner()->module()->conns();
+        if (p->isOutput()) {
+            auto dr = p->asOutput()->deps();
+            if (dr.depType == DependenceRule::AND_FireOne) {
+                unsigned max = 0;
+                for (auto dep: dr.inputs) {
+                    auto s = stepNumber(dep);
+                    if (s > max)
+                        max = s;
+                }
+                step = max + 1;
+            } else {
+                // Technically, this SR is invalid.
+                // TODO: Error or warn on this condition?
+                step = 0;
+            }
+        } else {
+            assert(p->isInput());
+            auto source = conns->findSource(p->asInput());
+            assert(source != nullptr);
+            if (source == nullptr)
+                step = 0;
+            else
+                step = stepNumber(source);
+        }
+    }
+
+#if 0
+    printf("%s (%p, %s): %u\n",
+           p->name().c_str(), p,
+           p->owner()->globalName().c_str(), step);
+#endif
+    _executionOrder[p] = step;
+    return step;
+}
+
+void ScheduledRegion::calculateOrder() {
+    for (auto memb: _members) {
+        stepNumber(memb);
+    }
+}
+
 void ScheduledRegion::checkOptFinalize() {
-    // Check to make sure NED property is ensured
-    // TODO
+    // TODOs:
+    // - Check to make sure NED property is ensured
+    // - Check to make sure acyclic
+    // - Check to make sure virtual region is constant-time
     
 
+    // Determine wait-based ordering of operations to make sure it is respected
+    // later when we schedule.
+    calculateOrder();
+    
     // Eliminate Waits and Forks
-#if 0
     set<Block*> blocks;
     _conns.findAllBlocks(blocks);
     for (auto b: blocks) {
+#if 0
         if (b->is<Wait>()) {
             auto w = b->as<Wait>();
             OutputPort* source = _conns.findSource(w->din());
+            if (_executionOrder[source] < _executionOrder[w->dout()]) {
+                // If necessary, update the source's step number to respect the
+                // wait conditions.
+                _executionOrder[source] = _executionOrder[w->dout()];
+            }
             vector<InputPort*> sinks;
             _conns.findSinks(w->dout(), sinks);
             for (auto sink: sinks) {
                 _conns.disconnect(w->dout(), sink);
-                if (source != NULL)
-                    _conns.connect(source, sink);
+                if (source != NULL) {
+                    auto id = new Identity(source->type());
+                    _conns.connect(source, id->din());
+                    _conns.connect(id->dout(), sink);
+                }
             }
             _conns.removeBlock(w);
         }
+#endif
 
         if (b->is<Fork>()) {
             auto f = b->as<Fork>();
@@ -513,10 +614,6 @@ void ScheduledRegion::checkOptFinalize() {
             _conns.removeBlock(f);
         }
     }
-#endif
-
-    SimplifyPass sp(design());
-    sp.runInternal(this);
 }
 
 void ScheduledRegion::finalize(Port* port) {

@@ -4,6 +4,7 @@
 #include <util/misc.hpp>
 #include <util/llvm_type.hpp>
 #include <llpm/control_region.hpp>
+#include <llpm/scheduled_region.hpp>
 
 #include <boost/format.hpp>
 
@@ -91,8 +92,23 @@ static std::string attrs(ObjectNamer&, OutputPort* op, InputPort* ip,
     auto ipName = ip->name();
     if (ipName == "")
         ipName = str(boost::format("%1%") % ip->owner()->inputNum(ip));
+    string extra = "";
+    if (op->owner()->module()->is<ScheduledRegion>()) {
+        auto sr = op->owner()->module()->as<ScheduledRegion>();
+        extra = str(boost::format("step: %1%")
+                        % sr->stepNumber(op));
+    } else if (ip->owner()->module()->is<ScheduledRegion>()) {
+        auto sr = ip->owner()->module()->as<ScheduledRegion>();
+        extra = str(boost::format("step: %1%")
+                        % sr->stepNumber(ip));
+    } 
+
+    if (extra != "")
+        extra = extra + "\\n";
+
     a["label"] = quote(opName + "\\n" 
         + ipName + "\\n"
+        + extra 
         + typestr(op->type()));
     a["fontsize"] = "8.0";
 

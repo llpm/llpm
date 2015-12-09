@@ -163,6 +163,26 @@ Interface* ContainerModule::addServerInterface(
     return iface;
 }
 
+InputPort* ContainerModule::findExternalPortFromDriver(
+    const OutputPort* driver) const {
+
+    for (auto inp: inputs()) {
+        if (getDriver(inp) == driver)
+            return inp;
+    }
+    return nullptr;
+}
+
+OutputPort* ContainerModule::findExternalPortFromSink(
+    const InputPort* sink) const {
+
+    for (auto outp: outputs()) {
+        if (getSink(outp) == sink)
+            return outp;
+    }
+    return nullptr;
+}
+
 bool ContainerModule::refine(ConnectionDB& conns) const
 {
     conns.update(_conns);

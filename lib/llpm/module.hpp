@@ -281,6 +281,7 @@ public:
         OutputPort* internalIPDriver = f->second->dout();
         return internalIPDriver;
     }
+    InputPort* findExternalPortFromDriver(const OutputPort*) const;
 
     InputPort* getSink(const OutputPort* op) const {
         // Strip away const-ness for lookup. Just don't touch it
@@ -289,6 +290,7 @@ public:
         InputPort* internalOPSink = f->second->din();
         return internalOPSink;
     }
+    OutputPort* findExternalPortFromSink(const InputPort*) const;
 
     void connect(InputPort* sink, OutputPort* source) {
         connect(source, sink);

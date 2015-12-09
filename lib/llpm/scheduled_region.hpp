@@ -68,6 +68,12 @@ protected:
     std::set<OutputPort*> _externalOutputs;
     std::set<InputPort*>  _externalInputs;
 
+    std::map<const Port*, unsigned> _executionOrder;
+    void calculateOrder();
+
+    std::set<OutputPort*> findVirtualDeps(InputPort*);
+    DependenceRule findInternalDeps(OutputPort*);
+
     bool add(const Port*, const std::set<const Port*>& constPorts = {});
     void addDriven(const InputPort*);
     void addDrivers(const OutputPort*);
@@ -112,6 +118,11 @@ public:
      * is retained in the pruning process.
      */
     void finalize(Port*);
+
+    /**
+     * What semantic step executes this port?
+     */
+    unsigned stepNumber(const Port*);
 
     virtual void validityCheck() const;
     virtual std::string print() const;
