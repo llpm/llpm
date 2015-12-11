@@ -578,8 +578,17 @@ void ScheduledRegion::calculateOrder() {
 }
 
 void ScheduledRegion::checkOptFinalize() {
+    // Check to make sure NED property is ensured
+    set<const InputPort*> exti(_externalInputs.begin(), _externalInputs.end());
+    for (auto exto: _externalOutputs) {
+        // Note: This check won't work properly after Waits have been removed
+        // but also has to be run after absorb() has been run.
+        auto dr = findInternalDeps(exto);
+        set<const InputPort*> deps(dr.inputs.begin(), dr.inputs.end());
+        assert(deps == exti && "NED property not held!");
+    }
+
     // TODOs:
-    // - Check to make sure NED property is ensured
     // - Check to make sure acyclic
     // - Check to make sure virtual region is constant-time
     
@@ -630,23 +639,97 @@ void ScheduledRegion::checkOptFinalize() {
     }
 }
 
-void ScheduledRegion::finalize(Port* port) {
+void ScheduledRegion::finalize(const OutputPort* root) {
     if (_members.size() == 0)
         return;
 
-    // Find external ports
-    //identifyIO();
+    printf("Finalizing ScheduledRegion %s\n", globalName().c_str());
 
     // As of now, all external outputs depend on all external inputs. Now we
     // must determine if this violates the NED property and fix it if so.
-    
-    // TODO!
+    _members.shrinkToConstraints(root, root->owner()->module()->conns());
     
     // OK, time to actually bring everything inside
     absorb();
 
     // Check sanity and remove things like waits and forks
     checkOptFinalize();
+}
+
+std::set<OutputPort*> ScheduledRegion::findVirtualDeps(
+    const InputPort* intIP,
+    std::set<const InputPort*> seen) const {
+
+    if (seen.count(intIP) > 0)
+        return {};
+    
+    seen.insert(intIP);
+
+    auto parent = module();
+    assert(parent != nullptr);
+    auto extconns = parent->conns();
+    assert(extconns != nullptr);
+
+    set<OutputPort*> ret;
+    auto source = extconns->findSource(intIP);
+    if (source != nullptr) {
+        if (source->owner() == this)
+            return {source};
+        auto dr = source->deps();
+        for (auto inp: dr.inputs) {
+            auto vd = findVirtualDeps(inp, seen);
+            ret.insert(vd.begin(), vd.end());
+        }
+    }
+    return ret;
+}
+
+DependenceRule ScheduledRegion::findInternalDeps(
+    const InputPort* ip,
+    std::set<const InputPort*> seen) const {
+
+    if (seen.count(ip) > 0)
+        return {};
+    
+    seen.insert(ip);
+
+    auto source = conns()->findSource(ip);
+    if (source == nullptr) {
+        if (ip->owner()->is<DummyBlock>()) {
+            auto extip = findExternalPortFromDriver(
+                ip->owner()->as<DummyBlock>()->dout());
+            assert(extip != nullptr);
+            if (_externalInputs.count(extip) > 0) {
+                return DependenceRule(DependenceRule::AND_FireOne, {extip});
+            } else { 
+                assert(_internalInputs.count(extip) > 0);
+
+                DependenceRule ret(DependenceRule::AND_FireOne, {});
+                auto vd = findVirtualDeps(extip);
+                for (auto intoDep: vd) {
+                    auto sink = getSink(intoDep);
+                    seen.insert(sink);
+                    auto newDR = findInternalDeps(sink, seen);
+                    ret.inputs.append(newDR.inputs.begin(), newDR.inputs.end());
+                }
+                return ret;
+            }
+        } else {
+            return DependenceRule(DependenceRule::AND_FireOne, {});
+        }
+    } else {
+        DependenceRule ret(DependenceRule::AND_FireOne, {});
+        for (auto dep: source->deps().inputs) {
+            auto newDR = findInternalDeps(dep, seen);
+            ret.inputs.append(newDR.inputs.begin(), newDR.inputs.end());
+        }
+        return ret;
+    }
+}
+
+DependenceRule ScheduledRegion::findInternalDeps(
+    const OutputPort* extOP) const {
+    return findInternalDeps(getSink(extOP));
 }
 
 bool ScheduledRegion::refine(ConnectionDB& conns) const {
@@ -667,6 +750,136 @@ std::string ScheduledRegion::print() const {
     return str(
         boost::format("memb: %1%")
             % _members.size());
+}
+
+void ScheduledRegion::Members::shrinkToConstraints(
+    const OutputPort* root, 
+    ConnectionDB* conns) {
+
+    struct DepInfo {
+        const OutputPort* op;
+        std::set<const Port*> allDeps;
+        std::set<const OutputPort*> extDeps;
+    };
+
+    while (true) {
+        // Do we satisfy NED?
+        auto extOuts = findExtOuts(conns);
+        vector<DepInfo> depInfo;
+        const DepInfo* rootDI = nullptr;
+        for (auto op: extOuts) {
+            depInfo.push_back(DepInfo());
+            DepInfo& di = depInfo.back();
+            di.op = op;
+            findDeps(op, conns, di.allDeps, di.extDeps);
+        }
+
+        unsigned lowestIsect;
+        unsigned lowestIsectIdx;
+        for (auto& d: depInfo) {
+            if (d.op == root)
+                rootDI = &d;
+        }
+        assert(rootDI != nullptr);
+
+        for (auto i=0u; i<depInfo.size(); i++) {
+            const auto& jd = depInfo[i];
+            vector<const OutputPort*> extDepIntersection;
+            std::set_intersection(
+                rootDI->extDeps.begin(), rootDI->extDeps.end(),
+                jd.extDeps.begin(), jd.extDeps.end(),
+                std::back_inserter(extDepIntersection));
+
+            if (i == 0 ||
+                extDepIntersection.size() < lowestIsect) {
+                lowestIsect = extDepIntersection.size();
+                lowestIsectIdx = i;
+            }
+            
+            printf("    %s(%p):%s -- %s(%p):%s: %lu (%lu vs. %lu)\n",
+                   rootDI->op->owner()->globalName().c_str(),
+                   rootDI->op->owner(),
+                   rootDI->op->name().c_str(),
+                   jd.op->owner()->globalName().c_str(),
+                   jd.op->owner(),
+                   jd.op->name().c_str(),
+                   extDepIntersection.size(),
+                   rootDI->allDeps.size(),
+                   jd.allDeps.size());
+            printf("        ");
+            for (auto extop: jd.extDeps) {
+                printf("%s(%p):%s, ",
+                       extop->owner()->globalName().c_str(),
+                       extop->owner(),
+                       extop->name().c_str());
+            }
+            printf("\n");
+        }
+    
+        if (lowestIsect == rootDI->extDeps.size()) {
+            // We DO satisfy NED!
+            return; // So we're done!
+        }
+
+        // We don't satisfy NED!
+        // Start trimming. Keep looping, checking, and trimming until
+        // we satisfy NED!
+        assert(false && "ScheduledRegion support incomplete!");
+
+        // TODO: Trim the output port with the least in common with the root
+        // port, update whatever is necessary and then loop.
+    }
+}
+
+void ScheduledRegion::Members::findDeps(
+    const OutputPort* op,
+    ConnectionDB* conns,
+    std::set<const Port*>& allDeps,
+    std::set<const OutputPort*>& extDeps) const {
+
+    // Make sure 'op' is a member!
+    assert(members.count(op) > 0);
+
+    // Ensure we don't recurse forever in a cycle
+    if (allDeps.count(op) > 0)
+        return;
+
+    auto dr = op->deps();
+    for (auto ip: dr.inputs) {
+        if (members.count(ip) == 0)
+            continue;
+
+        allDeps.insert(ip);
+        auto source = conns->findSource(ip);
+        if (source != nullptr) {
+            if (members.count(source) > 0) {
+                findDeps(source, conns, allDeps, extDeps);
+                allDeps.insert(source);
+            } else {
+                extDeps.insert(source);
+            }
+        }
+    }
+}
+
+std::set<const OutputPort*> ScheduledRegion::Members::findExtOuts(
+    ConnectionDB* conns) const {
+    set<const OutputPort*> ret;
+    for (auto member: members) {
+        if (member->isOutput()) {
+            auto outp = member->asOutput();
+            set<InputPort*> sinks;
+            conns->findSinks(outp, sinks);
+
+            for (auto sink: sinks) {
+                if (members.count(sink) == 0) {
+                    // We drive an external!
+                    ret.insert(outp);
+                }
+            }
+        }
+    }
+    return ret;
 }
 
 } // namespace llpm

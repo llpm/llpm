@@ -56,7 +56,27 @@ protected:
 
     /// Set of ports which are scheduled by this region. Only used during the
     //  building steps and cleared afterwards.
-    std::set<const Port*> _members;
+    struct Members {
+        std::set<const Port*> members;
+
+        void shrinkToConstraints(
+            const OutputPort* root,
+            ConnectionDB* conns);
+        void findDeps(
+            const OutputPort* op,
+            ConnectionDB* conns,
+            std::set<const Port*>& allDeps,
+            std::set<const OutputPort*>& extDeps) const;
+        std::set<const OutputPort*> findExtOuts(ConnectionDB* conns) const;
+
+        auto begin() { return members.begin(); }
+        auto end() { return members.end(); }
+        auto count(const Port* p) const { return members.count(p); }
+        auto size() const { return members.size(); }
+        auto insert(const Port* p) { return members.insert(p); }
+        template<typename IT>
+        auto insert(IT begin, IT end) { return members.insert(begin, end); }
+    } _members;
 
     /// Set of ports external to this region which are scheduled by this region
     //  (virtual region members).
@@ -71,8 +91,13 @@ protected:
     std::map<const Port*, unsigned> _executionOrder;
     void calculateOrder();
 
-    std::set<OutputPort*> findVirtualDeps(InputPort*);
-    DependenceRule findInternalDeps(OutputPort*);
+    std::set<OutputPort*> findVirtualDeps(
+        const InputPort*,
+        std::set<const InputPort*> seen = {} ) const;
+    DependenceRule findInternalDeps(
+        const InputPort*,
+        std::set<const InputPort*> seen = {} ) const;
+    DependenceRule findInternalDeps(const OutputPort*) const;
 
     bool add(const Port*, const std::set<const Port*>& constPorts = {});
     void addDriven(const InputPort*);
@@ -117,7 +142,7 @@ public:
      * absorb the member blocks and connections. Ensure that the specified port
      * is retained in the pruning process.
      */
-    void finalize(Port*);
+    void finalize(const OutputPort*);
 
     /**
      * What semantic step executes this port?
