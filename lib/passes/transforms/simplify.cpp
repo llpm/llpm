@@ -150,13 +150,21 @@ void SimplifyPass::eliminateNoops(Module* m) {
                 auto constSel = queries::FindConstant(m, selDriver);
                 if (constSel != nullptr) {
                     assert(constSel->getType()->isIntegerTy());
-                    auto constSelValue = constSel->getUniqueInteger();
-                    t.conns()->disconnect(selDriver, idxSel->idx());
+                    auto constSelValue =
+                        constSel->getUniqueInteger().getLimitedValue();
+                    printf("Eliminating IdxSel %s with input %lu\n",
+                           idxSel->globalName().c_str(),
+                           constSelValue);
+                    auto replWait = new Wait(idxSel->dout()->type());
+                    t.conns()->remap(
+                        idxSel->idx(),
+                        replWait->newControl(idxSel->idx()->type()));
+                    t.conns()->remap(idxSel->dout(), replWait->dout());
                     for (unsigned i=0; i<idxSel->din_size(); i++) {
                         auto dataSource = t.conns()->findSource(idxSel->din(i));
                         t.conns()->disconnect(dataSource, idxSel->din(i));
                         if (i == constSelValue) {
-                            t.conns()->remap(idxSel->dout(), dataSource);
+                            t.conns()->connect(dataSource, replWait->din());
                         } else {
                             auto ns = new NullSink(idxSel->dout()->type());
                             t.conns()->connect(dataSource, ns->din());
