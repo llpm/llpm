@@ -284,9 +284,21 @@ bool ScheduledRegion::add(const Port* port,
     if (!BlockAllowedVirtual(b))
         return false;
 
+    // Don't allow members which are not AND_FireOne (output case)
     if (port->isOutput() &&
         port->asOutput()->deps().depType != DependenceRule::AND_FireOne)
         return false;
+
+    // Don't allow members which are not AND_FireOne (input case)
+    for (auto op: b->outputs()) {
+        auto dr = op->deps();
+        for (auto dep: dr.inputs) {
+            if (dep == port &&
+                dr.depType != DependenceRule::AND_FireOne) {
+                return false;
+            }
+        }
+    }
 
     // Port is now a member. (Maybe virtual, maybe full. We'll determine that
     // when we finalize construction.)
