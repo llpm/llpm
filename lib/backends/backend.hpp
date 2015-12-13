@@ -5,7 +5,7 @@
 #include <refinery/refinery.hpp>
 #include <llpm/connection.hpp>
 #include <util/files.hpp>
-#include <util/time.hpp>
+#include <llpm/time.hpp>
 
 namespace llpm {
 // Fwd defs, not very fwd looking
