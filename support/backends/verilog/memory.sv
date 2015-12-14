@@ -31,7 +31,9 @@ reg [Width-1:0] data;
 assign read = data;
 
 assign write_req_bps = write_resp_bps;
-assign write_resp_valids = write_req_valids;
+
+reg write_reqs_last_cycle [NumWrites-1:0];
+assign write_resp_valids = write_reqs_last_cycle;
 
 reg has_valid_write;
 reg [CLog2NumWrites-1:0] write_select;
@@ -56,7 +58,9 @@ begin
     if(~resetn)
     begin
         data <= ResetValue;
+        write_reqs_last_cycle <= '{NumWrites{1'b0}};
     end else begin
+        write_reqs_last_cycle <= write_req_valids;
         if (has_valid_write)
         begin
             data <= write_reqs[write_select];
