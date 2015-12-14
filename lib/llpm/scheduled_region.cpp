@@ -104,23 +104,44 @@ void FormScheduledRegionPass::runInternal(Module* mod) {
     printf("Flattened %u SRs with one internal block\n", flattened);
 }
 
+bool ScheduledRegion::PortAllowed(const Port* p) {
+    if (p->isInput()) {
+        // Don't allow members which are not AND_FireOne (input case)
+        for (auto op: p->asInput()->findDriven()) {
+            auto dr = op->deps();
+            if (dr.depType != DependenceRule::AND_FireOne) {
+                return false;
+            }
+        }
+        return true;
+    } else if (p->isOutput()) {
+        auto output = p->asOutput();
+        auto dr = output->deps();
+        if (dr.depType != DependenceRule::AND_FireOne)
+            return false;
+        for (auto lat: dr.latencies) {
+            // Only allow fixed latency
+            if (!lat.depth().fixed() ||
+                !lat.depth().finite())
+                return false;
+            // Do not admit clocked elements (YET!)
+            // TODO: Allow clocked elements in the future
+            if (lat.depth().registers() > 0)
+                return false;
+        }
+        return true;
+    }
+
+    assert(false);
+}
 bool ScheduledRegion::BlockAllowedFull(Block* b) {
     if (!b->outputsTied())
         return false;
 
-    const auto inputs = b->inputs();
     for (auto output: b->outputs()) {
-        auto dr = b->deps(output);
-        if (dr.depType != DependenceRule::AND_FireOne)
-            return false;
-        if (!std::equal(dr.inputs.begin(), dr.inputs.end(),
-                        inputs.begin(), inputs.end()))
+        if (!PortAllowed(output))
             return false;
     }
-
-    if (b->is<Latch>() || b->is<PipelineRegister>())
-        // Don't allow Latches and PRegs for now
-        return false;
 
     if (b->is<Module>() ||
         b->is<DummyBlock>())
@@ -137,12 +158,6 @@ bool ScheduledRegion::BlockAllowedVirtual(Block* b) {
         return false;
 
     if (b->is<DummyBlock>())
-        return false;
-
-    if (b->is<Latch>() || b->is<PipelineRegister>())
-        // Don't allow Latches and PRegs for now since we're making all
-        // scheduled regions sub-cycle to start out. Once they support
-        // pipelining, we'll allow this.
         return false;
 
     return true;
@@ -214,15 +229,19 @@ bool ScheduledRegion::isConnectedToMe(const Port* port) const {
     ConnectionDB* conns = port->owner()->module()->conns();
     assert(conns != nullptr);
 
-    std::set<Port*> connected;
+    std::set<const Port*> connected;
     if (port->isInput()) {
         auto source = conns->findSource(port->asInput());
         if (source != nullptr)
             connected.insert(source);
+        auto driven = port->asInput()->findDriven();
+        connected.insert(driven.begin(), driven.end());
     } else {
         std::set<InputPort*> sinks;
         conns->findSinks(port->asOutput(), sinks);
         connected.insert(sinks.begin(), sinks.end());
+        auto deps = port->asOutput()->deps();
+        connected.insert(deps.inputs.begin(), deps.inputs.end());
     }
 
     bool isConnected = false;
@@ -237,34 +256,32 @@ bool ScheduledRegion::isConnectedToMe(const Port* port) const {
 void ScheduledRegion::addDrivers(const OutputPort* port) {
     auto dr = port->deps();
     if (dr.depType == DependenceRule::AND_FireOne) {
-        _members.insert(dr.inputs.begin(), dr.inputs.end());
+        for (auto inp: dr.inputs) {
+            add(inp);
+        }
     }
 }
 
 void ScheduledRegion::addDriven(const InputPort* port) {
-    Block* b = port->owner();
     std::set<const Port*> fires;
     bool andFireOne = true;
     
     // Find output ports which are always driven by this port and only this
     // port or other member ports
-    for (auto op: b->outputs()) {
+    for (auto op: port->findDriven()) {
         auto dr = op->deps();
-        for (auto dep: dr.inputs) {
-            if (dep == port) {
-                if (dr.depType == DependenceRule::AND_FireOne){
-                    fires.insert(op);
-                    fires.insert(dr.inputs.begin(), dr.inputs.end());
-                    break;
-                } else {
-                    andFireOne = false;
-                }
-            }
+        if (dr.depType == DependenceRule::AND_FireOne){
+            fires.insert(op);
+            fires.insert(dr.inputs.begin(), dr.inputs.end());
+        } else {
+            andFireOne = false;
         }
     }
 
     if (andFireOne) {
-        _members.insert(fires.begin(), fires.end());
+        for (auto p: fires) {
+            add(p);
+        }
     }
 }
 
@@ -273,6 +290,10 @@ bool ScheduledRegion::add(const Port* port,
     if (_members.count(port) > 0)
         // Already added! Cannot add it again, damnit!
         return false;
+
+    if (!PortAllowed(port)) {
+        return false;
+    }
 
     Block* b = port->owner();
     ConnectionDB* conns = b->module()->conns();
@@ -283,22 +304,6 @@ bool ScheduledRegion::add(const Port* port,
 
     if (!BlockAllowedVirtual(b))
         return false;
-
-    // Don't allow members which are not AND_FireOne (output case)
-    if (port->isOutput() &&
-        port->asOutput()->deps().depType != DependenceRule::AND_FireOne)
-        return false;
-
-    // Don't allow members which are not AND_FireOne (input case)
-    for (auto op: b->outputs()) {
-        auto dr = op->deps();
-        for (auto dep: dr.inputs) {
-            if (dep == port &&
-                dr.depType != DependenceRule::AND_FireOne) {
-                return false;
-            }
-        }
-    }
 
     // Port is now a member. (Maybe virtual, maybe full. We'll determine that
     // when we finalize construction.)
@@ -498,6 +503,11 @@ unsigned ScheduledRegion::stepNumber(const Port* p) {
     if (f != _executionOrder.end())
         return f->second;
 
+    if (_members.count(p) == 0 &&
+        p->owner()->module() != this) {
+        return 0;
+    }
+
     unsigned step;
     if (p->owner() == this) {
         if (p->isInput()) {
@@ -533,8 +543,6 @@ unsigned ScheduledRegion::stepNumber(const Port* p) {
                 step = stepNumber(source);
         }
     } else {
-        assert(_members.count(p) > 0 ||
-               p->owner()->module() == this);
         auto conns = p->owner()->module()->conns();
         if (p->isOutput()) {
             auto dr = p->asOutput()->deps();
@@ -762,7 +770,12 @@ void ScheduledRegion::Members::shrinkToConstraints(
         std::set<const OutputPort*> extDeps;
     };
 
-    while (true) {
+    while (members.size() > 0) {
+        removeIneligiblePorts();
+
+        if (members.size() == 0)
+            break;
+
         // Do we satisfy NED?
         auto extOuts = findExtOuts(conns);
         vector<DepInfo> depInfo;
@@ -774,14 +787,24 @@ void ScheduledRegion::Members::shrinkToConstraints(
             findDeps(op, conns, di.allDeps, di.extDeps);
         }
 
-        unsigned lowestIsect;
-        unsigned lowestIsectIdx;
         for (auto& d: depInfo) {
             if (d.op == root)
                 rootDI = &d;
         }
+
+        if (rootDI == nullptr) {
+            // The root is no longer an external output. Re-choose any root
+            // that contains the root as a dep
+            for (auto& d: depInfo) {
+                if (d.allDeps.count(root) > 0)
+                    rootDI = &d;
+            }
+        }
+
         assert(rootDI != nullptr);
 
+        unsigned lowestIsect;
+        unsigned lowestIsectIdx;
         for (auto i=0u; i<depInfo.size(); i++) {
             const auto& jd = depInfo[i];
             vector<const OutputPort*> extDepIntersection;
@@ -824,11 +847,42 @@ void ScheduledRegion::Members::shrinkToConstraints(
         // We don't satisfy NED!
         // Start trimming. Keep looping, checking, and trimming until
         // we satisfy NED!
-        assert(false && "ScheduledRegion support incomplete!");
 
-        // TODO: Trim the output port with the least in common with the root
-        // port, update whatever is necessary and then loop.
+        auto toRemove = depInfo[lowestIsectIdx];
+        printf("Removing %p(%p), ", toRemove.op, toRemove.op->owner());
+        members.erase(toRemove.op);
+        auto dr = toRemove.op->deps();
+        for (auto inp: dr.inputs) {
+            members.erase(inp);
+            printf("%p, ", inp);
+        }
+        printf("\n");
     }
+}
+
+void ScheduledRegion::Members::removeIneligiblePorts() {
+    set<const Port*> toRemove;
+    do {
+        toRemove.clear();
+        for (auto memb: members) {
+            if (memb->isInput()) {
+                for (auto driven: memb->asInput()->findDriven()) {
+                    if (members.count(driven) == 0)
+                        toRemove.insert(memb);
+                }
+            } else if (memb->isOutput()) {
+                for (auto dep: memb->asOutput()->deps().inputs) {
+                    if (members.count(dep) == 0)
+                        toRemove.insert(memb);
+                }
+            } else {
+                assert(false);
+            }
+        }
+        for (auto r: toRemove) {
+            members.erase(r);
+        }
+    } while (toRemove.size() > 0);
 }
 
 void ScheduledRegion::Members::findDeps(
@@ -843,6 +897,7 @@ void ScheduledRegion::Members::findDeps(
     // Ensure we don't recurse forever in a cycle
     if (allDeps.count(op) > 0)
         return;
+    allDeps.insert(op);
 
     auto dr = op->deps();
     for (auto ip: dr.inputs) {
@@ -854,7 +909,6 @@ void ScheduledRegion::Members::findDeps(
         if (source != nullptr) {
             if (members.count(source) > 0) {
                 findDeps(source, conns, allDeps, extDeps);
-                allDeps.insert(source);
             } else {
                 extDeps.insert(source);
             }

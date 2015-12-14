@@ -62,6 +62,7 @@ protected:
         void shrinkToConstraints(
             const OutputPort* root,
             ConnectionDB* conns);
+        void removeIneligiblePorts();
         void findDeps(
             const OutputPort* op,
             ConnectionDB* conns,
@@ -127,6 +128,7 @@ public:
                     std::string name="");
     virtual ~ScheduledRegion();
 
+    static bool PortAllowed(const Port*);
     static bool BlockAllowedFull(Block* b);
     static bool BlockAllowedVirtual(Block* b);
 
