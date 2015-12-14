@@ -58,7 +58,7 @@ public:
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
         return DependenceRule(DependenceRule::AND_FireOne,
-                              inputs());
+                              inputs()).combinational();
     }
 
     InputPort* newControl(llvm::Type*);
@@ -100,7 +100,7 @@ public:
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
         return DependenceRule(DependenceRule::AND_FireOne,
-                              inputs());
+                              inputs()).combinational();
     }
 
     static Join* get(ConnectionDB&, const std::vector<OutputPort*>&);
@@ -123,7 +123,7 @@ public:
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
         return DependenceRule(DependenceRule::Custom,
-                              inputs());
+                              inputs()).combinational();
     }
 
     float logicalEffort(const InputPort*, const OutputPort*) const {
@@ -153,7 +153,7 @@ public:
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
         return DependenceRule(DependenceRule::Custom,
-                              inputs());
+                              inputs()).combinational();
     }
 
     float logicalEffort(const InputPort*, const OutputPort*) const {
@@ -182,7 +182,7 @@ public:
         assert(std::find_if(_dout.begin(), _dout.end(),
                          RawEqualTo<const OutputPort>(op)) != _dout.end());
         return DependenceRule(DependenceRule::AND_FireOne,
-                              inputs());
+                              inputs()).combinational();
     }
 
     virtual bool refinable() const {
@@ -270,7 +270,7 @@ public:
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == dout());
         return DependenceRule(DependenceRule::Custom,
-                              inputs());
+                              inputs()).combinational();
     }
 
     virtual bool outputsSeparate() const {
@@ -299,7 +299,7 @@ public:
         assert(std::find_if(_dout.begin(), _dout.end(),
                          RawEqualTo<const OutputPort>(op)) != _dout.end());
         return DependenceRule(DependenceRule::Custom,
-                              inputs());
+                              inputs()).combinational();
     }
 
     virtual bool outputsSeparate() const {

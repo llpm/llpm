@@ -76,5 +76,28 @@ OutputPort* OutputPort::split(ConnectionDB& conns, unsigned idx) {
     return split(conns)->dout(idx);
 }
 
+void DependenceRule::populateLatenciesUnknown() {
+    latencies.clear();
+    for (unsigned i=0; i<inputs.size(); i++) {
+        latencies.push_back(
+            Latency(
+                Time::Unknown(),
+                PipelineDepth::Unknown()
+            )
+        );
+    }
+}
+
+DependenceRule DependenceRule::combinational() const {
+    auto ret = *this;
+    for (unsigned i=0; i<latencies.size(); i++) {
+        ret.latencies[i] = Latency (
+            latencies[i].time(),
+            PipelineDepth::Fixed(0)
+        );
+    }
+    return ret;
+}
+
 } // namespace llpm
 

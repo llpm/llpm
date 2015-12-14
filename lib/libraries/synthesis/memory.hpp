@@ -32,12 +32,20 @@ public:
 
     virtual DependenceRule deps(const OutputPort* op) const {
         for (const auto& write: _write) {
-            if (write->dout() == op)
-                return DependenceRule(DependenceRule::AND_FireOne, {write->din()});
+            if (write->dout() == op) {
+                auto ret = DependenceRule(DependenceRule::AND_FireOne,
+                                          {write->din()});
+                ret.latencies[0] = Latency (
+                    Time::Unknown(),
+                    PipelineDepth::Fixed(1)
+                );
+                return ret;
+            }
         }
         for (const auto& read: _read) {
             if (read->dout() == op)
-                return DependenceRule(DependenceRule::AND_FireOne, {read->din()});
+                return DependenceRule(DependenceRule::AND_FireOne,
+                                      {read->din()}).combinational();
         }
         assert(false);
     }
@@ -80,7 +88,7 @@ public:
         for (const auto& port: _ports) {
             if (op == port->dout())
                 return DependenceRule(DependenceRule::AND_FireOne,
-                                      {port->din()});
+                                      {port->din()}).combinational();
         }
         assert(false && "OP doesn't belong!");
     }

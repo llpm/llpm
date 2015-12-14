@@ -318,7 +318,7 @@ public:
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
         return DependenceRule(DependenceRule::AND_FireOne,
-                              {&_din});
+                              {&_din}).combinational();
     }
 };
 

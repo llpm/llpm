@@ -3,10 +3,12 @@
 
 #include <util/macros.hpp>
 #include <llpm/exceptions.hpp>
+#include <llpm/time.hpp>
 
 #include <boost/intrusive_ptr.hpp>
 #include <llvm/IR/Type.h>
 
+#include <set>
 #include <initializer_list>
 
 namespace llpm {
@@ -98,6 +100,8 @@ public:
     bool isOutput() const {
         return false;
     }
+
+    std::set<OutputPort*> findDriven() const;
 };
 
 /**
@@ -107,6 +111,7 @@ struct DependenceRule {
     friend class OutputPort;
 public:
     typedef llvm::SmallVector<const InputPort*, 2> InputVec;
+    typedef llvm::SmallVector<Latency, 2> LatencyVec;
 
     enum DepType {
         AND_FireOne,
@@ -116,6 +121,7 @@ public:
 public:
     DepType depType;
     InputVec inputs;
+    LatencyVec latencies;
 
     DependenceRule() :
         depType(Custom)
@@ -130,32 +136,32 @@ public:
                    llvm::SmallVector<InputPort*, N> inputs) :
         depType(ty),
         inputs(inputs.begin(), inputs.end())
-    { }
+    { populateLatenciesUnknown(); }
 
     DependenceRule(DepType ty,
                    std::vector<InputPort*> inputs) :
         depType(ty),
         inputs(inputs.begin(), inputs.end())
-    { }
+    { populateLatenciesUnknown(); }
 
     DependenceRule(DepType ty,
                    std::initializer_list<const InputPort*> inputs) :
         depType(ty),
         inputs(inputs)
-    { }
+    { populateLatenciesUnknown(); }
 
     template<unsigned N>
     DependenceRule(DepType ty,
                    llvm::SmallVector<const InputPort*, N> inputs) :
         depType(ty),
         inputs(inputs.begin(), inputs.end())
-    { }
+    { populateLatenciesUnknown(); }
 
     DependenceRule(DepType ty,
                    std::vector<const InputPort*> inputs) :
         depType(ty),
         inputs(inputs.begin(), inputs.end())
-    { }
+    { populateLatenciesUnknown(); }
 
     bool operator==(const DependenceRule& dr) const {
         return dr.depType == this->depType &&
@@ -174,6 +180,11 @@ public:
         ret.inputs.append(dr.inputs.begin(), dr.inputs.end());
         return ret;
     }
+
+    DependenceRule combinational() const;
+
+private:
+    void populateLatenciesUnknown();
 };
 
 /**

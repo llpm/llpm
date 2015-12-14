@@ -84,6 +84,16 @@ public:
         Quantity(Quantity::Unknown())
     { }
 
+    PipelineDepth(Quantity q) :
+        Quantity(q) {
+        assert(!q.valid());
+    }
+
+    PipelineDepth(const PipelineDepth& d) :
+        Quantity(d),
+        _registers(d._registers)
+    { }
+
     static PipelineDepth Variable() {
         return PipelineDepth(Quantity::Variable(), 0);
     }
@@ -125,6 +135,11 @@ public:
         Quantity(t),
         _time(t._time)
     { }
+
+    Time(Quantity q) :
+        Quantity(q) {
+        assert(!q.valid());
+    }
 
     static Time Variable() {
         return Time(Quantity::Variable(), 0);
@@ -184,6 +199,11 @@ public:
     Latency(Time t) :
         _time(t),
         _depth()
+    { }
+
+    Latency(const Latency& l) :
+        _time(l._time),
+        _depth(l._depth)
     { }
 
     DEF_GET_NP(time);

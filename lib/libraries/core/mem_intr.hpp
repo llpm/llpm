@@ -34,9 +34,11 @@ public:
 
     virtual DependenceRule deps(const OutputPort* op) const {
         if (op == _write.dout())
-            return DependenceRule(DependenceRule::AND_FireOne, {_write.din()});
+            return DependenceRule(DependenceRule::AND_FireOne,
+                                  {_write.din()});
         else if (op == _read.dout())
-            return DependenceRule(DependenceRule::AND_FireOne, {_read.din()});
+            return DependenceRule(DependenceRule::AND_FireOne,
+                                  {_read.din()});
         assert(false && "OP don't belong!");
     }
 };

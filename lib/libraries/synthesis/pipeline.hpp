@@ -87,7 +87,14 @@ public:
 
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND_FireOne, inputs());
+        auto ret = DependenceRule(DependenceRule::AND_FireOne, inputs());
+        for (unsigned i=0; i<ret.latencies.size(); i++) {
+            ret.latencies[i] = Latency(
+                ret.latencies[i].time(),
+                PipelineDepth::Fixed(1)
+            );
+        }
+        return ret;
     }
 };
 
@@ -118,7 +125,8 @@ public:
 
     virtual DependenceRule deps(const OutputPort* op) const {
         assert(op == &_dout);
-        return DependenceRule(DependenceRule::AND_FireOne, inputs());
+        return DependenceRule(DependenceRule::AND_FireOne,
+                              inputs()).combinational();
     }
 
     virtual float logicalEffort(const InputPort*, const OutputPort*) const {
