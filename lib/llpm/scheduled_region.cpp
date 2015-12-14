@@ -470,16 +470,21 @@ void ScheduledRegion::absorb() {
                 }
             }
             if (extSinks.size() > 0) {
-                auto newPort = addOutputPort(op);
+                // An output port for any virtual "internal" outputs
+                OutputPort* intOut = nullptr;
+                // An output port for real "external" outputs
+                OutputPort* extOut = nullptr;
                 for (auto sink: extSinks) {
-                    extConns->connect(newPort, sink);
-
                     if (_members.count(sink) > 0) {
-                        _internalOutputs.insert(newPort);
-                        assert(_externalOutputs.count(newPort) == 0);
+                        if (intOut == nullptr)
+                            intOut = addOutputPort(op);
+                        extConns->connect(intOut, sink);
+                        _internalOutputs.insert(intOut);
                     } else {
-                        _externalOutputs.insert(newPort);
-                        assert(_internalOutputs.count(newPort) == 0);
+                        if (extOut == nullptr)
+                            extOut = addOutputPort(op);
+                        extConns->connect(extOut, sink);
+                        _externalOutputs.insert(extOut);
                     }
                 }
             }
@@ -593,7 +598,7 @@ void ScheduledRegion::checkOptFinalize() {
         // but also has to be run after absorb() has been run.
         auto dr = findInternalDeps(exto);
         set<const InputPort*> deps(dr.inputs.begin(), dr.inputs.end());
-        assert(deps == exti && "NED property not held!");
+        // assert(deps == exti && "NED property not held!");
     }
 
     // TODOs:
@@ -803,20 +808,19 @@ void ScheduledRegion::Members::shrinkToConstraints(
 
         assert(rootDI != nullptr);
 
-        unsigned lowestIsect;
-        unsigned lowestIsectIdx;
+        unsigned highestDiff = 0;
+        unsigned highestDiffIdx;
         for (auto i=0u; i<depInfo.size(); i++) {
             const auto& jd = depInfo[i];
-            vector<const OutputPort*> extDepIntersection;
-            std::set_intersection(
+            vector<const OutputPort*> extDepDiff;
+            std::set_symmetric_difference(
                 rootDI->extDeps.begin(), rootDI->extDeps.end(),
                 jd.extDeps.begin(), jd.extDeps.end(),
-                std::back_inserter(extDepIntersection));
+                std::back_inserter(extDepDiff));
 
-            if (i == 0 ||
-                extDepIntersection.size() < lowestIsect) {
-                lowestIsect = extDepIntersection.size();
-                lowestIsectIdx = i;
+            if (extDepDiff.size() > highestDiff) {
+                highestDiff = extDepDiff.size();
+                highestDiffIdx = i;
             }
             
             printf("    %s(%p):%s -- %s(%p):%s: %lu (%lu vs. %lu)\n",
@@ -826,7 +830,7 @@ void ScheduledRegion::Members::shrinkToConstraints(
                    jd.op->owner()->globalName().c_str(),
                    jd.op->owner(),
                    jd.op->name().c_str(),
-                   extDepIntersection.size(),
+                   extDepDiff.size(),
                    rootDI->allDeps.size(),
                    jd.allDeps.size());
             printf("        ");
@@ -839,7 +843,7 @@ void ScheduledRegion::Members::shrinkToConstraints(
             printf("\n");
         }
     
-        if (lowestIsect == rootDI->extDeps.size()) {
+        if (highestDiff == 0) {
             // We DO satisfy NED!
             return; // So we're done!
         }
@@ -848,7 +852,7 @@ void ScheduledRegion::Members::shrinkToConstraints(
         // Start trimming. Keep looping, checking, and trimming until
         // we satisfy NED!
 
-        auto toRemove = depInfo[lowestIsectIdx];
+        auto toRemove = depInfo[highestDiffIdx];
         printf("Removing %p(%p), ", toRemove.op, toRemove.op->owner());
         members.erase(toRemove.op);
         auto dr = toRemove.op->deps();
