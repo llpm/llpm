@@ -49,6 +49,21 @@ InputPort* InputPort::join(ConnectionDB& conns, unsigned idx) {
     return join(conns)->din(idx);
 }
 
+std::set<OutputPort*> InputPort::findDriven() const {
+    std::set<OutputPort*> ret;
+    auto b = owner();
+    for (auto outp: b->outputs()) {
+        auto dr = outp->deps();
+        for (auto inp: dr.inputs) {
+            if (inp == this) {
+                ret.insert(outp);
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
 OutputPort::OutputPort(
     Block* owner, llvm::Type* type,
     std::string name) :
