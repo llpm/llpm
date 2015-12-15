@@ -219,7 +219,13 @@ void SimplifyPass::simplifyNullSinks(Module* m) {
             if (srcP == nullptr)
                 // This means that this NS was already deleted.
                 continue;
+
+            // The NullSink's source block
             auto src = srcP->owner();
+            if (src->is<DummyBlock>())
+                // We cannot delete a port
+                continue;
+
             vector<InputPort*> sinks;
             for (auto op: src->outputs()) {
                 m->conns()->findSinks(op, sinks);
@@ -237,7 +243,8 @@ void SimplifyPass::simplifyNullSinks(Module* m) {
             if (foundNonNS)
                 continue;
 
-            // src drives only NullSinks. It can be trashed and replaced with NullSinks
+            // src drives only NullSinks. It can be trashed and replaced with
+            // NullSinks
             for (auto ip: src->inputs()) {
                 auto newns = new NullSink(ip->type());
                 m->conns()->remap(ip, newns->din());
