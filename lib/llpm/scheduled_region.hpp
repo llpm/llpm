@@ -6,6 +6,10 @@
 
 namespace llpm {
 
+// Fwd. defs
+class PipelineRegister;
+class PipelineStageController;
+
 /**
  * A ScheduledRegion is a group of blocks which can be statically scheduled.
  * Once all inputs are available (t=0), all block execution times are known
@@ -48,6 +52,26 @@ namespace llpm {
  * the 'grow' method. The second step is executed with the 'finalize' method'.
  */
 class ScheduledRegion : public ContainerModule {
+public:
+    class Cycle {
+        friend class ScheduledRegion;
+
+        ScheduledRegion* _sr;
+        std::set<const OutputPort*> _newValues;
+        std::set<const OutputPort*> _available;
+        std::set<const InputPort*>  _firing;
+
+        std::set<const OutputPort*, PipelineRegister*>
+                                    _regs;
+        PipelineStageController* _controller;
+
+        Cycle(ScheduledRegion* sr) :
+            _sr(sr) {
+        }
+    public:
+
+    };
+
 protected:
     MutableModule* _parent;
 
@@ -69,6 +93,7 @@ protected:
             std::set<const Port*>& allDeps,
             std::set<const OutputPort*>& extDeps) const;
         std::set<const OutputPort*> findExtOuts(ConnectionDB* conns) const;
+        std::set<const OutputPort*>  findExtIns(ConnectionDB* conns) const;
 
         auto begin() { return members.begin(); }
         auto end() { return members.end(); }
@@ -77,28 +102,82 @@ protected:
         auto insert(const Port* p) { return members.insert(p); }
         template<typename IT>
         auto insert(IT begin, IT end) { return members.insert(begin, end); }
+
+        bool contains(const Port* p) const {
+            return members.count(p) > 0;
+        }
+
+        void erase(const Block*);
+
+        std::set<const InputPort*> getAllInputs() const;
     } _members;
 
-    /// Set of ports external to this region which are scheduled by this region
-    //  (virtual region members).
-    std::set<Port*>       _vmembers;
-
     /// Set of blocks which are connected entirely within this region
-    std::set<Block*>      _fullMembers;
+    std::set<BlockP>      _fullMembers;
 
     std::set<OutputPort*> _externalOutputs;
     std::set<InputPort*>  _externalInputs;
 
-    std::map<const Port*, unsigned> _executionOrder;
-    void calculateOrder();
+    /**
+     * For each output port, the set of input ports which can be run once it's
+     * been fired. These input ports may also be waiting for other output ports
+     * to fire, so they can't necessarily run. This many-to-many correspondence
+     * is possible because several Waits, Joins, ect. may have been removed
+     * from the graph but those semantic dependences must be retained. This
+     * data structure maintains them.
+    */
+    std::map<const OutputPort*, std::set<const InputPort*> > 
+        _executesNotLaterThan;
+    std::vector<Cycle> _cycles;
+    std::map<const Port*, unsigned> _cycleIdx;
+    const std::set<const InputPort*>&
+        calculateExecutionOrder(const OutputPort*, ConnectionDB*);
+    void calculateOrder(ConnectionDB* conns);
+    void addNewMembers();
+    void scheduleMinimumClocks();
+    void finalizeCycles();
 
+    /**
+     * Given an internal ("virtual") input port, find the internal ("virtual")
+     * output ports upon which it depends and the respective latencies. Only
+     * works after "absorb" has been called.
+     */
     std::set<OutputPort*> findVirtualDeps(
         const InputPort*,
         std::set<const InputPort*> seen = {} ) const;
+    /**
+     * Given an input port contained inside of this SR, find all of the
+     * external inputs upon which it depends. Only works after "absorb" has
+     * been called.
+     */
     DependenceRule findInternalDeps(
         const InputPort*,
         std::set<const InputPort*> seen = {} ) const;
+    /**
+     * Given one of this module's output ports, find all of the external input
+     * ports upon which it depends. In a correctly-formed SR, the answer is all
+     * of them, but this function determines that the hard way. Only works
+     * after "absorb" has been called.
+     */
     DependenceRule findInternalDeps(const OutputPort*) const;
+
+
+    /**
+     * Find member port which drives a particular input port. This port may be
+     * a full member or a virtual member.
+     */
+    const OutputPort* findInternalSource(const InputPort*) const;
+
+    /**
+     * Find member port which is driven by a particular output port. These
+     * ports may be full members or virtual members.
+     */
+    void findInternalSinks(const OutputPort*,
+                           std::set<const InputPort*>&) const;
+
+
+    /// Clean up internal data structures
+    void cleanInternal();
 
     bool add(const Port*, const std::set<const Port*>& constPorts = {});
     void addDriven(const InputPort*);
@@ -136,20 +215,21 @@ public:
     DEF_GET_NP(internalInputs);
     DEF_GET_NP(externalOutputs);
     DEF_GET_NP(externalInputs);
+    DEF_GET_NP(cycles);
 
     bool grow(const Port*, const std::set<const Port*>& constPorts = {});
     bool grow(const std::set<const Port*>& constPorts = {});
+
+    bool contains(Block* b) {
+        return _fullMembers.count(b) > 0;
+    }
+
     /**
      * Finalize the region by pruning it to ensure it meets restrictions, then
      * absorb the member blocks and connections. Ensure that the specified port
      * is retained in the pruning process.
      */
-    void finalize(const OutputPort*);
-
-    /**
-     * What semantic step executes this port?
-     */
-    unsigned stepNumber(const Port*);
+    bool finalize(const OutputPort*);
 
     virtual void validityCheck() const;
     virtual std::string print() const;
@@ -162,7 +242,8 @@ public:
     }
 
     /// How many clock cycles does it take to compute this?
-    unsigned clocks();
+    unsigned clocks() const;
+    unsigned findClockNum(const Port*) const;
 };
 
 class FormScheduledRegionPass : public ModulePass {

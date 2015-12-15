@@ -74,10 +74,6 @@ public:
 class PipelineDepth : public Quantity {
     /// The number of registers in a
     unsigned _registers;
-
-    PipelineDepth(Quantity qf, unsigned registers) :
-        Quantity(qf),
-        _registers(registers) { }
     
 public:
     PipelineDepth():
@@ -93,6 +89,10 @@ public:
         Quantity(d),
         _registers(d._registers)
     { }
+
+    PipelineDepth(Quantity qf, unsigned registers) :
+        Quantity(qf),
+        _registers(registers) { }
 
     static PipelineDepth Variable() {
         return PipelineDepth(Quantity::Variable(), 0);
@@ -120,8 +120,8 @@ class Time : public Quantity {
         _time(seconds)
     { }
 
-    Time(double seconds) :
-        Quantity(Quantity::FiniteEstimate()),
+    Time(double seconds, Quantity q) :
+        Quantity(q),
         _time(seconds)
     { }
 
@@ -149,20 +149,20 @@ public:
         return _time;
     }
 
-    static Time s(double t) {
-        return Time(t);
+    static Time s(double t, Quantity q = Quantity::FiniteEstimate()) {
+        return Time(t, q);
     }
-    static Time ms(double t) {
-        return Time(t * 1e-3);
+    static Time ms(double t, Quantity q = Quantity::FiniteEstimate()) {
+        return Time(t * 1e-3, q);
     }
-    static Time us(double t) {
-        return Time(t * 1e-6);
+    static Time us(double t, Quantity q = Quantity::FiniteEstimate()) {
+        return Time(t * 1e-6, q);
     }
-    static Time ns(double t) {
-        return Time(t * 1e-9);
+    static Time ns(double t, Quantity q = Quantity::FiniteEstimate()) {
+        return Time(t * 1e-9, q);
     }
-    static Time ps(double t) {
-        return Time(t * 1e-12);
+    static Time ps(double t, Quantity q = Quantity::FiniteEstimate()) {
+        return Time(t * 1e-12, q);
     }
 
     Time& operator+=(const Time& t) {
@@ -208,6 +208,7 @@ public:
 
     DEF_GET_NP(time);
     DEF_GET_NP(depth);
+
 };
 
 ///*********
@@ -215,35 +216,55 @@ public:
 ///*********
 
 inline Time operator+(const Time &t1, const Time &t2) {
-    return Time::s(t1.sec() + t2.sec());
+    assert(t1.validity() == t2.validity());
+    return Time::s(t1.sec() + t2.sec(), t1);
 }
 
 inline Time operator-(const Time &t1, const Time &t2) {
-    return Time::s(t1.sec() - t2.sec());
+    assert(t1.validity() == t2.validity());
+    return Time::s(t1.sec() - t2.sec(), t1);
 }
 
 inline Time operator*(const Time &t1, unsigned n) {
-    return Time::s(t1.sec() * n);
+    return Time::s(t1.sec() * n, t1);
 }
 
 inline bool operator>(const Time &t1, const Time &t2) {
+    assert(t1.valid() && t2.valid());
     return t1.sec() > t2.sec();
 }
 
 inline bool operator>=(const Time &t1, const Time &t2) {
+    assert(t1.valid() && t2.valid());
     return t1.sec() >= t2.sec();
 }
 
 inline bool operator<(const Time &t1, const Time &t2) {
+    assert(t1.valid() && t2.valid());
     return t1.sec() < t2.sec();
 }
 
 inline bool operator<=(const Time &t1, const Time &t2) {
+    assert(t1.valid() && t2.valid());
     return t1.sec() <= t2.sec();
 }
 
 inline bool operator==(const Time &t1, const Time &t2) {
-    return t1.sec() == t2.sec();
+    if (t1.valid() && t2.valid())
+        return t1.sec() == t2.sec() &&
+               t1.validity() == t2.validity();
+    return (t1.validity() == t2.validity());
+}
+
+inline PipelineDepth operator+(const PipelineDepth& d1,
+                               const PipelineDepth& d2) {
+    assert(d1.valid() && d2.valid());
+    return PipelineDepth(d1, d1.registers() + d2.registers());
+}
+
+inline Latency operator+(const Latency& l1, const Latency& l2) {
+    return Latency(l1.time() + l2.time(),
+                   l1.depth() + l2.depth());
 }
 
 } // namespace llpm

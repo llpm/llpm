@@ -95,12 +95,22 @@ static std::string attrs(ObjectNamer&, OutputPort* op, InputPort* ip,
     string extra = "";
     if (op->owner()->module()->is<ScheduledRegion>()) {
         auto sr = op->owner()->module()->as<ScheduledRegion>();
-        extra = str(boost::format("step: %1%")
-                        % sr->stepNumber(op));
-    } else if (ip->owner()->module()->is<ScheduledRegion>()) {
+        extra = str(boost::format("op step: %1%")
+                        % sr->findClockNum(op));
+    } else if (op->owner()->is<ScheduledRegion>()) {
+        auto sr = op->owner()->as<ScheduledRegion>();
+        extra = str(boost::format("op step: %1%")
+                        % sr->findClockNum(op));
+    } 
+
+    if (ip->owner()->module()->is<ScheduledRegion>()) {
         auto sr = ip->owner()->module()->as<ScheduledRegion>();
-        extra = str(boost::format("step: %1%")
-                        % sr->stepNumber(ip));
+        extra = extra + str(boost::format(" ip step: %1%")
+                            % sr->findClockNum(ip));
+    } else if (ip->owner()->is<ScheduledRegion>()) {
+        auto sr = ip->owner()->as<ScheduledRegion>();
+        extra = extra + str(boost::format(" ip step: %1%")
+                            % sr->findClockNum(ip));
     } 
 
     if (extra != "")
@@ -180,7 +190,7 @@ void printConns(std::ostream& os,
 
                 os << "    " << getName(op->owner()) << " -> "
                    << getName(ip->owner()) 
-                   << "[" << attrs(namer, op, ip, extra_attr) << "];\n";
+                   << "[" << attrs(namer, conn.source(), conn.sink(), extra_attr) << "];\n";
             }
         }
     }

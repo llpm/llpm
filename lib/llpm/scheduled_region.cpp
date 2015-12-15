@@ -5,6 +5,7 @@
 #include <analysis/graph_queries.hpp>
 #include <libraries/synthesis/fork.hpp>
 #include <libraries/synthesis/pipeline.hpp>
+#include <libraries/core/logic_intr.hpp>
 
 #include <util/misc.hpp>
 #include <backends/graphviz/graphviz.hpp>
@@ -74,13 +75,18 @@ void FormScheduledRegionPass::runInternal(Module* mod) {
                                         % mod->name()
                                         % counter);
             ScheduledRegion* sr =
-                new ScheduledRegion(cm, opDriver->owner(), crName);
+                new ScheduledRegion(cm, b, crName);
             sr->grow(constPorts);
-            sr->finalize(opDriver);
-            const auto ext = sr->inputs();
-            inputsToSee.insert(inputsToSee.end(),
-                               ext.begin(), ext.end());
-            counter++;
+            if (sr->finalize(opDriver)) {
+                const auto ext = sr->inputs();
+                inputsToSee.insert(inputsToSee.end(),
+                                   ext.begin(), ext.end());
+                counter++;
+            } else {
+                inputsToSee.insert(inputsToSee.end(),
+                                   b->inputs().begin(), b->inputs().end());
+                seen.insert(b);
+            }
         }
     }
 
@@ -124,16 +130,13 @@ bool ScheduledRegion::PortAllowed(const Port* p) {
             if (!lat.depth().fixed() ||
                 !lat.depth().finite())
                 return false;
-            // Do not admit clocked elements (YET!)
-            // TODO: Allow clocked elements in the future
-            if (lat.depth().registers() > 0)
-                return false;
         }
         return true;
     }
 
     assert(false);
 }
+
 bool ScheduledRegion::BlockAllowedFull(Block* b) {
     if (!b->outputsTied())
         return false;
@@ -351,7 +354,7 @@ void ScheduledRegion::identifyIO() {
                 fullMem = false;
         }
         if (fullMem)
-            _fullMembers.insert(b);
+            _fullMembers.insert(b->getptr());
     }
 
     // Label as member, internal port, or external port
@@ -503,90 +506,53 @@ void ScheduledRegion::absorb() {
     }
 }
 
-unsigned ScheduledRegion::stepNumber(const Port* p) {
-    auto f = _executionOrder.find(p);
-    if (f != _executionOrder.end())
+const std::set<const InputPort*>& ScheduledRegion::calculateExecutionOrder(
+    const OutputPort* op,
+    ConnectionDB* conns) {
+    auto f = _executesNotLaterThan.find(op);
+    if (f != _executesNotLaterThan.end())
         return f->second;
 
-    if (_members.count(p) == 0 &&
-        p->owner()->module() != this) {
-        return 0;
-    }
+    set<const InputPort*> ret;
+    set<InputPort*> sinks;
+    conns->findSinks(op, sinks);
+    for (auto sink: sinks) {
+        if (_members.contains(sink)) {
+            ret.insert(sink);
 
-    unsigned step;
-    if (p->owner() == this) {
-        if (p->isInput()) {
-            auto ip = (InputPort*)p->asInput();
-            if (_externalInputs.count(ip) > 0) {
-                step = 0;
-            } else if (_internalInputs.count(ip) > 0) {
-                auto source = module()->conns()->findSource(ip);
-                step = stepNumber(source);
-            } else {
-                assert(false && "Cannot resolve port type!");
-            }
-        } else {
-            assert(p->isOutput());
-            auto intip = getSink(p->asOutput());
-            step = stepNumber(intip);
-        }
-    } else if (p->owner()->is<DummyBlock>()) {
-        if (p->isOutput()) {
-            assert(p->owner()->module() == this);
-            auto extip = findExternalPortFromDriver(p->asOutput());
-            if (extip != nullptr) {
-                step = stepNumber(extip);
-            } else {
-                step = stepNumber(p->owner()->as<DummyBlock>()->din());
-            }
-        } else {
-            assert(p->isInput());
-            auto source = conns()->findSource(p->asInput());
-            if (source == nullptr)
-                step = 0;
-            else
-                step = stepNumber(source);
-        }
-    } else {
-        auto conns = p->owner()->module()->conns();
-        if (p->isOutput()) {
-            auto dr = p->asOutput()->deps();
-            if (dr.depType == DependenceRule::AND_FireOne) {
-                unsigned max = 0;
-                for (auto dep: dr.inputs) {
-                    auto s = stepNumber(dep);
-                    if (s > max)
-                        max = s;
+            for (auto driven: sink->findDriven()) {
+                if (_members.contains(driven)) {
+                    auto recSink = calculateExecutionOrder(driven, conns);
+                    ret.insert(recSink.begin(), recSink.end());
                 }
-                step = max + 1;
-            } else {
-                // Technically, this SR is invalid.
-                // TODO: Error or warn on this condition?
-                step = 0;
             }
-        } else {
-            assert(p->isInput());
-            auto source = conns->findSource(p->asInput());
-            assert(source != nullptr);
-            if (source == nullptr)
-                step = 0;
-            else
-                step = stepNumber(source);
         }
     }
 
-#if 0
-    printf("%s (%p, %s): %u\n",
-           p->name().c_str(), p,
-           p->owner()->globalName().c_str(), step);
-#endif
-    _executionOrder[p] = step;
-    return step;
+    if (_members.contains(op)) {
+        _executesNotLaterThan[op] = ret;
+        return _executesNotLaterThan[op];
+    } else {
+        static std::set<const InputPort*> EmptySet;
+        return EmptySet;
+    }
 }
 
-void ScheduledRegion::calculateOrder() {
-    for (auto memb: _members) {
-        stepNumber(memb);
+void ScheduledRegion::calculateOrder(ConnectionDB* conns) {
+    // To get list of external/internal I/O
+    identifyIO();
+
+    for (auto extInp: _externalInputs) {
+        auto source = conns->findSource(extInp);
+        calculateExecutionOrder(source, conns);
+    }
+
+    for (auto fm: _fullMembers) {
+        if (fm->inputs().size() == 0) {
+            for (auto outp: fm->outputs()) {
+                calculateExecutionOrder(outp, conns);
+            }
+        }
     }
 }
 
@@ -598,17 +564,16 @@ void ScheduledRegion::checkOptFinalize() {
         // but also has to be run after absorb() has been run.
         auto dr = findInternalDeps(exto);
         set<const InputPort*> deps(dr.inputs.begin(), dr.inputs.end());
-        // assert(deps == exti && "NED property not held!");
+        if (deps != exti) {
+            printf("WARNING: NED property not held!\n");
+        }
     }
 
-    // TODOs:
     // - Check to make sure acyclic
-    // - Check to make sure virtual region is constant-time
-    
+    assert(!hasCycle());
 
-    // Determine wait-based ordering of operations to make sure it is respected
-    // later when we schedule.
-    calculateOrder();
+    // TODOs:
+    // - Check to make sure virtual region is constant-time
     
     // Eliminate Waits and Forks
     set<Block*> blocks;
@@ -617,19 +582,12 @@ void ScheduledRegion::checkOptFinalize() {
         if (b->is<Wait>()) {
             auto w = b->as<Wait>();
             OutputPort* source = _conns.findSource(w->din());
-            if (_executionOrder[source] < _executionOrder[w->dout()]) {
-                // If necessary, update the source's step number to respect the
-                // wait conditions.
-                _executionOrder[source] = _executionOrder[w->dout()];
-            }
             vector<InputPort*> sinks;
             _conns.findSinks(w->dout(), sinks);
             for (auto sink: sinks) {
                 _conns.disconnect(w->dout(), sink);
                 if (source != NULL) {
-                    auto id = new Identity(source->type());
-                    _conns.connect(source, id->din());
-                    _conns.connect(id->dout(), sink);
+                    _conns.connect(source, sink);
                 }
             }
             _conns.removeBlock(w);
@@ -650,23 +608,323 @@ void ScheduledRegion::checkOptFinalize() {
             _conns.removeBlock(f);
         }
     }
+
+    // Run internal simplifications to get rid of things like dangling outputs,
+    // which could mess up later stages.
+    SimplifyPass sp(design());
+    sp.runInternal(this);
+
+
+    cleanInternal();
 }
 
-void ScheduledRegion::finalize(const OutputPort* root) {
+/**
+ * Some internal data structures may contain references to ports which no
+ * longer exist after optimization of internal blocks. Clean them out!
+ */
+void ScheduledRegion::cleanInternal() {
+    // Find and remove deleted members
+    set<BlockP> blocksToRemove;
+    for (auto memb: _fullMembers) {
+        bool foundConnection = false;
+        for (auto inp: memb->inputs()) {
+            if (conns()->findSource(inp) != nullptr)
+                foundConnection = true;
+        }
+        for (auto outp: memb->outputs()) {
+            if (conns()->countSinks(outp) > 0)
+                foundConnection = true;
+        }
+        if (!foundConnection) {
+            blocksToRemove.insert(memb);
+        }
+    }
+    for (auto r: blocksToRemove) {
+        _members.erase(r.get());
+        _fullMembers.erase(r);
+    }
+    blocksToRemove.clear();
+
+    // Find and remove deleted ports from ordering structures
+    deque<const OutputPort*> toRemove;
+    for (auto& opSetPair: _executesNotLaterThan) {
+        if (!_members.contains(opSetPair.first)) {
+            toRemove.push_back(opSetPair.first);
+        } else {
+            deque<const InputPort*> toRemoveInternal;
+            for (auto ip: opSetPair.second) {
+                if (!_members.contains(ip)) {
+                    toRemoveInternal.push_back(ip);
+                }
+            }
+
+            for (auto r: toRemoveInternal) {
+                opSetPair.second.erase(r);
+            }
+        }
+    }
+
+    for (auto r: toRemove) {
+        _executesNotLaterThan.erase(r);
+    }
+}
+
+bool ScheduledRegion::finalize(const OutputPort* root) {
     if (_members.size() == 0)
-        return;
+        return false;
+
+    auto conns = root->owner()->module()->conns();
+    assert(conns != nullptr);
 
     printf("Finalizing ScheduledRegion %s\n", globalName().c_str());
 
     // As of now, all external outputs depend on all external inputs. Now we
     // must determine if this violates the NED property and fix it if so.
-    _members.shrinkToConstraints(root, root->owner()->module()->conns());
+    _members.shrinkToConstraints(root, conns);
+    if (_members.size() == 0)
+        return false;
+
+    // Determine wait-based ordering of operations to make sure it is respected
+    // later when we schedule. It is much easier to do this before be actually
+    // absorb the blocks since after absorbing them we'll have to trace
+    // dataflow through the SR module boundaries.
+    calculateOrder(conns);
+    if (_fullMembers.size() == 0)
+        // Require at least one full member, for now.
+        return false;
     
+    // Find dangling outputs and add NullSinks
+    for (auto memb: _members) {
+        if (memb->isOutput()) {
+            auto outp = memb->asOutput();
+            if (conns->countSinks(outp) == 0) {
+                auto ns = new NullSink(outp->type());
+                conns->connect((OutputPort*)outp, ns->din());
+                _members.insert(ns->din());
+            }
+        }
+    }
+
     // OK, time to actually bring everything inside
     absorb();
 
     // Check sanity and remove things like waits and forks
     checkOptFinalize();
+
+    // Do a minimum clock latency scheduling
+    scheduleMinimumClocks();
+
+    return true;
+}
+
+void ScheduledRegion::addNewMembers() {
+    set<Block*> blocks;
+    conns()->findAllBlocks(blocks);
+
+    // Include external outputs as members
+    for (auto outp: _externalOutputs) {
+        auto sink = getSink(outp);
+        _members.insert(sink);
+        auto source = findInternalSource(sink);
+        if (source != nullptr)
+            _executesNotLaterThan[source].insert(sink);
+    }
+
+    // Include external inputs as members
+    set<const InputPort*> allInputs = _members.getAllInputs();
+    for (auto inp: _externalInputs) {
+        auto driver = getDriver(inp);
+        _members.insert(driver);
+        _executesNotLaterThan[driver] = allInputs;
+    }
+
+    // All contained blocks are full members
+    for (auto b: blocks) {
+        _fullMembers.insert(b->getptr());
+        for (auto inp: b->inputs()) {
+            _members.insert(inp);
+            auto source = findInternalSource(inp);
+            if (source != nullptr)
+                _executesNotLaterThan[source].insert(inp);
+        }
+
+        for (auto outp: b->outputs()) {
+            _members.insert(outp);
+        }
+
+        assert(BlockAllowedFull(b) || b->is<DummyBlock>());
+    }
+}
+
+void ScheduledRegion::scheduleMinimumClocks() {
+    /*
+     * Do a lazy scheduling of ports, working from the outputs on up. CycleNum
+     * in this code refers to INVERSE TIME. So cycleNum == 0 means the last
+     * cycle in this SR, and cycleNum == 1 means the second to last, ect.
+     */
+
+    _cycles.clear();
+    _cycleIdx.clear();
+
+    // If blocks have been added since ordering/memberizing, add them to the
+    // order and member data.
+    addNewMembers();
+
+    set<const OutputPort*> inputSources;
+    for (auto extInp: _externalInputs) {
+        inputSources.insert(getDriver(extInp));
+    }
+
+    // Find deps by inverting _executesNotLaterThan
+    map<const InputPort*, set<const OutputPort*> > remainingDeps;
+    for (const auto& executesPair: _executesNotLaterThan) {
+        for (auto ip: executesPair.second) {
+            remainingDeps[ip].insert(executesPair.first);
+        }
+    }
+
+    map<unsigned, deque<const InputPort*>> firingAtCycle;
+    // Start with all outputs
+    for (auto extOutp: _externalOutputs) {
+        firingAtCycle[0].push_back(getSink(extOutp));
+    }
+    // And any input which leads nowhere
+    for (auto memb: _members) {
+        if (memb->isInput()) {
+            auto inp = memb->asInput();
+            if (inp->findDriven().size() == 0)
+                firingAtCycle[0].push_back(inp);
+        }
+    }
+
+    for (auto memb: _members) {
+        if (memb->isOutput()) {
+            auto outMemb = memb->asOutput();
+            set<const InputPort*> sinks;
+            //TODO: Re-add this check
+            // findInternalSinks(outMemb, sinks);
+            // assert(sinks.size() > 0 && "Cannot have dangling outputs!");
+        }
+    }
+
+    // Iterate until all inputs have been fired
+    do {
+        unsigned cycleNum = _cycles.size();
+        _cycles.insert(_cycles.begin(), Cycle(this));
+        Cycle& cycle = _cycles.front();
+
+        if (cycleNum > 100) {
+            printf("ERROR: Giving up scheduling!\n");
+            break;
+        }
+
+        // Iterate over everything firing this cycle
+        //   Note: do not cache pointers into this data structure as it can be
+        //   updated in this loop, invalidating those pointers.
+        while (firingAtCycle[cycleNum].size() > 0) {
+            auto firingIP = firingAtCycle[cycleNum].front();
+            firingAtCycle[cycleNum].pop_front();
+            cycle._firing.insert(firingIP);
+
+            // These outputs MUST already have been available, even if they
+            // aren't actually used.
+            auto neededDeps = remainingDeps[firingIP];
+            remainingDeps.erase(firingIP);
+
+            auto dataSource = findInternalSource(firingIP);
+            assert(dataSource != nullptr);
+            assert(neededDeps.count(dataSource) > 0 ||
+                   dataSource->owner()->is<DummyBlock>() ); // Sanity check
+            // The data on this output port must be available this cycle!
+            cycle._available.insert(dataSource);
+
+            // Go through all the deps and determine if we have already
+            // calculated it or if this is the first usage.
+            for (auto dep: neededDeps) {
+                if (inputSources.count(dep) > 0)
+                    continue; // No need to schedule inputs
+
+                const auto& otherUsers = _executesNotLaterThan[dep];
+                bool alreadyUsed = false;
+                for (auto otherUser: otherUsers) {
+                    if (remainingDeps.count(otherUser) > 0)
+                        alreadyUsed = true;
+                }
+
+                if (!alreadyUsed) {
+                    // OK, this is the first use of this value. Schedule it to
+                    // ensure it is available THIS clock cycle.
+                    cycle._newValues.insert(dep);
+                    auto dr = dep->deps();
+                    assert(dr.inputs.size() == dr.latencies.size());
+                    for (unsigned i=0; i<dr.inputs.size(); i++) {
+                        auto ip = dr.inputs[i];
+                        auto lat = dr.latencies[i];
+                        auto scheduledCycle =
+                            cycleNum + lat.depth().registers();
+                        firingAtCycle[scheduledCycle].push_back(ip);
+                    }
+                }
+            }
+        }
+        firingAtCycle.erase(cycleNum);
+    } while (remainingDeps.size() > 0);
+
+    finalizeCycles();
+}
+
+void ScheduledRegion::finalizeCycles() {
+    for (auto extInp: _externalInputs) {
+        auto extSource = getDriver(extInp);
+        _cycles[0]._newValues.insert(extSource);
+        _cycleIdx[extSource] = 0;
+    }
+
+    for (unsigned i=0; i<_cycles.size(); i++) {
+        Cycle& cycle = _cycles[i];
+        for (auto nv: cycle._newValues) {
+            _cycleIdx[nv] = i;
+        }
+        for (auto firing: cycle._firing) {
+            _cycleIdx[firing] = i;
+        }
+    }
+}
+
+const OutputPort* ScheduledRegion::findInternalSource(
+    const InputPort* sink) const {
+
+    // Find the correct conns to use
+    const ConnectionDB* conns = this->conns();
+    if (sink->owner() == this ||
+        sink->owner()->module() == module()) {
+
+        conns = module()->conns();
+    }
+    assert(conns != nullptr);
+
+    auto source = conns->findSource(sink);
+    if (source == nullptr) {
+        return nullptr;
+    } else if (_internalOutputs.count(source) > 0) {
+        // This source is a virtual output port. Find our internal driver
+        // instead so that the virtual connections are transparent
+        return findInternalSource(getSink(source));
+    } else if (source->owner()->is<DummyBlock>() &&
+               source->owner()->module() == this &&
+               _internalInputs.count(findExternalPortFromDriver(source)) > 0) {
+        // This source is a virtual input port. Find the virtual, external
+        // driver instead so that the virtual connections are transparent
+        auto intInput = findExternalPortFromDriver(source);
+        return findInternalSource(intInput);
+    } else {
+        if (_members.contains(source) ||
+            ( source->owner()->is<DummyBlock>() &&
+              source->owner()->module() == this) )
+            return source;
+        else
+            return nullptr;
+    }
 }
 
 std::set<OutputPort*> ScheduledRegion::findVirtualDeps(
@@ -765,6 +1023,15 @@ std::string ScheduledRegion::print() const {
             % _members.size());
 }
 
+void ScheduledRegion::Members::erase(const Block* b) {
+    for (auto inp: b->inputs()) {
+        members.erase(inp);
+    }
+    for (auto outp: b->outputs()) {
+        members.erase(outp);
+    }
+}
+
 void ScheduledRegion::Members::shrinkToConstraints(
     const OutputPort* root, 
     ConnectionDB* conns) {
@@ -782,7 +1049,12 @@ void ScheduledRegion::Members::shrinkToConstraints(
             break;
 
         // Do we satisfy NED?
+        auto extIns  = findExtIns(conns);
         auto extOuts = findExtOuts(conns);
+        if (extOuts.size() == 0)
+            // If we have no external outputs, then NED is guaranteed!
+            return;
+
         vector<DepInfo> depInfo;
         const DepInfo* rootDI = nullptr;
         for (auto op: extOuts) {
@@ -806,10 +1078,16 @@ void ScheduledRegion::Members::shrinkToConstraints(
             }
         }
 
+        if (rootDI == nullptr) {
+            // The root is not part of any remaining output chain. Select any
+            // output as new root.
+            rootDI = &depInfo[0];
+        }
+
         assert(rootDI != nullptr);
 
         unsigned highestDiff = 0;
-        unsigned highestDiffIdx;
+        unsigned highestDiffIdx = 0;
         for (auto i=0u; i<depInfo.size(); i++) {
             const auto& jd = depInfo[i];
             vector<const OutputPort*> extDepDiff;
@@ -843,7 +1121,10 @@ void ScheduledRegion::Members::shrinkToConstraints(
             printf("\n");
         }
     
-        if (highestDiff == 0) {
+        
+        auto highestDiffDI = depInfo[highestDiffIdx];
+        if (highestDiff == 0 &&
+            highestDiffDI.extDeps == extIns) {
             // We DO satisfy NED!
             return; // So we're done!
         }
@@ -852,7 +1133,7 @@ void ScheduledRegion::Members::shrinkToConstraints(
         // Start trimming. Keep looping, checking, and trimming until
         // we satisfy NED!
 
-        auto toRemove = depInfo[highestDiffIdx];
+        auto toRemove = highestDiffDI;
         printf("Removing %p(%p), ", toRemove.op, toRemove.op->owner());
         members.erase(toRemove.op);
         auto dr = toRemove.op->deps();
@@ -920,6 +1201,21 @@ void ScheduledRegion::Members::findDeps(
     }
 }
 
+std::set<const OutputPort*> ScheduledRegion::Members::findExtIns(
+    ConnectionDB* conns) const {
+    set<const OutputPort*> ret;
+    for (auto member: members) {
+        if (member->isInput()) {
+            auto inp = member->asInput();
+            auto source = conns->findSource(inp);
+            if (members.count(source) == 0) {
+                ret.insert(source);
+            }
+        }
+    }
+    return ret;
+}
+
 std::set<const OutputPort*> ScheduledRegion::Members::findExtOuts(
     ConnectionDB* conns) const {
     set<const OutputPort*> ret;
@@ -928,7 +1224,9 @@ std::set<const OutputPort*> ScheduledRegion::Members::findExtOuts(
             auto outp = member->asOutput();
             set<InputPort*> sinks;
             conns->findSinks(outp, sinks);
-
+            if (sinks.size() == 0) {
+                ret.insert(outp);
+            }
             for (auto sink: sinks) {
                 if (members.count(sink) == 0) {
                     // We drive an external!
@@ -938,6 +1236,58 @@ std::set<const OutputPort*> ScheduledRegion::Members::findExtOuts(
         }
     }
     return ret;
+}
+
+
+std::set<const InputPort*> ScheduledRegion::Members::getAllInputs() const {
+    set<const InputPort*> ret;
+    for (auto memb: members) {
+        if (memb->isInput()) {
+            ret.insert(memb->asInput());
+        }
+    }
+    return ret;
+}
+
+unsigned ScheduledRegion::clocks() const {
+    return _cycles.size() - 1;
+}
+
+unsigned ScheduledRegion::findClockNum(const Port* p) const {
+    auto f = _cycleIdx.find(p);
+    if (f != _cycleIdx.end())
+        return f->second;
+    if (p->owner()->is<DummyBlock>()) {
+        auto db = p->owner()->as<DummyBlock>();
+        if (p->isInput()) {
+            p = db->dout();
+        } else {
+            p = db->din();
+        }
+    } else if (p->owner() == this) {
+        // Port is one of our ports!
+        if (p->isInput()) {
+            auto inp = (InputPort*)p->asInput();
+            if (_externalInputs.count(inp) > 0)
+                p = getDriver(inp);
+            else if (_internalInputs.count(inp) > 0)
+                p = module()->conns()->findSource(inp);
+        } else {
+            auto op = (OutputPort*)p->asOutput();
+            if (_externalOutputs.count(op) > 0)
+                p = getSink(op);
+            else if (_internalOutputs.count(op) > 0)
+                p = conns()->findSource(getSink(op));
+        }
+    }
+
+    // Retry with port on other end of DummyBlock
+    //   (Some code does really stupid things, let's just accomodate this)
+    f = _cycleIdx.find(p);
+    if (f != _cycleIdx.end())
+        return f->second;
+
+    return -1;
 }
 
 } // namespace llpm
