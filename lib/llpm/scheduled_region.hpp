@@ -82,6 +82,7 @@ protected:
     //  building steps and cleared afterwards.
     struct Members {
         std::set<const Port*> members;
+        std::set<BlockP> memBlockPtrs;
 
         void shrinkToConstraints(
             const OutputPort* root,
@@ -99,17 +100,28 @@ protected:
         auto end() { return members.end(); }
         auto count(const Port* p) const { return members.count(p); }
         auto size() const { return members.size(); }
-        auto insert(const Port* p) { return members.insert(p); }
+        auto insert(const Port* p) {
+            memBlockPtrs.insert(p->ownerP());
+            return members.insert(p);
+        }
         template<typename IT>
-        auto insert(IT begin, IT end) { return members.insert(begin, end); }
+        auto insert(IT begin, IT end) {
+            for (auto i=begin; i != end; i++) {
+                memBlockPtrs.insert((*i)->ownerP());
+            }
+            return members.insert(begin, end);
+        }
 
         bool contains(const Port* p) const {
             return members.count(p) > 0;
         }
 
+        void erase(const Port* p) {
+            members.erase(p);
+        }
         void erase(const Block*);
-
         std::set<const InputPort*> getAllInputs() const;
+        void cleanInternal();
     } _members;
 
     /// Set of blocks which are connected entirely within this region
@@ -145,6 +157,7 @@ protected:
     std::set<OutputPort*> findVirtualDeps(
         const InputPort*,
         std::set<const InputPort*> seen = {} ) const;
+
     /**
      * Given an input port contained inside of this SR, find all of the
      * external inputs upon which it depends. Only works after "absorb" has
@@ -153,6 +166,7 @@ protected:
     DependenceRule findInternalDeps(
         const InputPort*,
         std::set<const InputPort*> seen = {} ) const;
+
     /**
      * Given one of this module's output ports, find all of the external input
      * ports upon which it depends. In a correctly-formed SR, the answer is all
@@ -160,6 +174,9 @@ protected:
      * after "absorb" has been called.
      */
     DependenceRule findInternalDeps(const OutputPort*) const;
+
+    // Find the member input ports upon which this OP depends. Non-recursive.
+    DependenceRule internalDeps(const OutputPort*) const;
 
 
     /**
@@ -195,6 +212,7 @@ protected:
      * Absorb the full member blocks and connections
      */
     void absorb();
+    void absorb(OutputPort*, InputPort*);
 
     /**
      * Check & optimize the interior
@@ -244,6 +262,8 @@ public:
     /// How many clock cycles does it take to compute this?
     unsigned clocks() const;
     unsigned findClockNum(const Port*) const;
+
+    void debugPrint(std::string name) const;
 };
 
 class FormScheduledRegionPass : public ModulePass {

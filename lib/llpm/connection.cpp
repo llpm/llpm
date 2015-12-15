@@ -115,7 +115,7 @@ void ConnectionDB::find(Block* b, std::vector<Connection>& out) const {
     }
     for (auto ip: b->inputs()) {
         auto op = findSource(ip);
-        if (op && op->owner() != b)
+        if (op != nullptr)
             out.push_back(Connection(op, ip));
     }
 }
@@ -250,6 +250,7 @@ void ConnectionDB::removeBlock(Block* b) {
     for (auto&& c: conns) {
         this->disconnect(c);
     }
+    assert(!isUsed(b));
 }
 
 void ConnectionDB::update(const ConnectionDB& newdb) {
