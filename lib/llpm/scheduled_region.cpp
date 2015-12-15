@@ -929,12 +929,18 @@ void ScheduledRegion::scheduleMinimumClocks() {
         while (firingAtCycle[cycleNum].size() > 0) {
             auto firingIP = firingAtCycle[cycleNum].front();
             firingAtCycle[cycleNum].pop_front();
+            if (cycle._firing.count(firingIP) > 0)
+                // We have already fired this one this cycle. Somehow got in
+                // the list twice, just just ignore it.
+                continue;
             cycle._firing.insert(firingIP);
 
             // These outputs MUST already have been available, even if they
             // aren't actually used.
-            auto neededDeps = remainingDeps[firingIP];
-            remainingDeps.erase(firingIP);
+            auto f = remainingDeps.find(firingIP);
+            assert(f != remainingDeps.end());
+            auto neededDeps = f->second;
+            remainingDeps.erase(f);
 
             auto dataSource = findInternalSource(firingIP);
             assert(dataSource != nullptr);
