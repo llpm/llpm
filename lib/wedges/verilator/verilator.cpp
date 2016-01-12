@@ -89,7 +89,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
 
     // Copy in the necessary globals
     for (auto f: externalFiles) {
-        auto cpy = fileset.copy(Directories::executablePath() + f);
+        auto cpy = fileset.copy(Directories::llpmLibraryPath() + f);
         myFiles.insert(cpy);
     }
 
@@ -118,7 +118,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
     std::string tmpdir = fileset.tmpdir();
     run(str(
         boost::format("%1%/verilator/bin/verilator_bin %2% --Mdir %3% --top-module %4% %5%")
-            % Directories::executablePath()
+            % Directories::llpmLibraryPath()
             % verilatorGlobalOpts
             % tmpdir
             % mod->name()
@@ -160,7 +160,7 @@ void VerilatorWedge::writeModule(FileSet& fileset, Module* mod) {
         FileSet::File* objFile = f->deriveExt(".bc");
         run(str(
             boost::format("%1%/llvm/bin/clang++ -c -emit-llvm -O1 -o %2% %3% %4%")
-                % Directories::executablePath()
+                % Directories::llpmLibraryPath()
                 % objFile->name()
                 % f->name()
                 % verilatedCppOpts

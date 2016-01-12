@@ -288,6 +288,23 @@ struct Directories {
         auto pos = full.find_last_of("/");
         return full.substr(0, pos);
     }
+
+    static std::string llpmLibraryFullName() {
+        std::ifstream maps("/proc/self/maps");
+        for (std::string line; getline(maps, line); ) {
+            if (line.find("libllpm") != std::string::npos) {
+                auto pos = line.find_first_of("/");
+                return line.substr(pos);
+            }
+        }
+        throw InternalError("Could not find LLPM library path");
+    }
+
+    static std::string llpmLibraryPath() {
+        std::string full = llpmLibraryFullName();
+        auto pos = full.find_last_of("/");
+        return full.substr(0, pos);
+    }
 };
 
 };
