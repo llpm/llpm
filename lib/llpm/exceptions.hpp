@@ -26,6 +26,12 @@ public:
 class ImplementationError : public Exception {
 public:
     ImplementationError(std::string msg = "") :
+        Exception("Implementation error detected. " + msg) { }
+};
+
+class InternalError: public Exception {
+public:
+    InternalError(std::string msg = "") :
         Exception("Internal error detected. " + msg) { }
 };
 

@@ -320,7 +320,7 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
     }
 
     for (auto f: externalFiles) {
-        auto cpy = dir.copy(Directories::executablePath() + f);
+        auto cpy = dir.copy(Directories::llpmLibraryPath() + f);
         files.insert(cpy);
     }
 
