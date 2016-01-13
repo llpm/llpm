@@ -1,5 +1,4 @@
-#ifndef __LLPM_EXCEPTIONS_HPP__
-#define __LLPM_EXCEPTIONS_HPP__
+#pragma once
 
 #include <string>
 #include <exception>
@@ -75,4 +74,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_EXCEPTIONS_HPP__

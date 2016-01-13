@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_LEGACY_RTL_WRAPPERS_HPP__
-#define __LLPM_LIBRARIES_LEGACY_RTL_WRAPPERS_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <llpm/module.hpp>
@@ -190,4 +189,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_LEGACY_RTL_WRAPPERS_HPP__

@@ -1,5 +1,4 @@
-#ifndef __LLPM_PASSES_MANAGER_HPP__
-#define __LLPM_PASSES_MANAGER_HPP__
+#pragma once
 
 #include <passes/pass.hpp>
 
@@ -47,4 +46,3 @@ public:
 
 };
 
-#endif // __LLPM_PASSES_MANAGER_HPP__

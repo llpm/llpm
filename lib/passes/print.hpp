@@ -1,5 +1,4 @@
-#ifndef __LLPM_PASSES_PRINT_HPP__
-#define __LLPM_PASSES_PRINT_HPP__
+#pragma once
 
 #include <passes/pass.hpp>
 #include <map>
@@ -45,5 +44,4 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_PASSES_PRINT_HPP__
 

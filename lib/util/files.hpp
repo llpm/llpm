@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_FILES_HPP__
-#define __LLPM_UTIL_FILES_HPP__
+#pragma once
 
 #include <set>
 #include <string>
@@ -309,4 +308,3 @@ struct Directories {
 
 };
 
-#endif // __LLPM_UTIL_FILES_HPP__

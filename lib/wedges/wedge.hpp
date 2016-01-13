@@ -1,5 +1,4 @@
-#ifndef __LLPM_WEDGES_WEDGE_HPP__
-#define __LLPM_WEDGES_WEDGE_HPP__
+#pragma once
 
 #include <util/files.hpp>
 
@@ -26,4 +25,3 @@ public:
 
 } // llpm
 
-#endif // __LLPM_WEDGES_WEDGE_HPP__

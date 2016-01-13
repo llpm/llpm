@@ -1,5 +1,4 @@
-#ifndef __ANALYSIS_GRAPH_HPP__
-#define __ANALYSIS_GRAPH_HPP__
+#pragma once
 
 /***************
  *  Library of graph analyses which operate on LLPM connections in a
@@ -221,5 +220,4 @@ public:
 
 #include "graph_impl.hpp"
 
-#endif // __ANALYSIS_GRAPH_HPP__
 

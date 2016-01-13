@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_TIME_HPP__
-#define __LLPM_UTIL_TIME_HPP__
+#pragma once
 
 namespace llpm {
 
@@ -80,4 +79,3 @@ inline bool operator==(const Time &t1, const Time &t2) {
 
 } // namespace llpm
 
-#endif // __LLPM_UTIL_TIME_HPP__

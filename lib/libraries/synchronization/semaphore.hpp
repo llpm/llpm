@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_SYNCHRONIZATION_SEMAPHORE_HPP__
-#define __LLPM_LIBRARIES_SYNCHRONIZATION_SEMAPHORE_HPP__
+#pragma once
 
 #include <llpm/design.hpp>
 #include <llpm/block.hpp>
@@ -38,4 +37,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_SYNCHRONIZATION_SEMAPHORE_HPP__

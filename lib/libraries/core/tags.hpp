@@ -1,5 +1,4 @@
-#ifndef __LIBRARIES_CORE_TAGS_HPP__
-#define __LIBRARIES_CORE_TAGS_HPP__
+#pragma once
 
 #include <libraries/core/interface.hpp>
 #include <passes/pass.hpp>
@@ -52,4 +51,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LIBRARIES_CORE_TAGS_HPP__

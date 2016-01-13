@@ -1,5 +1,4 @@
-#ifndef __LLPM_LLVM_TRANSLATE_HPP__
-#define __LLPM_LLVM_TRANSLATE_HPP__
+#pragma once
 
 #include <llpm/design.hpp>
 #include <llpm/module.hpp>
@@ -44,4 +43,3 @@ private:
 
 } // namespace llpm
 
-#endif // __LLPM_LLVM_TRANSLATE_HPP__

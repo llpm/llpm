@@ -1,5 +1,4 @@
-#ifndef __LLPM_HISTORY_HPP__
-#define __LLPM_HISTORY_HPP__
+#pragma once
 
 #include <list>
 #include <string>
@@ -94,4 +93,3 @@ public:
 
 };
 
-#endif // __LLPM_HISTORY_HPP

@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_SYNTHESIS_MEMORY_HPP__
-#define __LLPM_LIBRARIES_SYNTHESIS_MEMORY_HPP__
+#pragma once
 
 #include <libraries/core/mem_intr.hpp>
 
@@ -96,4 +95,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_SYNTHESIS_MEMORY_HPP__

@@ -1,5 +1,4 @@
-#ifndef __LLPM_MODULE_HPP__
-#define __LLPM_MODULE_HPP__
+#pragma once
 
 #include <llpm/design.hpp>
 #include <llpm/ports.hpp>
@@ -336,4 +335,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_MODULE_HPP__

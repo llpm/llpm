@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_SYNTHESIS_PIPELINE_HPP__
-#define __LLPM_LIBRARIES_SYNTHESIS_PIPELINE_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <llpm/design.hpp>
@@ -128,5 +127,4 @@ public:
 
 };
 
-#endif // __LLPM_LIBRARIES_SYNTHESIS_PIPELINE_HPP__
 

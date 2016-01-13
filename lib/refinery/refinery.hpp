@@ -1,5 +1,4 @@
-#ifndef __LLPM_REFINERY_HPP__
-#define __LLPM_REFINERY_HPP__
+#pragma once
 
 #include <type_traits>
 #include <typeindex>
@@ -148,4 +147,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_REFINERY_HPP__

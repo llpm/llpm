@@ -1,5 +1,4 @@
-#ifndef __LLPM_ANALYSIS_CONSTANT_HPP__
-#define __LLPM_ANALYSIS_CONSTANT_HPP__
+#pragma once
 
 #include <llpm/ports.hpp>
 #include <llvm/IR/Constant.h>
@@ -12,4 +11,3 @@ llvm::Constant* EvalConstant(const ConnectionDB* conns, OutputPort*);
 
 } // namespace llpm
 
-#endif // __LLPM_ANALYSIS_CONSTANT_HPP__

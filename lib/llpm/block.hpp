@@ -1,5 +1,4 @@
-#ifndef __LLPM_BLOCK_HPP__
-#define __LLPM_BLOCK_HPP__
+#pragma once
 
 #include <llpm/llpm.hpp>
 #include <llpm/history.hpp>
@@ -324,4 +323,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_BLOCK_HPP__

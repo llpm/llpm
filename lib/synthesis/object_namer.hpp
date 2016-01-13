@@ -1,5 +1,4 @@
-#ifndef __LLPM_SYNTHESIS_OBJECT_NAMER_HPP__
-#define __LLPM_SYNTHESIS_OBJECT_NAMER_HPP__
+#pragma once
 
 #include <string>
 #include <map>
@@ -45,4 +44,3 @@ public:
 
 }
 
-#endif // __LLPM_SYNTHESIS_OBJECT_NAMER_HPP__

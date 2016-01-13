@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_TYPES_HPP__
-#define __LLPM_UTIL_TYPES_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 
@@ -59,4 +58,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_UTIL_TYPES_HPP__

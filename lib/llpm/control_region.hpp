@@ -1,5 +1,4 @@
-#ifndef __LLPM_CONTROL_REGION_HPP__
-#define __LLPM_CONTROL_REGION_HPP__
+#pragma once
 
 #include <llpm/module.hpp>
 #include <passes/pass.hpp>
@@ -99,6 +98,4 @@ public:
 };
 
 } // namespace llpm
-
-#endif // __LLPM_CONTROL_REGION_HPP__
 

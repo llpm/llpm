@@ -1,5 +1,4 @@
-#ifndef __LLPM_PASSES_TRANSFORMS_SYNTHESIZE_MEM_HPP__
-#define __LLPM_PASSES_TRANSFORMS_SYNTHESIZE_MEM_HPP__
+#pragma once
 
 #include <passes/pass.hpp>
 namespace llpm {
@@ -22,4 +21,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_PASSES_TRANSFORMS_SYNTHESIZE_MEM_HPP__

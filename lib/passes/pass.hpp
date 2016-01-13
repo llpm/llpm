@@ -1,5 +1,4 @@
-#ifndef __LLPM_PASSES_PASS_HPP__
-#define __LLPM_PASSES_PASS_HPP__
+#pragma once
 
 #include <boost/function.hpp>
 
@@ -47,5 +46,4 @@ public:
 };
 };
 
-#endif // __LLPM_PASSES_PASS_HPP__
 

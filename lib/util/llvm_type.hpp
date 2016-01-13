@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_LLVM_TYPE_HPP__
-#define __LLPM_UTIL_LLVM_TYPE_HPP__
+#pragma once
 
 #include <string>
 
@@ -30,4 +29,3 @@ namespace llpm {
     unsigned    numContainedTypes(llvm::Type* ty);
 }
 
-#endif // __LLPM_UTIL_LLVM_TYPE_HPP__

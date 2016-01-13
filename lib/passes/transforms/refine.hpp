@@ -1,5 +1,4 @@
-#ifndef __LLPM_PASSES_TRANSFORMS_REFINE_HPP__
-#define __LLPM_PASSES_TRANSFORMS_REFINE_HPP__
+#pragma once
 
 #include <passes/pass.hpp>
 
@@ -16,4 +15,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_PASSES_TRANSFORMS_REFINE_HPP__

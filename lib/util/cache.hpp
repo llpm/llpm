@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_CACHE_HPP__
-#define __LLPM_UTIL_CACHE_HPP__
+#pragma once
 
 #include <stdint.h>
 #include <boost/function.hpp>
@@ -109,4 +108,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_UTIL_CACHE_HPP__

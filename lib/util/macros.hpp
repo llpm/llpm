@@ -1,5 +1,4 @@
-#ifndef __LLPM_MACROS_HPP__
-#define __LLPM_MACROS_HPP__
+#pragma once
 
 #include <iostream>
 #include <sstream>
@@ -88,4 +87,3 @@ struct RawEqualTo
         return str; \
     }
 
-#endif // __LLPM_MACROS_HPP__

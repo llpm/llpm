@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_NOC_AXI_AXI4_LITE_HPP__
-#define __LLPM_LIBRARIES_NOC_AXI_AXI4_LITE_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 
@@ -101,4 +100,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_NOC_AXI_AXI4_LITE_HPP__

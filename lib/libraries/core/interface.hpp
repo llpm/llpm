@@ -1,5 +1,4 @@
-#ifndef __LIBRARIES_CORE_INTERFACE_HPP__
-#define __LIBRARIES_CORE_INTERFACE_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 
@@ -146,5 +145,4 @@ public:
 
 };
 
-#endif // __LIBRARIES_CORE_INTERFACE_HPP__
 

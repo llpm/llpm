@@ -1,5 +1,4 @@
-#ifndef __LLPM_WEDGES_AXI_AXI_WEDGE_HPP__
-#define __LLPM_WEDGES_AXI_AXI_WEDGE_HPP__
+#pragma once
 
 #include <util/files.hpp>
 #include <wedges/wedge.hpp>
@@ -40,5 +39,4 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_WEDGES_AXI_AXI_WEDGE_HPP__
 

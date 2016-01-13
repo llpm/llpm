@@ -1,5 +1,4 @@
-#ifndef __LLPM_PASSES_TRANSFORMS_PIPELINE_HPP__
-#define __LLPM_PASSES_TRANSFORMS_PIPELINE_HPP__
+#pragma once
 
 #include <passes/pass.hpp>
 #include <util/time.hpp>
@@ -60,4 +59,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_PASSES_TRANSFORMS_PIPELINE_HPP__

@@ -1,5 +1,4 @@
-#ifndef __LLPM_PORTS_HPP__
-#define __LLPM_PORTS_HPP__
+#pragma once
 
 #include <util/macros.hpp>
 #include <llpm/exceptions.hpp>
@@ -220,4 +219,3 @@ inline const OutputPort* Port::asOutput() const {
 
 } //llpm
 
-#endif // __LLPM_PORTS_HPP__

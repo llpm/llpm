@@ -1,5 +1,4 @@
-#ifndef __LLPM_VERILATOR_VERILATOR_HPP__
-#define __LLPM_VERILATOR_VERILATOR_HPP__
+#pragma once
 
 #include <util/files.hpp>
 #include <backends/verilog/synthesize.hpp>
@@ -44,4 +43,3 @@ public:
 
 };
 
-#endif // __LLPM_VERILATOR_VERILATOR_HPP__

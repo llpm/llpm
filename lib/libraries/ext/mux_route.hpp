@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_EXT_MUX_ROUTE_HPP__
-#define __LLPM_LIBRARIES_EXT_MUX_ROUTE_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <libraries/core/comm_intr.hpp>
@@ -47,4 +46,3 @@ public:
 
 }
 
-#endif
