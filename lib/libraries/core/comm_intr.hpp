@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_CORE_COMM_INTR_HPP__
-#define __LLPM_LIBRARIES_CORE_COMM_INTR_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <llvm/IR/InstrTypes.h>
@@ -313,4 +312,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_CORE_COMM_INTR_HPP__

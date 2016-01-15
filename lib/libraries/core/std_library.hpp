@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_CORE_STD_LIBRARY_HPP__
-#define __LLPM_LIBRARIES_CORE_STD_LIBRARY_HPP__
+#pragma once
 
 /***************
  * This file contains all of the standard functions (and #includes
@@ -263,4 +262,3 @@ namespace llpm {
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_CORE_STD_LIBRARY_HPP__

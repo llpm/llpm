@@ -1,5 +1,4 @@
-#ifndef __LLPM_LIBRARIES_SYNTHESIS_FORK_HPP__
-#define __LLPM_LIBRARIES_SYNTHESIS_FORK_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <cmath>
@@ -53,4 +52,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LIBRARIES_SYNTHESIS_FORK_HPP__

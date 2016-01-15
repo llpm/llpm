@@ -1,5 +1,4 @@
-#ifndef __LLPM_BACKENDS_IPXACT_IPXACT_HPP__
-#define __LLPM_BACKENDS_IPXACT_IPXACT_HPP__
+#pragma once
 
 #include <backends/backend.hpp>
 #include <backends/verilog/synthesize.hpp>
@@ -93,4 +92,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_BACKENDS_IPXACT_IPXACT_HPP__

@@ -1,5 +1,4 @@
-#ifndef __LLPM_LLVM_LIBRARY_HPP__
-#define __LLPM_LLVM_LIBRARY_HPP__
+#pragma once
 
 #include <frontends/llvm/objects.hpp>
 #include <refinery/refinery.hpp>
@@ -29,4 +28,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_LLVM_LIBRARAY_HPP__

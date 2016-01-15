@@ -1,5 +1,4 @@
-#ifndef __LLPM_VERILOG_SYNTHESIZE_HPP__
-#define __LLPM_VERILOG_SYNTHESIZE_HPP__
+#pragma once
 
 #include <util/files.hpp>
 
@@ -148,4 +147,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_VERILOG_SYNTHESIZE_HPP__

@@ -1,5 +1,4 @@
-#ifndef __LLPM_CONNECTION_HPP__
-#define __LLPM_CONNECTION_HPP__
+#pragma once
 
 #include <llpm/ports.hpp>
 #include <llpm/block.hpp>
@@ -318,4 +317,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_CONNECTION_HPP__

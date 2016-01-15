@@ -1,5 +1,4 @@
-#ifndef __LLPM_PRIORITY_COLLECTION_HPP__
-#define __LLPM_PRIORITY_COLLECTION_HPP__
+#pragma once
 
 #include <iostream>
 #include <type_traits>
@@ -122,4 +121,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_PRIORITY_COLLECTION_HPP__

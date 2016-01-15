@@ -1,5 +1,4 @@
-#ifndef __LLPM_BACKENDS_GRAPHVIZ_GRAPHVIZ_HPP__
-#define __LLPM_BACKENDS_GRAPHVIZ_GRAPHVIZ_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <llpm/module.hpp>
@@ -25,4 +24,3 @@ public:
 
 };
 
-#endif // __LLPM_BACKENDS_GRAPHVIZ_GRAPHVIZ_HPP__

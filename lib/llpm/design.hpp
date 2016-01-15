@@ -1,5 +1,4 @@
-#ifndef __LLPM_DESIGN_HPP__
-#define __LLPM_DESIGN_HPP__
+#pragma once
 
 #include <llpm/llpm.hpp>
 #include <llvm/IR/LLVMContext.h>
@@ -136,4 +135,3 @@ public:
 
 } // namespace llpm
 
-#endif // __LLPM_DESIGN_HPP__

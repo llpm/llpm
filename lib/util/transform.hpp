@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_TRANSFORM_HPP__
-#define __LLPM_UTIL_TRANSFORM_HPP__
+#pragma once
 
 #include <llpm/module.hpp>
 #include <llpm/connection.hpp>
@@ -44,5 +43,4 @@ public:
 
 };
 
-#endif // __LLPM_UTIL_TRANSFORM_HPP__
 

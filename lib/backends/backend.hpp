@@ -1,5 +1,4 @@
-#ifndef __BACKENDS_BACKEND_HPP__
-#define __BACKENDS_BACKEND_HPP__
+#pragma once
 
 #include <llpm/block.hpp>
 #include <refinery/refinery.hpp>
@@ -54,5 +53,3 @@ public:
 };
 
 };
-
-#endif // __BACKENDS_BACKEND_HPP__

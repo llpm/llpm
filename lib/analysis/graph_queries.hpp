@@ -1,5 +1,4 @@
-#ifndef __ANALYSIS_GRAPH_QUERIES_HPP__
-#define __ANALYSIS_GRAPH_QUERIES_HPP__
+#pragma once
 
 #include <llpm/connection.hpp>
 #include <llpm/module.hpp>
@@ -68,5 +67,4 @@ llvm::Constant* FindConstant(const Module*, Port*);
 };
 };
 
-#endif // __ANALYSIS_GRAPH_QUERIES_HPP__
 

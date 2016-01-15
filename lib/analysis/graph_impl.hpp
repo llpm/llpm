@@ -1,5 +1,4 @@
-#ifndef __ANALYSIS_GRAPH_IMPL_HPP__
-#define __ANALYSIS_GRAPH_IMPL_HPP__
+#pragma once
 
 #include "graph.hpp"
 
@@ -187,4 +186,3 @@ void GraphSearch<Visitor, Algo>::go(const Container& init) {
 
 } // namespace llpm
 
-#endif // __ANALYSIS_GRAPH_IMPL_HPP__

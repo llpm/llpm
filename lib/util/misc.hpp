@@ -1,5 +1,4 @@
-#ifndef __LLPM_UTIL_MISC_HPP__
-#define __LLPM_UTIL_MISC_HPP__
+#pragma once
 
 #include <string>
 #include <vector>
@@ -36,4 +35,3 @@ unsigned inline idxwidth(uint64_t N) {
 
 };
 
-#endif //__LLPM_UTIL_MISC_HPP__
