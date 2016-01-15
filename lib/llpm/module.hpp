@@ -111,11 +111,18 @@ public:
     virtual void validityCheck() const = 0;
 
     virtual OutputPort* getDriver(const InputPort*) const {
-        return nullptr;
+        assert(false);
+    }
+    virtual InputPort* findExternalPortFromDriver(const OutputPort*) const {
+        assert(false);
     }
     virtual InputPort* getSink(const OutputPort*) const {
-        return nullptr;
+        assert(false);
     }
+    virtual OutputPort* findExternalPortFromSink(const InputPort*) const {
+        assert(false);
+    }
+
     void internalDrivers(std::vector<OutputPort*>&) const;
 
     virtual bool hasCycle() const = 0;
@@ -273,23 +280,23 @@ public:
 
     virtual void validityCheck() const;
 
-    OutputPort* getDriver(const InputPort* ip) const {
+    virtual OutputPort* getDriver(const InputPort* ip) const {
         // Strip away const-ness for lookup. Just don't touch it
         auto f = _inputMap.find((InputPort*)ip);
         assert(f != _inputMap.end());
         OutputPort* internalIPDriver = f->second->dout();
         return internalIPDriver;
     }
-    InputPort* findExternalPortFromDriver(const OutputPort*) const;
+    virtual InputPort* findExternalPortFromDriver(const OutputPort*) const;
 
-    InputPort* getSink(const OutputPort* op) const {
+    virtual InputPort* getSink(const OutputPort* op) const {
         // Strip away const-ness for lookup. Just don't touch it
         auto f = _outputMap.find((OutputPort*)op);
         assert(f != _outputMap.end());
         InputPort* internalOPSink = f->second->din();
         return internalOPSink;
     }
-    OutputPort* findExternalPortFromSink(const InputPort*) const;
+    virtual OutputPort* findExternalPortFromSink(const InputPort*) const;
 
     void connect(InputPort* sink, OutputPort* source) {
         connect(source, sink);

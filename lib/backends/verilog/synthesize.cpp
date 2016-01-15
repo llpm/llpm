@@ -546,13 +546,6 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
     set<Block*> blocks;
     conns->findAllBlocks(blocks);
 
-    for (auto ip: mod->inputs()) {
-        blocks.insert(mod->getDriver(ip)->owner());
-    }
-    for (auto op: mod->outputs()) {
-        blocks.insert(mod->getSink(op)->owner());
-    }
-
     // Track block names for sanity checking
     std::map<std::string, Block*> blockNames;
 
@@ -636,9 +629,6 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
          << "\n";
 
     for (Block* b: blocks) {
-        if (dynamic_cast<DummyBlock*>(b) != NULL)
-            continue;
-
         const vector<Printer*>& possible_printers = _printers(b);
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
         if (possible_printers.size() == 0) {
@@ -701,17 +691,23 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
 
 }
 
+VerilogSynthesizer::Printer* VerilogSynthesizer::getPrinter(Block* b) {
+    const vector<Printer*>& possible_printers = _printers(b);
+    if (possible_printers.empty())
+        return nullptr;
+    return possible_printers.front();
+}
+
 void VerilogSynthesizer::print(Context& ctxt, Block* b)
 {
-    const vector<Printer*>& possible_printers = _printers(b);
-    if (possible_printers.size() == 0) {
+    Printer* printer = getPrinter(b);
+    if (printer == nullptr) {
         auto blockName = ctxt.name(b);
         throw ImplementationError(
             str(boost::format(" Cannot translate block %1% of type %2% into verilog.") 
                             % blockName
                             % cpp_demangle(typeid(*b).name())));
     } else {
-        auto printer = possible_printers.front();
         printer->print(ctxt, b);
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
 

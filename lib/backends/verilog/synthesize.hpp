@@ -59,9 +59,30 @@ public:
         }
 
 
-        template<typename C>
-        std::string name(C c, bool io = false) {
+        std::string name(Block* c, bool io = false) {
             return _namer.getName(c, _ctxt, io);
+        }
+
+        std::string name(InputPort* ip, bool io = false) {
+            assert(ip != nullptr);
+            if (ip->owner()->is<DummyBlock>()) {
+                auto ext = ip->owner()->module()->
+                                findExternalPortFromSink(ip);
+                assert(ext != nullptr && "Querying wrong side of DummyBlock");
+                return name(ext, true);
+            }
+            return _namer.getName(ip, _ctxt, io);
+        }
+
+        std::string name(OutputPort* op, bool io = false) {
+            assert(op != nullptr);
+            if (op->owner()->is<DummyBlock>()) {
+                auto ext = op->owner()->module()->
+                                findExternalPortFromDriver(op);
+                assert(ext != nullptr && "Querying wrong side of DummyBlock");
+                return name(ext, true);
+            }
+            return _namer.getName(op, _ctxt, io);
         }
 
         template<typename T>
@@ -133,6 +154,7 @@ public:
                              Module* mod,
                              std::set<FileSet::File*>& files);
 
+    Printer* getPrinter(Block* b);
     void print(Context& ctxt, Block* b);
 
     virtual bool blockIsPrimitive(Block* b);
