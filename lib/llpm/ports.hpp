@@ -64,6 +64,11 @@ public:
     virtual bool isOutput() const = 0;
 
     unsigned num() const;
+
+    // C++ const rules suck
+    Port* m() const {
+        return (Port*)this;
+    }
 };
 
 /**
@@ -101,6 +106,11 @@ public:
     }
 
     std::set<OutputPort*> findDriven() const;
+
+    // C++ const rules suck
+    InputPort* m() const {
+        return (InputPort*)this;
+    }
 };
 
 /**
@@ -221,6 +231,11 @@ public:
 
     bool isOutput() const {
         return true;
+    }
+
+    // C++ const rules suck
+    OutputPort* m() const {
+        return (OutputPort*)this;
     }
 };
 
