@@ -28,19 +28,20 @@ public:
      * same block? Ideally, this returns an accurate time based on layout
      * information, but an estimate is more realistic.
      */
-    virtual Time latency(const InputPort*, const OutputPort*) const;
+    virtual Latency latency(const InputPort*, const OutputPort*) const;
 
     /**
      * What is the longest latency to this output port?
      */
-    Time maxLatency(const OutputPort*) const;
+    Latency maxTime(const OutputPort*) const;
+    Latency maxDepth(const OutputPort*) const;
 
     /**
      * What is the maximum latency for a signal to propagate a connection?
      * Again, this is ideally based on layout or at least floor planning, but
      * that may not be practical.
      */
-    virtual Time latency(Connection) const;
+    virtual Latency latency(Connection) const;
 
     /**
      * Are we compiling for a synchronous (clocked) execution substrate?

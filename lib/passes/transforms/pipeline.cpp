@@ -284,7 +284,7 @@ struct DelayVisitor : public Visitor<OIEdge> {
             }
             return pipePass->_modOutDelays[op];
         } else {
-            return s.inputPathDelay + backend->maxLatency(op);
+            return s.inputPathDelay + backend->maxTime(op).time();
         }
     }
 
@@ -293,7 +293,7 @@ struct DelayVisitor : public Visitor<OIEdge> {
         Time delay = edgeDelay(edge.end().first);
 
         // Add the routing delay
-        delay += backend->latency(edge.end().second, edge.end().first);
+        delay += backend->latency(edge.end().second, edge.end().first).time();
 
         if (delay >= period) {
             pipeline.insert(edge.end().first);

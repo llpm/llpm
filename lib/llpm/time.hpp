@@ -256,10 +256,45 @@ inline bool operator==(const Time &t1, const Time &t2) {
     return (t1.validity() == t2.validity());
 }
 
-inline PipelineDepth operator+(const PipelineDepth& d1,
-                               const PipelineDepth& d2) {
-    assert(d1.valid() && d2.valid());
-    return PipelineDepth(d1, d1.registers() + d2.registers());
+inline PipelineDepth operator+(const PipelineDepth &t1, const PipelineDepth &t2) {
+    assert(t1.validity() == t2.validity());
+    return PipelineDepth(t1, t1.registers() + t2.registers());
+}
+
+inline PipelineDepth operator-(const PipelineDepth &t1, const PipelineDepth &t2) {
+    assert(t1.validity() == t2.validity());
+    return PipelineDepth(t1, t1.registers() - t2.registers());
+}
+
+inline PipelineDepth operator*(const PipelineDepth &t1, unsigned n) {
+    return PipelineDepth::Fixed(t1.registers() * n);
+}
+
+inline bool operator>(const PipelineDepth &t1, const PipelineDepth &t2) {
+    assert(t1.valid() && t2.valid());
+    return t1.registers() > t2.registers();
+}
+
+inline bool operator>=(const PipelineDepth &t1, const PipelineDepth &t2) {
+    assert(t1.valid() && t2.valid());
+    return t1.registers() >= t2.registers();
+}
+
+inline bool operator<(const PipelineDepth &t1, const PipelineDepth &t2) {
+    assert(t1.valid() && t2.valid());
+    return t1.registers() < t2.registers();
+}
+
+inline bool operator<=(const PipelineDepth &t1, const PipelineDepth &t2) {
+    assert(t1.valid() && t2.valid());
+    return t1.registers() <= t2.registers();
+}
+
+inline bool operator==(const PipelineDepth &t1, const PipelineDepth &t2) {
+    if (t1.valid() && t2.valid())
+        return t1.registers() == t2.registers() &&
+               t1.validity() == t2.validity();
+    return (t1.validity() == t2.validity());
 }
 
 inline Latency operator+(const Latency& l1, const Latency& l2) {
