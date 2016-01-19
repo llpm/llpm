@@ -33,7 +33,7 @@ Terminate Visitor<Path>::pathEnd(const ConnectionDB*,
 
 template<typename SrcPort,
          typename DstPort>
-bool Path<SrcPort, DstPort>::contains(Block* b) const {
+bool QueryPath<SrcPort, DstPort>::contains(Block* b) const {
     for (const auto& pp: _path) {
         if (pp.first->owner() == b ||
             pp.second->owner() == b)
@@ -44,7 +44,7 @@ bool Path<SrcPort, DstPort>::contains(Block* b) const {
 
 template<typename SrcPort,
          typename DstPort>
-bool Path<SrcPort, DstPort>::hasCycle() const {
+bool QueryPath<SrcPort, DstPort>::hasCycle() const {
     std::set< std::pair<const SrcPort*, const DstPort*> > seen;
     for (const auto& pp: _path) {
         if (seen.count(pp) != 0)
@@ -57,7 +57,7 @@ bool Path<SrcPort, DstPort>::hasCycle() const {
 template<typename SrcPort,
          typename DstPort>
 std::vector< std::pair<const SrcPort*, const DstPort*> >
-Path<SrcPort, DstPort>::extractCycle() const {
+QueryPath<SrcPort, DstPort>::extractCycle() const {
     std::set< std::pair<const SrcPort*, const DstPort*> > seen;
     std::pair<const SrcPort*, const DstPort*> crux;
     for (const auto& pp: _path) {
@@ -86,7 +86,7 @@ Path<SrcPort, DstPort>::extractCycle() const {
 
 template<typename SrcPort,
          typename DstPort>
-void Path<SrcPort, DstPort>::print() const {
+void QueryPath<SrcPort, DstPort>::print() const {
     for (const auto& pp: _path) {
         printf("%p owner: %p %s -- %p owner %p %s\n",
                pp.first, pp.first->owner(),

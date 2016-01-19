@@ -125,26 +125,26 @@ typedef VisitPort<OutputPort, InputPort> VisitInputPort;
 typedef VisitPort<InputPort, OutputPort> VisitOutputPort;
 
 template<typename SrcPort, typename DstPort>
-class Path {
+class QueryPath {
     std::vector< std::pair<const SrcPort*, const DstPort*> > _path;
 
 public:
     typedef const SrcPort SrcPortTy;
     typedef const DstPort DstPortTy;
 
-    Path() { }
+    QueryPath() { }
 
-    Path(const SrcPort* src, const DstPort* dst) {
+    QueryPath(const SrcPort* src, const DstPort* dst) {
         _path.push_back(std::make_pair(src, dst));
     }
 
-    Path(const Path* p, const SrcPort* src, const DstPort* dst) :
+    QueryPath(const QueryPath* p, const SrcPort* src, const DstPort* dst) :
         _path(p->_path) {
         _path.push_back(std::make_pair(src, dst));
     }
 
-    Path push(const SrcPort* sp, const DstPort* dp) const {
-        return Path(this, sp, dp);
+    QueryPath push(const SrcPort* sp, const DstPort* dp) const {
+        return QueryPath(this, sp, dp);
     }
 
     std::pair<const SrcPort*, const DstPort*> end() const {
@@ -173,20 +173,20 @@ public:
 
     std::vector< std::pair<const SrcPort*, const DstPort*> > extractCycle() const;
 
-    bool operator==(const Path& p) const {
+    bool operator==(const QueryPath& p) const {
         return _path == p._path;
     }
 
-    bool operator<(const Path& p) const {
+    bool operator<(const QueryPath& p) const {
         return _path < p._path;
     }
 
     void print() const;
 };
 
-typedef Path<OutputPort, InputPort> SourceSinkPath;
-typedef Path<InputPort, OutputPort> SinkSourcePath;
-typedef Path<Port, Port>            GenericPath;
+typedef QueryPath<OutputPort, InputPort> SourceSinkPath;
+typedef QueryPath<InputPort, OutputPort> SinkSourcePath;
+typedef QueryPath<Port, Port>            GenericPath;
 
 enum SearchAlgo {
     DFS,

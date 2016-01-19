@@ -45,7 +45,7 @@ void FindDominators(const ConnectionDB* conns,
 }
 
 
-typedef Path<InputPort, OutputPort> IOPath;
+typedef QueryPath<InputPort, OutputPort> IOPath;
 struct TokenAnalysisVisitor : public Visitor<IOPath> {
     const Port* source;
     bool foundSource;
