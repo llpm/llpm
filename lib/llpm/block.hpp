@@ -112,6 +112,22 @@ public:
 
     std::string globalName() const;
 
+    InputPort* toMutable(const InputPort* ip) {
+        for (auto myip: inputs()) {
+            if (ip == myip)
+                return myip;
+        }
+        return nullptr;
+    }
+
+    OutputPort* toMutable(const OutputPort* op) {
+        for (auto myop: outputs()) {
+            if (op == myop)
+                return myop;
+        }
+        return nullptr;
+    }
+
     /**
      * Upon what conditions does a block accept inputs and execute?
      * This routine only works properly when all the outputs have the

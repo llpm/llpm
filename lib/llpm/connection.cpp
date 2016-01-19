@@ -10,7 +10,7 @@ using namespace std;
 namespace llpm {
 
 void ConnectionDB::filterBlocks(boost::function<bool(Block*)> ignoreBlock,
-                                std::set<Block*>& blocks)
+                                std::set<Block*>& blocks) const
 {
     for (auto p: _blockUseCounts) {
         if (p.second >= 1 &&
@@ -49,7 +49,8 @@ void ConnectionDB::deregisterBlock(BlockP block) {
     uint64_t& count = _blockUseCounts[block];
     assert(count >= 1);
     count -= 1;
-    if (count == 0) {
+    if (count == 0 &&
+        block->isnot<DummyBlock>()) {
         block->module(nullptr);
     }
 }

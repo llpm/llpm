@@ -353,6 +353,8 @@ void SimplifyPass::simplifyConstants(Module* m) {
 
 void SimplifyPass::runInternal(Module* m) {
     Transformer t(m);
+    if (!t.canMutate())
+        return;
 
     ConnectionDB* conns = m->conns();
     assert(conns != NULL);

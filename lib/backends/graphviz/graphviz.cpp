@@ -146,7 +146,7 @@ void printConns(std::ostream& os,
 
         auto opContainer = dynamic_cast<ContainerModule*>(op->owner());
         if (transparent && opContainer != NULL) {
-            auto cdb = opContainer->conns();
+            auto cdb = opContainer->connsConst();
             auto internalSink = opContainer->getSink(op);
             op = cdb->findSource(internalSink);
             if (op->owner()->is<DummyBlock>()) {
@@ -156,7 +156,7 @@ void printConns(std::ostream& os,
 
         auto ipContainer = dynamic_cast<ContainerModule*>(ip->owner());
         if (transparent && ipContainer != NULL) {
-            auto cdb = ipContainer->conns();
+            auto cdb = ipContainer->connsConst();
             auto internalSource = ipContainer->getDriver(ip);
             cdb->findSinks(internalSource, sinks);
             if (sinks.size() == 0) {
@@ -185,7 +185,7 @@ void printConns(std::ostream& os,
             for (auto ip: sinks) {
                 if ((is_hidden(op->owner(), mod) || 
                      is_hidden(ip->owner(), mod)) && 
-                    conns != mod->conns() )
+                    conns != mod->connsConst() )
                         continue;
 
                 os << "    " << getName(op->owner()) << " -> "
@@ -240,12 +240,12 @@ void printBlock(std::ostream& os,
         for (Block* b: crblocks) {
             printBlock(os, namer, mod, b, transparent);
         }
-        printConns(os, namer, mod, cm->conns(),
+        printConns(os, namer, mod, cm->connsConst(),
                    {{"style", "dashed"}}, transparent);
 
         for (auto extOut: cm->outputs()) {
             auto sink = cm->getSink(extOut);
-            auto source = cm->conns()->findSource(sink);
+            auto source = cm->connsConst()->findSource(sink);
             if (is_hidden(source->owner(), mod)) {
                 printBlock(os, namer, mod, sink->owner(), transparent);
             }
@@ -263,7 +263,7 @@ void GraphvizOutput::writeModule(std::ostream& os, Module* mod,
                                  bool transparent, string comment) {
     ObjectNamer& namer = mod->design().namer();
 
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     assert(conns != NULL);
 
     os << "digraph " << mod->name() << " {\n";

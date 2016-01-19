@@ -188,7 +188,7 @@ public:
      * function passed in.
      */
     void filterBlocks(boost::function<bool(Block*)>,
-                      std::set<Block*>&);
+                      std::set<Block*>&) const;
 
     void connect(OutputPort* o, InputPort* i);
     void connect(InputPort* i, OutputPort* o) {

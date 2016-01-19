@@ -99,7 +99,7 @@ static const unsigned MaxPasses = 100;
 class SetFrontendHistory: public ModulePass {
 protected:
     virtual void runInternal(Module* m) {
-        ConnectionDB* conns = m->conns();
+        const ConnectionDB* conns = m->connsConst();
         if (conns == NULL)
             return;
 
@@ -118,7 +118,7 @@ public:
 
 void setUnknownElaboration(Module* m) {
     std::set<Block*> blocks;
-    m->conns()->findAllBlocks(blocks);
+    m->connsConst()->findAllBlocks(blocks);
     for (Block* b: blocks) {
         if (b->history().src() == BlockHistory::Unset) {
             b->history().setUnknown();
@@ -177,7 +177,7 @@ void Design::optimize(bool debug) {
     LambdaModulePass p(*this,
         [](Module* m) {
             std::set<Block*> blocks;
-            m->conns()->findAllBlocks(blocks);
+            m->connsConst()->findAllBlocks(blocks);
             for (Block* b: blocks) {
                 if (b->history().src() == BlockHistory::Unset) {
                     b->history().setOptimization(NULL);

@@ -34,7 +34,7 @@ void TextPrinterPass::runInternal(Module* mod) {
                             % _name
                             % ctr);
 
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         return;
     auto f =_design.workingDir()->create(fn);
@@ -52,7 +52,7 @@ void TextPrinterPass::runInternal(Module* mod) {
 }
 
 void StatsPrinterPass::runInternal(Module* mod) {
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         return;
 

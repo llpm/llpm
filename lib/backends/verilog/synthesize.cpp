@@ -411,7 +411,7 @@ void VerilogSynthesizer::writeCRControl(Context& ctxt) {
     Module* mod = ctxt.module();
     ControlRegion* cr = mod->as<ControlRegion>();
     assert(cr != nullptr);
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL) {
         throw InvalidArgument("Verilog synthesizer cannot operate on "
                               "opaque modules!");
@@ -498,7 +498,7 @@ void VerilogSynthesizer::writeCRControl(Context& ctxt) {
 
 void VerilogSynthesizer::writeLocalIOControl(Context& ctxt) {
     Module* mod = ctxt.module();
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL) {
         throw InvalidArgument("Verilog synthesizer cannot operate on "
                               "opaque modules!");
@@ -540,9 +540,7 @@ void VerilogSynthesizer::writeLocalIOControl(Context& ctxt) {
 }
 
 void VerilogSynthesizer::writeBlocks(Context& ctxt) {
-    ConnectionDB* conns = ctxt.module()->conns();
-    Module* mod = ctxt.module();
-    
+    const ConnectionDB* conns = ctxt.module()->connsConst();
     set<Block*> blocks;
     conns->findAllBlocks(blocks);
 

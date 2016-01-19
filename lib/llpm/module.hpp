@@ -90,10 +90,13 @@ public:
     virtual const ConnectionDB* conns() const {
         return NULL;
     }
+    virtual const ConnectionDB* connsConst() const {
+        return conns();
+    }
 
     // Return the current change count -- useful for tracking if
     // changes have been made to a module
-    virtual uint64_t changeCounter() = 0;
+    virtual uint64_t changeCounter() const = 0;
 
     virtual void blocks(std::vector<Block*>&) const = 0;
     virtual void submodules(std::vector<Module*>&) const = 0;
@@ -166,7 +169,7 @@ public:
     virtual ConnectionDB* conns() = 0;
     virtual const ConnectionDB* conns() const = 0;
 
-    virtual uint64_t changeCounter() {
+    virtual uint64_t changeCounter() const {
         return conns()->changeCounter();
     }
 
@@ -271,10 +274,10 @@ public:
 
     virtual ~ContainerModule();
 
-    ConnectionDB* conns() {
+    virtual ConnectionDB* conns() {
         return &_conns;
     }
-    const ConnectionDB* conns() const {
+    virtual const ConnectionDB* conns() const {
         return &_conns;
     } 
 

@@ -14,7 +14,8 @@ using namespace std;
 namespace llpm {
 
 void CheckConnectionsPass::runInternal(Module* m) {
-    ConnectionDB* conns = m->conns();
+    const ConnectionDB* conns = m->connsConst();
+    ConnectionDB* mconns = m->conns();
     if (conns == NULL)
         return;
 
@@ -34,8 +35,10 @@ void CheckConnectionsPass::runInternal(Module* m) {
 
                 fprintf(stderr, "History:\n");
                 block->history().print();
-                auto never = new Never(ip->type());
-                conns->connect(never->dout(), ip);
+                if (mconns != nullptr) {
+                    auto never = new Never(ip->type());
+                    mconns->connect(never->dout(), ip);
+                }
             }
         }
     }
@@ -50,7 +53,7 @@ void CheckOutputsPass::runInternal(Module* m) {
         // Output rules do not apply within control regions.
         return;
 
-    ConnectionDB* conns = m->conns();
+    const ConnectionDB* conns = m->connsConst();
     if (conns == NULL)
         return;
 

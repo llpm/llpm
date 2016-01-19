@@ -128,7 +128,7 @@ bool TokenOrderAnalysis(
             "Sink and source must be within the same module!");
     }
 
-    ConnectionDB* conns = source->owner()->module()->conns();
+    const ConnectionDB* conns = source->owner()->module()->connsConst();
     if (conns == NULL) {
         throw InvalidArgument("Can only analyze transparent modules!");
     }
@@ -237,7 +237,7 @@ bool FindCycle(Module* mod,
                std::vector< std::pair<const OutputPort*, const InputPort*> >& cycle) {
     CycleFindingVisitor visitor;
     visitor.ignoreBlock = ignoreBlock;
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
     GraphSearch<CycleFindingVisitor, DFS> search(conns, visitor);
@@ -305,7 +305,7 @@ void FindConstants(Module* mod,
                    std::set<const Port*>& constPorts,
                    std::set<Block*>& constBlocks)
 {
-    ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
 
@@ -372,7 +372,7 @@ void FindDependencies(const Module* mod,
                       std::set<const OutputPort*>& deps,
                       DependenceRule& rule)
 {
-    const ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
 
@@ -416,7 +416,7 @@ void FindConsumers(const Module* mod,
                    std::set<const InputPort*>& consumers,
                    boost::function<bool(Block*)> ignoreBlock)
 {
-    const ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
 
@@ -431,7 +431,7 @@ void FindConsumers(const Module* mod,
 OutputPort* FindSubfieldDriver(const Module* mod,
                                InputPort* ip,
                                std::vector<unsigned> subfield) {
-    const ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
 
@@ -511,7 +511,7 @@ static llvm::Constant* extractSubConstant(
 // If a port is driven by a constant, find & return that constant
 llvm::Constant* FindConstant(const Module* mod, Port* port) {
     assert(port != nullptr);
-    const ConnectionDB* conns = mod->conns();
+    const ConnectionDB* conns = mod->connsConst();
     if (conns == NULL)
         throw InvalidArgument("Cannot analyze opaque module!");
 

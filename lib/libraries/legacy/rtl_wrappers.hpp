@@ -175,7 +175,7 @@ public:
             return 0;
         return _wrapped->internalRefine(depth, sc);
     }
-    virtual uint64_t changeCounter() {
+    virtual uint64_t changeCounter() const {
         return _wrapped->changeCounter();
     }
 
