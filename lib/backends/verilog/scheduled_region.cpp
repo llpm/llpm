@@ -161,120 +161,155 @@ void ScheduledRegionVerilogPrinter::writeConstants() {
     _sr->connsConst()->findAllBlocks(allBlocks);
     for (auto b: allBlocks) {
         if (b->inputs().size() == 0) {
-            write(b);
+            write(nullptr, b);
         }
     }
 }
 
-void ScheduledRegionVerilogPrinter::write(const OutputPort* op) {
-    write(op->owner());
+void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
+                                          const OutputPort* op) {
+    write(cycle, op->owner());
 }
 
-void ScheduledRegionVerilogPrinter::write(const InputPort* ip) {
+void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
+                                          const InputPort* ip) {
     if (ip->owner()->module() == _sr) {
-        write(ip->owner());
+        write(cycle, ip->owner());
     } else {
         // This IP is virtual. Make sure its sink gets driven
         auto source = _sr->module()->connsConst()->findSource(ip);
         if (source != nullptr && source->owner() == _sr) {
             auto sink = _sr->getSink(source);
             assert(sink != nullptr);
-            write(sink);
+            write(cycle, sink);
         }
     }
 }
 
-void ScheduledRegionVerilogPrinter::write(Block* b) {
+void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
+                                          Block* b) {
     assert(b->module() == _sr);
     if (_written.count(b) > 0) {
         return;
     }
 
-    if (b->is<PipelineRegister>())
-        return write(b->as<PipelineRegister>());
-    if (b->is<PipelineStageController>())
-        return write(b->as<PipelineStageController>());
-
-    if (b->is<DummyBlock>()) {
-        // Write the connection to this I/O
-        for (auto ip: b->inputs()) {
-            auto ext = _sr->findExternalPortFromSink(ip);
-            if (ext != nullptr && bitwidth(ip->type()) > 0) {
-                _ctxt << "\n    // Output connection\n";
-                auto source = _sr->connsConst()->findSource(ip);
-                if (source == nullptr) {
-                    printf("Warning: found undriven SR output: %s.%s\n",
-                           _sr->name().c_str(),
-                           _ctxt.name(ext, true).c_str());
-                } else {
-                    _ctxt << boost::format("    assign %1% = %2%;\n")
-                                % _ctxt.name((InputPort*)ip)
-                                % _ctxt.name(source);
-                }
-            }
-        }
-    } else {
-        auto conns = _sr->connsConst();
-
-        for (InputPort* ip: b->inputs()) {
-            auto source = conns->findSource(ip);
-            if (source == nullptr) {
+    //***
+    // Write out deps first so verilog can resolve wire names
+    auto conns = _sr->connsConst();
+    for (InputPort* ip: b->inputs()) {
+        auto source = conns->findSource(ip);
+        if (source == nullptr) {
+            if (b->isnot<DummyBlock>()) {
+                // If this is an I/O, unconnected inputs are expected.
+                // Otherwise...
                 printf("Warning: found unconnected input %s\n",
                        _ctxt.name(ip).c_str());
-            } else {
-                write(source);
             }
+        } else {
+            write(cycle, source);
         }
-
-        auto printer = _parent->getPrinter(b);
-        auto blockName = _ctxt.name(b);
-        auto blockType = cpp_demangle(typeid(*b).name());
-        if (printer == nullptr) {
-            throw ImplementationError(
-                str(boost::format(
-                        " Cannot translate block %1% of type %2% into verilog.") 
-                            % blockName
-                            % blockType));
-        }
-        _ctxt << boost::format("\n    // Block %1% of type %2%\n")
-                    % blockName
-                    % blockType;
-        for (InputPort* ip: b->inputs()) {
-            if (bitwidth(ip->type()) > 0) {
-                auto source = conns->findSource(ip);
-                _ctxt << boost::format("    wire [%1%-1:0] %2% = %3%;\n")
-                            % bitwidth(ip->type())
-                            % _ctxt.name(ip)
-                            % _ctxt.name(source) ;
-            }
-            if (printer->customLID()) {
-                _ctxt << boost::format("    wire %1%_valid;\n")
-                            % _ctxt.name(ip);
-                _ctxt << boost::format("    wire %1%_bp;\n")
-                            % _ctxt.name(ip);
-            }
-        }
-        for (OutputPort* op: b->outputs()) {
-            if (bitwidth(op->type()) > 0) {
-                _ctxt << boost::format("    wire [%1%-1:0] %2%;\n")
-                            % bitwidth(op->type())
-                            % _ctxt.name(op);
-            }
-            if (printer->customLID()) {
-                _ctxt << boost::format("    wire %1%_valid;\n")
-                            % _ctxt.name(op);
-                _ctxt << boost::format("    wire %1%_bp;\n")
-                            % _ctxt.name(op);
-            }
-        }
-
-        printer->print(_ctxt, b);
     }
+
+    //***
+    // Special cases
+    //
+    if (b->is<PipelineRegister>())
+        return write(cycle, b->as<PipelineRegister>());
+    if (b->is<PipelineStageController>())
+        return write(cycle, b->as<PipelineStageController>());
+    if (b->is<DummyBlock>())
+        return write(cycle, b->as<DummyBlock>());
+
+    //***
+    // Normal case
+    //
+    auto printer = _parent->getPrinter(b);
+    auto blockName = _ctxt.name(b);
+    auto blockType = cpp_demangle(typeid(*b).name());
+    if (printer == nullptr) {
+        throw ImplementationError(
+            str(boost::format(
+                    " Cannot translate block %1% of type %2% into verilog.") 
+                        % blockName
+                        % blockType));
+    }
+    _ctxt << boost::format("\n    // Block %1% of type %2%\n")
+                % blockName
+                % blockType;
+    for (InputPort* ip: b->inputs()) {
+        if (bitwidth(ip->type()) > 0) {
+            auto source = conns->findSource(ip);
+            _ctxt << boost::format("    wire [%1%-1:0] %2% = %3%;\n")
+                        % bitwidth(ip->type())
+                        % _ctxt.name(ip)
+                        % _ctxt.name(source) ;
+        }
+        if (printer->customLID()) {
+            _ctxt << boost::format("    wire %1%_valid;\n")
+                        % _ctxt.name(ip);
+            _ctxt << boost::format("    wire %1%_bp;\n")
+                        % _ctxt.name(ip);
+        }
+    }
+    for (OutputPort* op: b->outputs()) {
+        if (bitwidth(op->type()) > 0) {
+            _ctxt << boost::format("    wire [%1%-1:0] %2%;\n")
+                        % bitwidth(op->type())
+                        % _ctxt.name(op);
+        }
+        if (printer->customLID()) {
+            _ctxt << boost::format("    wire %1%_valid;\n")
+                        % _ctxt.name(op);
+            _ctxt << boost::format("    wire %1%_bp;\n")
+                        % _ctxt.name(op);
+        }
+    }
+
+    printer->print(_ctxt, b);
 
     _written.insert(b);
 }
 
-void ScheduledRegionVerilogPrinter::write(PipelineRegister* reg) {
+void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
+                                          DummyBlock* b) {
+    assert(b->module() == _sr);
+    if (_written.count(b) > 0) {
+        return;
+    }
+    _written.insert(b);
+
+    // Write the connection to this I/O
+    auto ip = b->din();
+    auto ext = _sr->findExternalPortFromSink(ip);
+    if (ext != nullptr) {
+        _ctxt << "\n    // Output connection\n";
+        auto source = _sr->connsConst()->findSource(ip);
+        if (source == nullptr) {
+            printf("Warning: found undriven SR output: %s.%s\n",
+                   _sr->name().c_str(),
+                   _ctxt.name(ext, true).c_str());
+        } else {
+            if (bitwidth(ip->type()) > 0) {
+                _ctxt << boost::format(
+                    "    assign %1% = %2%;\n")
+                    % _ctxt.name((InputPort*)ip)
+                    % _ctxt.name(source);
+            }
+
+            if (_sr->internalOutputs().count(ext) > 0) {
+                // Drive the valid signal here only if it's an internalOutput
+                assert(cycle != nullptr);
+                _ctxt << boost::format(
+                    "    assign %1%_valid = %2%_valid;\n")
+                    % _ctxt.name((InputPort*)ip)
+                    % validSignal(cycle);
+            }
+        }
+    }
+}
+
+void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
+                                          PipelineRegister* reg) {
     assert(reg->module() == _sr);
     if (_written.count(reg) > 0) {
         return;
@@ -318,20 +353,38 @@ void ScheduledRegionVerilogPrinter::write(PipelineRegister* reg) {
         % bitwidth(reg->dout()->type()) ;
 }
 
-void ScheduledRegionVerilogPrinter::write(PipelineStageController* psc) {
+std::string ScheduledRegionVerilogPrinter::validSignal(
+        const ScheduledRegion::Cycle* cycle) {
+    assert(cycle != nullptr);
+    auto psc = cycle->controller();
+    OutputPort* vinSource = nullptr;
+    if (psc == nullptr) {
+        // Special case: last cycle has no PSC
+        if (_sr->cycles_size() > 1) {
+            vinSource = _sr->cycles(_sr->cycles_size() - 2).controller()->vout(); 
+        } else {
+            vinSource = _sr->startControl()->dout();
+        }
+    } else {
+        vinSource = _sr->connsConst()->findSource(psc->vin());
+    }
+    assert(vinSource != nullptr);
+    string vin;
+    if (vinSource == _sr->startControl()->dout())
+        return _ctxt.name(_sr->startControl());
+    else
+        return _ctxt.name(vinSource);   
+}
+
+void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
+                                          PipelineStageController* psc) {
     assert(psc->module() == _sr);
     if (_written.count(psc) > 0) {
         return;
     }
     _written.insert(psc);
 
-    auto vinSource = _sr->connsConst()->findSource(psc->vin());
-    assert(vinSource != nullptr);
-    string vin;
-    if (vinSource == _sr->startControl()->dout())
-        vin = _ctxt.name(_sr->startControl());
-    else
-        vin = _ctxt.name(vinSource);
+    auto vin = validSignal(cycle);
     _ctxt << boost::format(
         "    wire %3%_valid;\n"
         "    wire %3%_bp;\n"
@@ -357,25 +410,48 @@ void ScheduledRegionVerilogPrinter::writeCycle(unsigned cycleNum) {
                 % cycleNum;
     auto firing = c.firing();
     for (auto ip: firing) {
-        write(ip);
+        write(&c, ip);
     }
     _ctxt << boost::format(
                 "\n// ***** Cycle %1%: Registers *****\n")
                 % cycleNum;
 
     if (c.controller() != nullptr)
-        write(c.controller());
+        write(&c, c.controller());
     auto regs = c.regs();
     for (auto rpair: regs) {
-        write(rpair.second);
+        write(&c, rpair.second);
     }
 }
 
 void ScheduledRegionVerilogPrinter::writeOutputs() {
-    _ctxt << "\n// ***** Final outputs *****\n";
+    _ctxt << "\n// ***** Final output LI bits *****\n";
+    const ScheduledRegion::Cycle& lastCycle = _sr->cycles(_sr->cycles_size() - 1);
+
+    _ctxt << boost::format(
+        "    wire [%2%-1:0] __outputfork_dout_valid;\n"
+        "    wire [%2%-1:0] __outputfork_dout_bp;\n"
+        "    Fork_VoidData # (\n"
+        "        .NumOutputs(%2%)\n"
+        "    ) __outputfork (\n"
+        "        .clk(clk),\n"
+        "        .resetn(resetn),\n"
+        "        .din_valid(%1%_valid),\n"
+        "        .din_bp(%1%_bp),\n"
+        "        .dout_valid(__outputfork_dout_valid),\n"
+        "        .dout_bp(__outputfork_dout_bp)\n"
+        "    );\n")
+        % validSignal(&lastCycle)
+        % _sr->externalOutputs().size();
+    unsigned idx = 0;
     for (auto op: _sr->externalOutputs()) {
-        auto sink = _sr->getSink(op);
-        write(sink);
+        assert(_written.count(_sr->getSink(op)->owner()) > 0);
+        _ctxt << boost::format(
+            "    assign %1%_valid = __outputfork_dout_valid[%2%];\n"
+            "    assign __outputfork_dout_bp[%2%] = %1%_bp;\n")
+            % _ctxt.name(op, true)
+            % idx;
+        idx++;
     }
 }
 

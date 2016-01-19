@@ -1170,8 +1170,13 @@ bool ScheduledRegion::refine(ConnectionDB& conns) const {
     return false;
 }
 
-DependenceRule ScheduledRegion::deps(const OutputPort*) const {
-    return DependenceRule(DependenceRule::AND_FireOne, inputs());
+DependenceRule ScheduledRegion::deps(const OutputPort* op) const {
+    vector<InputPort*> deps(_externalInputs.begin(), _externalInputs.end());
+    if (_externalOutputs.count((OutputPort*)op) > 0) {
+        return DependenceRule(DependenceRule::AND_FireOne, deps);
+    } else {
+        return DependenceRule(DependenceRule::Custom, deps);
+    }
 }
 
 void ScheduledRegion::validityCheck() const {

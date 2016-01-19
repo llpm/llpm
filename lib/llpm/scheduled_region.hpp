@@ -280,6 +280,9 @@ public:
     virtual std::string print() const;
 
     virtual DependenceRule deps(const OutputPort* op) const;
+    virtual bool outputsSeparate() const {
+        return true;
+    }
 
     virtual bool refine(ConnectionDB& conns) const;
     virtual bool refinable() const {

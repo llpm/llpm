@@ -56,7 +56,6 @@ module Fork_VoidData(
     din_valid, din_bp,
     dout_valid, dout_bp);
 
-parameter Width = 8;
 parameter NumOutputs = 4;
 
 input wire clk;

@@ -26,13 +26,16 @@ private:
     void writeIO();
     void writeStartControl();
     void writeConstants();
-    void write(const InputPort*);
-    void write(const OutputPort*);
-    void write(Block*);
-    void write(PipelineRegister*);
-    void write(PipelineStageController*);
+    void write(const ScheduledRegion::Cycle*, const InputPort*);
+    void write(const ScheduledRegion::Cycle*, const OutputPort*);
+    void write(const ScheduledRegion::Cycle*, Block*);
+    void write(const ScheduledRegion::Cycle*, DummyBlock*);
+    void write(const ScheduledRegion::Cycle*, PipelineRegister*);
+    void write(const ScheduledRegion::Cycle*, PipelineStageController*);
     void writeCycle(unsigned cycleNum);
     void writeOutputs();
+
+    std::string validSignal(const ScheduledRegion::Cycle*);
 
     std::set<const Block*> _written;
 };
