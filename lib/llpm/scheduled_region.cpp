@@ -75,8 +75,8 @@ void FormScheduledRegionPass::runInternal(Module* mod) {
                                         % mod->name()
                                         % counter);
             ScheduledRegion* sr =
-                new ScheduledRegion(cm, b, crName);
-            sr->grow(constPorts);
+                new ScheduledRegion(cm, b, crName, constPorts);
+            sr->grow();
             if (sr->finalize(opDriver)) {
                 const auto ext = sr->inputs();
                 inputsToSee.insert(inputsToSee.end(),
@@ -168,9 +168,12 @@ bool ScheduledRegion::BlockAllowedVirtual(Block* b) {
 
 ScheduledRegion::ScheduledRegion(MutableModule* parent,
                                  Block* seed,
-                                 std::string name) :
+                                 std::string name,
+                                 const std::set<const Port*>& constPorts) :
     ContainerModule(parent->design(), name),
-    _parent(parent) {
+    _parent(parent),
+    _constPorts(constPorts),
+    _finalized(false) {
 
     assert(BlockAllowedFull(seed));
     module(parent);
@@ -186,8 +189,7 @@ ScheduledRegion::ScheduledRegion(MutableModule* parent,
 
 ScheduledRegion::~ScheduledRegion() { }
 
-bool ScheduledRegion::grow(const Port* port,
-                           const std::set<const Port*>& constPorts) {
+bool ScheduledRegion::grow(const Port* port) {
     assert(_members.count(port) > 0);
 
     ConnectionDB* conns = port->owner()->module()->conns();
@@ -197,13 +199,13 @@ bool ScheduledRegion::grow(const Port* port,
         auto source = conns->findSource(port->asInput());    
         if (source == nullptr)
             return false;
-        return add(source, constPorts);
+        return add(source);
     } else if (port->isOutput()) {
         std::set<InputPort*> sinks;
         conns->findSinks(port->asOutput(), sinks);
         bool ret = false;
         for (auto sink: sinks) {
-            auto rc = add(sink, constPorts);
+            auto rc = add(sink);
             ret = ret || rc;
         }
         return ret;
@@ -211,7 +213,7 @@ bool ScheduledRegion::grow(const Port* port,
     assert(false);
 }
 
-bool ScheduledRegion::grow(const std::set<const Port*>& constPorts) {
+bool ScheduledRegion::grow() {
     bool ret = false;
 
     // Keep growing up and down until we can't grow up and down anymore
@@ -219,7 +221,7 @@ bool ScheduledRegion::grow(const std::set<const Port*>& constPorts) {
         bool grew = false;
 
         for (auto port: _members) {
-            auto rc = grow(port, constPorts);
+            auto rc = grow(port);
             grew = grew || rc;
         }
 
@@ -275,8 +277,10 @@ void ScheduledRegion::addDriven(const InputPort* port) {
     for (auto op: port->findDriven()) {
         auto dr = op->deps();
         if (dr.depType == DependenceRule::AND_FireOne){
-            fires.insert(op);
-            fires.insert(dr.inputs.begin(), dr.inputs.end());
+            fires.insert(op->owner()->toMutable(op));
+            for (auto dep: dr.inputs) {
+                fires.insert(dep->owner()->toMutable(dep));
+            }
         } else {
             andFireOne = false;
         }
@@ -289,8 +293,7 @@ void ScheduledRegion::addDriven(const InputPort* port) {
     }
 }
 
-bool ScheduledRegion::add(const Port* port,
-                          const std::set<const Port*>& constPorts) {
+bool ScheduledRegion::add(const Port* port) {
     if (_members.count(port) > 0)
         // Already added! Cannot add it again, damnit!
         return false;
@@ -619,6 +622,7 @@ void ScheduledRegion::debugPrint(string name) const {
         "Scheduled region debug " + name);
     f->close();
 }
+
 void ScheduledRegion::checkOptFinalize() {
     // Check to make sure NED property is ensured
     set<const InputPort*> exti(_externalInputs.begin(), _externalInputs.end());
@@ -704,8 +708,10 @@ void ScheduledRegion::cleanInternal() {
         }
     }
     for (auto r: blocksToRemove) {
-        _members.erase(r.get());
-        _fullMembers.erase(r);
+        if (r->isnot<DummyBlock>()) {
+            _members.erase(r.get());
+            _fullMembers.erase(r);
+        }
     }
     blocksToRemove.clear();
 
@@ -725,7 +731,9 @@ void ScheduledRegion::cleanInternal() {
         }
     }
     for (auto p: membToRemove) {
-        _members.erase(p);
+        if (p->owner()->isnot<DummyBlock>()) {
+            _members.erase(p);
+        }
     }
 
     // Find and remove deleted ports from ordering structures
@@ -828,6 +836,7 @@ bool ScheduledRegion::finalize(const OutputPort* root) {
     // Do a minimum clock latency scheduling
     scheduleMinimumClocks();
 
+    _finalized = true;
     return true;
 }
 
@@ -912,6 +921,10 @@ void ScheduledRegion::scheduleMinimumClocks() {
         }
     }
 
+    // 'available' keeps track of values that subsequent stages need. An OP is
+    // added when it's used and the OP is removed when it is produced.
+    set<const OutputPort*> available;
+
     // Iterate until all inputs have been fired
     do {
         unsigned cycleNum = _cycles.size();
@@ -929,11 +942,11 @@ void ScheduledRegion::scheduleMinimumClocks() {
         while (firingAtCycle[cycleNum].size() > 0) {
             auto firingIP = firingAtCycle[cycleNum].front();
             firingAtCycle[cycleNum].pop_front();
-            if (cycle._firing.count(firingIP) > 0)
+            if (cycle._firing.count((InputPort*)firingIP) > 0)
                 // We have already fired this one this cycle. Somehow got in
                 // the list twice, just just ignore it.
                 continue;
-            cycle._firing.insert(firingIP);
+            cycle._firing.insert(firingIP->owner()->toMutable(firingIP));
 
             // These outputs MUST already have been available, even if they
             // aren't actually used.
@@ -947,7 +960,7 @@ void ScheduledRegion::scheduleMinimumClocks() {
             assert(neededDeps.count(dataSource) > 0 ||
                    dataSource->owner()->is<DummyBlock>() ); // Sanity check
             // The data on this output port must be available this cycle!
-            cycle._available.insert(dataSource);
+            available.insert(dataSource);
 
             // Go through all the deps and determine if we have already
             // calculated it or if this is the first usage.
@@ -965,7 +978,7 @@ void ScheduledRegion::scheduleMinimumClocks() {
                 if (!alreadyUsed) {
                     // OK, this is the first use of this value. Schedule it to
                     // ensure it is available THIS clock cycle.
-                    cycle._newValues.insert(dep);
+                    cycle._newValues.insert((OutputPort*)dep);
                     auto dr = internalDeps(dep);
                     assert(dr.inputs.size() == dr.latencies.size());
                     for (unsigned i=0; i<dr.inputs.size(); i++) {
@@ -979,6 +992,10 @@ void ScheduledRegion::scheduleMinimumClocks() {
             }
         }
         firingAtCycle.erase(cycleNum);
+        cycle._available = available;
+        for (auto nv: cycle._newValues) {
+            available.erase(nv);
+        }
     } while (remainingDeps.size() > 0);
 
     finalizeCycles();
@@ -991,6 +1008,16 @@ void ScheduledRegion::finalizeCycles() {
         _cycleIdx[extSource] = 0;
     }
 
+    assert(_externalInputs.size() > 0);
+    Constant* c = Constant::getVoid(design());
+    _startControl = new Wait(c->dout()->type());
+    _startControl->name("start");
+    conns()->connect(c->dout(), _startControl->din());
+    OutputPort* startSig = _startControl->dout();
+    for (auto extinp: _externalInputs) {
+        _startControl->newControl(conns(), getDriver(extinp));
+    }
+
     for (unsigned i=0; i<_cycles.size(); i++) {
         Cycle& cycle = _cycles[i];
         for (auto nv: cycle._newValues) {
@@ -999,6 +1026,10 @@ void ScheduledRegion::finalizeCycles() {
         for (auto firing: cycle._firing) {
             _cycleIdx[firing] = i;
         }
+        cycle.finalize(i);
+
+        if (i == 0)
+            cycle._controller->connectVin(conns(), startSig);
     }
 }
 
@@ -1007,7 +1038,7 @@ const OutputPort* ScheduledRegion::findInternalSource(
 
     if (sink->owner()->is<DummyBlock>() &&
         sink->owner()->module() == this) {
-        // This is one of our module inputs
+        // This is one of our module external inputs
         auto dbOut = sink->owner()->as<DummyBlock>()->dout();
         auto extInp = findExternalPortFromDriver(dbOut);
         if (_internalInputs.count(extInp)) {
@@ -1414,12 +1445,99 @@ unsigned ScheduledRegion::findClockNum(const Port* p) const {
     }
 
     // Retry with port on other end of DummyBlock
-    //   (Some code does really stupid things, let's just accomodate this)
+    //   (Some code does really stupid things, let's just accommodate this)
     f = _cycleIdx.find(p);
     if (f != _cycleIdx.end())
         return f->second;
 
     return -1;
+}
+
+void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
+    if (cycleNum > 0) {
+        _prev = &_sr->_cycles[cycleNum-1];
+    }
+    
+    // *********
+    // Find all virtual (external) members and add their I/O ports as members.
+    set<OutputPort*> toAddOP;
+    set<InputPort*> toAddIP;
+    for (auto nv: _newValues) {
+        if (!_sr->contains(nv->owner())) {
+            // This OP's owner is a virtual member
+            set<InputPort*> sinks;
+            _sr->module()->conns()->findSinks(nv, sinks); 
+            for (auto sink: sinks) {
+                if (sink->owner() == _sr) {
+                    toAddOP.insert(_sr->getDriver(sink)); 
+                }
+            }
+        }
+    }
+    for (auto firing: _firing) {
+        if (!_sr->contains(firing->owner())) {
+            // This OP's owner is a virtual member
+            auto source = _sr->module()->conns()->findSource(firing); 
+            if (source != nullptr && source->owner() == _sr) {
+                toAddIP.insert(_sr->getSink(source)); 
+            }
+        }
+    }
+    _newValues.insert(toAddOP.begin(), toAddOP.end());
+    _available.insert(toAddOP.begin(), toAddOP.end());
+    _firing.insert(toAddIP.begin(), toAddIP.end());
+    // ********
+
+    if (cycleNum < _sr->cycles_size() - 1) {
+        _controller = new PipelineStageController(_sr->design());
+        _controller->name(str(boost::format("cycle%1%") % cycleNum));
+        if (_prev != nullptr) {
+            _controller->connectVin(_sr->conns(), _prev->_controller->vout());
+        }
+    } else {
+        _controller = nullptr;
+    }
+
+    auto conns = _sr->conns();
+    for (auto firing: _firing) {
+        auto source = (OutputPort*)_sr->findInternalSource(firing);
+        assert(_sr->isConst(source) || _available.count(source) > 0);
+        if (_newValues.count(source) == 0 &&
+            !_sr->isConst(source)) {
+            // Wasn't generated this cycle, look to the past!
+            assert(_prev != nullptr);
+            conns->disconnect(source, firing);
+            source = _prev->getPipelinedPort(source);
+            conns->connect(source, firing);
+        }
+    }
+}
+
+OutputPort* ScheduledRegion::Cycle::getPipelinedPort(
+    const OutputPort* opConst) {
+    
+    auto op = (OutputPort*)opConst;
+    if (_sr->isConst(opConst))
+        return op;
+
+    assert(_available.count(op) > 0);
+
+    auto f = _regs.find(op);
+    if (f == _regs.end()) {
+        OutputPort* opThisCycle = op;
+        if (_newValues.count(op) == 0) { 
+            assert(_prev != nullptr);
+            opThisCycle = _prev->getPipelinedPort(op);
+        }
+        auto preg = new PipelineRegister(opThisCycle);
+        assert(_controller != nullptr);
+        preg->controller(_sr->conns(), _controller);
+        _regs[op] = preg;
+        _sr->conns()->connect(opThisCycle, preg->din());
+        return preg->dout();
+    } else {
+        return f->second->dout();
+    }
 }
 
 } // namespace llpm

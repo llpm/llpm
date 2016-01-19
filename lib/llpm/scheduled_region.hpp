@@ -9,6 +9,7 @@ namespace llpm {
 // Fwd. defs
 class PipelineRegister;
 class PipelineStageController;
+class Wait;
 
 /**
  * A ScheduledRegion is a group of blocks which can be statically scheduled.
@@ -57,19 +58,29 @@ public:
         friend class ScheduledRegion;
 
         ScheduledRegion* _sr;
-        std::set<const OutputPort*> _newValues;
+        Cycle*           _prev;
+        std::set<OutputPort*> _newValues;
         std::set<const OutputPort*> _available;
-        std::set<const InputPort*>  _firing;
+        std::set<InputPort*>  _firing;
 
-        std::set<const OutputPort*, PipelineRegister*>
+        std::map<const OutputPort*, PipelineRegister*>
                                     _regs;
         PipelineStageController* _controller;
 
         Cycle(ScheduledRegion* sr) :
-            _sr(sr) {
-        }
-    public:
+            _sr(sr),
+            _prev(nullptr)
+        { }
 
+        void finalize(unsigned cycleNum);
+        OutputPort* getPipelinedPort(const OutputPort*);
+
+    public:
+        DEF_GET_NP(newValues);
+        DEF_GET_NP(available);
+        DEF_GET_NP(firing);
+        DEF_GET_NP(regs);
+        DEF_GET_NP(controller);
     };
 
 protected:
@@ -127,8 +138,18 @@ protected:
     /// Set of blocks which are connected entirely within this region
     std::set<BlockP>      _fullMembers;
 
-    std::set<OutputPort*> _externalOutputs;
-    std::set<InputPort*>  _externalInputs;
+    /// Set of ports which are constant.
+    std::set<const Port*>  _constPorts;
+
+    std::set<OutputPort*>  _externalOutputs;
+    std::set<InputPort*>   _externalInputs;
+
+    /// Wait block to signal start of region
+    Wait*                  _startControl;
+
+
+    /// Has this block been finalized?
+    bool                   _finalized;
 
     /**
      * For each output port, the set of input ports which can be run once it's
@@ -196,7 +217,7 @@ protected:
     /// Clean up internal data structures
     void cleanInternal();
 
-    bool add(const Port*, const std::set<const Port*>& constPorts = {});
+    bool add(const Port*);
     void addDriven(const InputPort*);
     void addDrivers(const OutputPort*);
 
@@ -222,21 +243,27 @@ protected:
 public:
     ScheduledRegion(MutableModule* parent,
                     Block* seed,
-                    std::string name="");
+                    std::string name="",
+                    const std::set<const Port*>& constPorts = {});
     virtual ~ScheduledRegion();
 
     static bool PortAllowed(const Port*);
     static bool BlockAllowedFull(Block* b);
     static bool BlockAllowedVirtual(Block* b);
 
+    bool isConst(const Port* p) const {
+        return _constPorts.count(p) > 0;
+    }
+
     DEF_GET_NP(internalOutputs);
     DEF_GET_NP(internalInputs);
     DEF_GET_NP(externalOutputs);
     DEF_GET_NP(externalInputs);
-    DEF_GET_NP(cycles);
+    DEF_ARRAY_GET(cycles);
+    DEF_GET_NP(startControl);
 
-    bool grow(const Port*, const std::set<const Port*>& constPorts = {});
-    bool grow(const std::set<const Port*>& constPorts = {});
+    bool grow(const Port*);
+    bool grow();
 
     bool contains(Block* b) {
         return _fullMembers.count(b) > 0;
@@ -264,6 +291,17 @@ public:
     unsigned findClockNum(const Port*) const;
 
     void debugPrint(std::string name) const;
+
+    /// If finalized, don't give out a mutable DB
+    virtual ConnectionDB* conns() {
+        return _finalized ?
+                    nullptr :
+                    ContainerModule::conns();
+    }
+
+    virtual const ConnectionDB* conns() const {
+        return ContainerModule::conns();
+    }
 };
 
 class FormScheduledRegionPass : public ModulePass {

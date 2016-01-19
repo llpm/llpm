@@ -6,6 +6,7 @@
 #include <util/llvm_type.hpp>
 #include <util/misc.hpp>
 #include <refinery/refinery.hpp>
+#include <backends/verilog/scheduled_region.hpp>
 
 #include <libraries/core/comm_intr.hpp>
 #include <libraries/core/std_library.hpp>
@@ -329,6 +330,13 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
         return;
     }
 
+    if (mod->is<ScheduledRegion>()) {
+        ScheduledRegionVerilogPrinter(
+            this, dir, mod->as<ScheduledRegion>()).
+            writeRegion(files);
+        return;
+    }
+
     auto vf = dir.create(mod->name() + ".sv");
     files.insert(vf);
     std::ostream& os = vf->openStream();
@@ -361,11 +369,7 @@ void VerilogSynthesizer::writeModule(FileSet& dir,
     vector<Module*> submodules;
     mod->submodules(submodules);
     for (Module* sm: submodules) {
-        ControlRegion* cr = dynamic_cast<ControlRegion*>(sm);
-        if (cr != NULL) {
-            ctxt << "\n";
-            writeModule(dir, cr, files);
-        }
+        writeModule(dir, sm, files);
     }
 
     vf->close();
@@ -559,9 +563,9 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                bnF->second == b);
         blockNames[bname] = b;
 
-        const vector<Printer*>& possible_printers = _printers(b);
+        auto printer = getPrinter(b);
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
-        if (possible_printers.size() == 0) {
+        if (printer == nullptr) {
             auto blockName = ctxt.name(b);
             throw ImplementationError(
                 str(boost::format(
@@ -569,7 +573,6 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                             % blockName
                             % cpp_demangle(typeid(*b).name())));
         }
-        auto printer = possible_printers.front();
 
         ctxt << "    // Signal fwd defs \"" << ctxt.primBlockName(b) << "\" type "
              << cpp_demangle(typeid(*b).name()) << "\n";
@@ -627,9 +630,9 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
          << "\n";
 
     for (Block* b: blocks) {
-        const vector<Printer*>& possible_printers = _printers(b);
+        auto printer = getPrinter(b);
         bool writeControlBits = !ctxt.module()->is<ControlRegion>();
-        if (possible_printers.size() == 0) {
+        if (printer == nullptr) {
             auto blockName = ctxt.name(b);
             throw ImplementationError(
                 str(boost::format(
@@ -637,7 +640,6 @@ void VerilogSynthesizer::writeBlocks(Context& ctxt) {
                             % blockName
                             % cpp_demangle(typeid(*b).name())));
         }
-        auto printer = possible_printers.front();
 
         ctxt << "    // Block \"" << ctxt.primBlockName(b) << "\" type "
              << cpp_demangle(typeid(*b).name()) << "\n";
