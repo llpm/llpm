@@ -153,6 +153,12 @@ void ScheduledRegionVerilogPrinter::writeStartControl() {
     }
     _ctxt << "        1'b1;\n";
     _ctxt << "    wire " << _ctxt.name(_sr->startControl()) << "_bp;\n";
+    for (auto&& ip: _sr->externalInputs()) {
+        _ctxt << boost::format(
+            "    assign %1%_bp = %2%_bp;\n")
+            % _ctxt.name(ip, true)
+            % _ctxt.name(_sr->startControl());
+    }
 }
 
 void ScheduledRegionVerilogPrinter::writeConstants() {
@@ -300,7 +306,7 @@ void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
                 // Drive the valid signal here only if it's an internalOutput
                 assert(cycle != nullptr);
                 _ctxt << boost::format(
-                    "    assign %1%_valid = %2%_valid;\n")
+                    "    assign %1%_valid = %2%_valid && ~%2%_bp;\n")
                     % _ctxt.name((InputPort*)ip)
                     % validSignal(cycle);
             }
