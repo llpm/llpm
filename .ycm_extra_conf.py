@@ -6,7 +6,7 @@ flags = """-fopenmp -g -mfpmath=sse -msse4 -march=native -Wall
 -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 -Wno-deprecated -D_FILE_OFFSET_BITS=64
 -std=c++1y
--Ilib -Ibin/llvm/include -Illvm/include""".split()
+-Ilib -Ibin/llvm/include -Illvm/include -Ibin/flopc++/include/coin""".split()
 
 
 SOURCE_EXTENSIONS = [ '.cpp', '.cxx', '.cc', '.c' ]

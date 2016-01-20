@@ -6,7 +6,7 @@ if not os.path.isfile("./bin/llvm/bin/llvm-config"):
     print "Must compile llvm with ./build_llvm.sh first!"
     sys.exit(1)
 
-LibPaths = [".", "llvm/lib"]
+LibPaths = [".", "llvm/lib", "flopc++/lib"]
 
 CxxLdFlags = """
 -g -pthread -fno-omit-frame-pointer -Wno-unused-parameter
@@ -16,13 +16,14 @@ AddOption('--cxx', action='store', type='string', dest='cxx', nargs=1, metavar='
 		   help='Use argument as the C++ compiler.')
 
 env = Environment(
-    CPPPATH=['./lib', './bin/llvm/include/'],
+    CPPPATH=['./lib', './bin/llvm/include/', './bin/flopc++/include/coin/'],
     CXXFLAGS="""-O0 -mfpmath=sse -msse4 -march=native
             -Wall -Wextra -std=c++1y
             -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS
             -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS """.split()
             + CxxLdFlags,
-    LIBS="""tinyxml2 boost_program_options boost_filesystem boost_system LLVM-3.7""".split(),
+    LIBS="""tinyxml2 boost_program_options boost_filesystem
+            boost_system LLVM-3.7 FlopCpp OsiCbc""".split(),
     LIBPATH=map(lambda x: "bin/" + x, LibPaths),
     LINKFLAGS=[]
               + CxxLdFlags

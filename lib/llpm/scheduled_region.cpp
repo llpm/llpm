@@ -12,6 +12,9 @@
 #include <backends/graphviz/graphviz.hpp>
 #include <boost/format.hpp>
 
+#include <flopc.hpp>
+#include <OsiCbcSolverInterface.hpp>
+
 using namespace std;
 
 namespace llpm {
@@ -914,18 +917,99 @@ void ScheduledRegion::scheduleMinimumClocks() {
     // order and member data.
     addNewMembers();
 
-    // How many cycles?
-    Latency criticalLen = _deps.findCriticalLength();
-    unsigned numCycles = criticalLen.depth().registers();
-    if (numCycles == 0 && combinationallyDrivesSelf()) {
-        numCycles = 1;
-    }
-    printf("Scheduling %s in %u cycles\n", name().c_str(), numCycles);
-        
+    // Must we be sequential?
+    bool mustBeSequential = combinationallyDrivesSelf();
 
-    // Create each cycle
-    for (unsigned i=0; i<=numCycles; i++) {
+    // Assign IDs to ports
+    std::map<Port*, unsigned> id;
+    unsigned idx = 0;
+    for (auto p: _members) {
+
+        id[p] = idx++;
+    }
+
+    // Formulate as LP
+    using namespace flopc;
+    MP_model::getDefaultModel().setSolver(new OsiCbcSolverInterface);
+    MP_set Port(_members.size());
+    MP_variable Assignment(Port);
+    Assignment.lowerLimit(Port) = 0;
+
+    MP_subset<1> ExtOuts(Port);
+    MP_subset<2> Deps(Port, Port);
+    MP_subset<2> CalcLatency(Port, Port);
+
+    MP_data CalcLatencies(Port, Port);
+
+    for (auto p: _members) {
+        idx = id[p];
+        if (p->isInput()) {
+            auto ip = p->asInput();
+            for (auto dep: _deps[ip]) {
+                auto depid = id[dep];
+                Deps.insert(idx, depid);
+            }
+
+            if (mustBeSequential &&
+                _externalOutputs.count(findExternalPortFromSink(ip)) > 0) {
+                ExtOuts.insert(idx);
+                printf("ExtOut: %u\n", idx);
+            }
+        } else if (p->isOutput()) {
+            auto op = p->asOutput();
+            auto dr = op->deps();
+            for (unsigned i=0; i<dr.inputs.size(); i++) {
+                auto ip = dr.inputs[i]->m();
+                if (_members.contains(ip)) {
+                    auto ipid = id[ip];
+                    CalcLatency.insert(idx, ipid);
+                    auto lat = dr.latencies[i].depth().registers();
+                    CalcLatencies(idx, ipid) = lat;
+                    if (lat > 0) {
+                        printf("Lat: %u (%u, %u)\n", lat, idx, ipid);
+                    }
+                }
+            }
+        }
+    }
+
+    MP_index i, j;
+
+    MP_constraint SeqConstr(Port);
+    SeqConstr(ExtOuts(i)) = Assignment(i) >= 1;
+
+    MP_constraint DepsConstr(Port, Port);
+    DepsConstr(Deps(i, j)) = Assignment(i) >= Assignment(j);
+
+    MP_constraint CalcLatencyConstr(Port, Port);
+    CalcLatencyConstr(CalcLatency(i, j)) =
+        Assignment(i) - Assignment(j) == CalcLatencies(i, j);
+
+    minimize( sum(Port(i), Assignment(i) ));
+    int maxCyc = 0;
+    for (unsigned idx=0; idx<_members.size(); idx++) {
+        int cycNum = Assignment.level(idx);
+        maxCyc = max(maxCyc, cycNum);
+    }
+
+    for (int k=0; k<=maxCyc; k++) {
         _cycles.push_back(new Cycle(this));
+    }
+
+    for (auto p: _members) {
+        auto idx = id[p];
+        int cycNum = Assignment.level(idx);
+        auto cycle = _cycles[cycNum];
+        _cycleIdx[p] = cycNum;
+        if (p->isInput()) {
+            cycle->_firing.insert(p->asInput());
+        } else {
+            cycle->_newValues.insert(p->asOutput());
+        }
+
+        printf("[%u] %s %s %s: %i\n", idx, p->owner()->name().c_str(),
+               cpp_demangle(typeid(*p->owner()).name()).c_str(),
+               p->name().c_str(), cycNum);
     }
  
     finalizeCycles();
@@ -976,7 +1060,7 @@ void ScheduledRegion::finalizeCycles() {
     for (auto extInp: _externalInputs) {
         auto extSource = getDriver(extInp);
         _cycles[0]->_newValues.insert(extSource);
-        _cycles[0]->_available.insert(extSource);
+        // _cycles[0]->_available.insert(extSource);
         _cycleIdx[extSource] = 0;
     }
 
@@ -1432,7 +1516,7 @@ void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
         }
     }
     _newValues.insert(toAddOP.begin(), toAddOP.end());
-    _available.insert(toAddOP.begin(), toAddOP.end());
+    // _available.insert(toAddOP.begin(), toAddOP.end());
     _firing.insert(toAddIP.begin(), toAddIP.end());
     // ********
 
@@ -1449,7 +1533,7 @@ void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
     auto conns = _sr->conns();
     for (auto firing: _firing) {
         auto source = _sr->findInternalSource(firing);
-        assert(_sr->isConst(source) || _available.count(source) > 0);
+        // assert(_sr->isConst(source) || _available.count(source) > 0);
         if (_newValues.count(source) == 0 &&
             !_sr->isConst(source)) {
             // Wasn't generated this cycle, look to the past!
@@ -1468,7 +1552,7 @@ OutputPort* ScheduledRegion::Cycle::getPipelinedPort(
     if (_sr->isConst(opConst))
         return op;
 
-    assert(_available.count(op) > 0);
+    // assert(_available.count(op) > 0);
 
     auto f = _regs.find(op);
     if (f == _regs.end()) {
