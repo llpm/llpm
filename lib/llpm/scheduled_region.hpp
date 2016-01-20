@@ -3,6 +3,7 @@
 
 #include <llpm/module.hpp>
 #include <passes/pass.hpp>
+#include <llpm/path.hpp>
 
 namespace llpm {
 
@@ -60,11 +61,11 @@ public:
         ScheduledRegion* _sr;
         Cycle*           _prev;
         std::set<OutputPort*> _newValues;
-        std::set<const OutputPort*> _available;
+        std::set<OutputPort*> _available;
         std::set<InputPort*>  _firing;
 
-        std::map<const OutputPort*, PipelineRegister*>
-                                    _regs;
+        std::map<OutputPort*, PipelineRegister*>
+                                 _regs;
         PipelineStageController* _controller;
 
         Cycle(ScheduledRegion* sr) :
@@ -73,7 +74,7 @@ public:
         { }
 
         void finalize(unsigned cycleNum);
-        OutputPort* getPipelinedPort(const OutputPort*);
+        OutputPort* getPipelinedPort(OutputPort*);
 
     public:
         DEF_GET_NP(newValues);
@@ -92,26 +93,26 @@ protected:
     /// Set of ports which are scheduled by this region. Only used during the
     //  building steps and cleared afterwards.
     struct Members {
-        std::set<const Port*> members;
+        std::set<Port*> members;
         std::set<BlockP> memBlockPtrs;
 
         void shrinkToConstraints(
-            const OutputPort* root,
+            OutputPort* root,
             ConnectionDB* conns);
         void removeIneligiblePorts();
         void findDeps(
-            const OutputPort* op,
+            OutputPort* op,
             ConnectionDB* conns,
-            std::set<const Port*>& allDeps,
-            std::set<const OutputPort*>& extDeps) const;
-        std::set<const OutputPort*> findExtOuts(ConnectionDB* conns) const;
-        std::set<const OutputPort*>  findExtIns(ConnectionDB* conns) const;
+            std::set<Port*>& allDeps,
+            std::set<OutputPort*>& extDeps) const;
+        std::set<OutputPort*> findExtOuts(ConnectionDB* conns) const;
+        std::set<OutputPort*>  findExtIns(ConnectionDB* conns) const;
 
         auto begin() { return members.begin(); }
         auto end() { return members.end(); }
-        auto count(const Port* p) const { return members.count(p); }
+        auto count(Port* p) const { return members.count(p); }
         auto size() const { return members.size(); }
-        auto insert(const Port* p) {
+        auto insert(Port* p) {
             memBlockPtrs.insert(p->ownerP());
             return members.insert(p);
         }
@@ -123,15 +124,15 @@ protected:
             return members.insert(begin, end);
         }
 
-        bool contains(const Port* p) const {
+        bool contains(Port* p) const {
             return members.count(p) > 0;
         }
 
-        void erase(const Port* p) {
+        void erase(Port* p) {
             members.erase(p);
         }
-        void erase(const Block*);
-        std::set<const InputPort*> getAllInputs() const;
+        void erase(Block*);
+        std::set<InputPort*> getAllInputs() const;
         void cleanInternal();
     } _members;
 
@@ -158,13 +159,81 @@ protected:
      * is possible because several Waits, Joins, ect. may have been removed
      * from the graph but those semantic dependences must be retained. This
      * data structure maintains them.
+     *
+     * The FULL set of dependencies is governed both by this data structure
+     * _AND_ the dependences between ports belonging to blocks. In other words,
+     * the inputs upon which an OutputPort depends is given by the OutputPort's
+     * block (aliased by op->deps()). The dependences between an InputPort and
+     * the various OutputPorts which must be available for it to fire are given
+     * by this data structure (which was, in turn, populated from a
+     * ConnectionDB).
     */
-    std::map<const OutputPort*, std::set<const InputPort*> > 
-        _executesNotLaterThan;
-    std::vector<Cycle> _cycles;
+    struct Deps {
+        ScheduledRegion* sr;
+
+        Deps(ScheduledRegion* sr) :
+            sr(sr)
+        { }
+
+        std::map<OutputPort*, std::set<InputPort*> > 
+            reverse;
+        std::map<InputPort*, std::set<OutputPort*> >
+            deps;
+
+        void declare(InputPort* ip, OutputPort* op) {
+            reverse[op].insert(ip);
+            deps[ip].insert(op);
+        }
+
+        void declare(OutputPort* op) {
+            reverse[op];
+        }
+        
+        void declare(InputPort* ip) {
+            deps[ip];
+        }
+
+        bool has(InputPort* ip) const {
+            return deps.find(ip) != deps.end();
+        }
+
+        bool has(OutputPort* op) const {
+            return reverse.find(op) != reverse.end();
+        }
+
+        const std::set<OutputPort*>& operator[](InputPort* ip) const {
+            auto f = deps.find(ip);
+            assert(f != deps.end());
+            return f->second;
+        }
+
+        const std::set<InputPort*>& operator[](OutputPort* op) const {
+            auto f = reverse.find(op);
+            assert(f != reverse.end());
+            return f->second;
+        }
+
+        Latency findCriticalLength() const;
+
+        /// Find the longest path in this graph
+        Path findCriticalPath() const;
+
+        /// Find the longest path in this graph, ending with this IP 
+        Path findCriticalPath(InputPort*) const;
+        /// Find the longest path in this graph, ending with this OP 
+        Path findCriticalPath(OutputPort*) const;
+
+        void clean();
+        void minimize();
+        void rebuildReverse();
+    } _deps;
+    friend struct ScheduledRegion::Deps;
+
+
+    std::vector<Cycle*> _cycles;
     std::map<const Port*, unsigned> _cycleIdx;
-    const std::set<const InputPort*>&
-        calculateExecutionOrder(const OutputPort*, ConnectionDB*);
+    const std::set<InputPort*>&
+        calculateExecutionOrder(OutputPort*, ConnectionDB*);
     void calculateOrder(ConnectionDB* conns);
     void addNewMembers();
     void scheduleMinimumClocks();
@@ -204,24 +273,24 @@ protected:
      * Find member port which drives a particular input port. This port may be
      * a full member or a virtual member.
      */
-    const OutputPort* findInternalSource(const InputPort*) const;
+    OutputPort* findInternalSource(const InputPort*) const;
 
     /**
      * Find member port which is driven by a particular output port. These
      * ports may be full members or virtual members.
      */
     void findInternalSinks(const OutputPort*,
-                           std::set<const InputPort*>&) const;
+                           std::set<InputPort*>&) const;
 
 
     /// Clean up internal data structures
     void cleanInternal();
 
-    bool add(const Port*);
-    void addDriven(const InputPort*);
-    void addDrivers(const OutputPort*);
+    bool add(Port*);
+    void addDriven(InputPort*);
+    void addDrivers(OutputPort*);
 
-    bool isConnectedToMe(const Port*) const;
+    bool isConnectedToMe(Port*) const;
 
     /**
      * Examine the _members of this region and identify external and internal
@@ -239,6 +308,11 @@ protected:
      * Check & optimize the interior
      */
     void checkOptFinalize();
+
+    /**
+     * Do I drive myself without passing through a pipeline reg?
+     */
+    bool combinationallyDrivesSelf() const;
 
 public:
     ScheduledRegion(MutableModule* parent,
@@ -262,7 +336,7 @@ public:
     DEF_ARRAY_GET(cycles);
     DEF_GET_NP(startControl);
 
-    bool grow(const Port*);
+    bool grow(Port*);
     bool grow();
 
     bool contains(Block* b) {
@@ -274,7 +348,7 @@ public:
      * absorb the member blocks and connections. Ensure that the specified port
      * is retained in the pruning process.
      */
-    bool finalize(const OutputPort*);
+    bool finalize(OutputPort*);
 
     virtual void validityCheck() const;
     virtual std::string print() const;
@@ -291,7 +365,7 @@ public:
 
     /// How many clock cycles does it take to compute this?
     unsigned clocks() const;
-    unsigned findClockNum(const Port*) const;
+    unsigned findClockNum(Port*) const;
 
     void debugPrint(std::string name) const;
 

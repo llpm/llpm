@@ -361,7 +361,7 @@ std::string ScheduledRegionVerilogPrinter::validSignal(
     if (psc == nullptr) {
         // Special case: last cycle has no PSC
         if (_sr->cycles_size() > 1) {
-            vinSource = _sr->cycles(_sr->cycles_size() - 2).controller()->vout(); 
+            vinSource = _sr->cycles(_sr->cycles_size() - 2)->controller()->vout(); 
         } else {
             vinSource = _sr->startControl()->dout();
         }
@@ -404,29 +404,29 @@ void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
 }
 
 void ScheduledRegionVerilogPrinter::writeCycle(unsigned cycleNum) {
-    const ScheduledRegion::Cycle& c = _sr->cycles(cycleNum);
+    const ScheduledRegion::Cycle* c = _sr->cycles(cycleNum);
     _ctxt << boost::format(
                 "\n// ***** Cycle %1%: Computation *****\n")
                 % cycleNum;
-    auto firing = c.firing();
+    auto firing = c->firing();
     for (auto ip: firing) {
-        write(&c, ip);
+        write(c, ip);
     }
     _ctxt << boost::format(
                 "\n// ***** Cycle %1%: Registers *****\n")
                 % cycleNum;
 
-    if (c.controller() != nullptr)
-        write(&c, c.controller());
-    auto regs = c.regs();
+    if (c->controller() != nullptr)
+        write(c, c->controller());
+    auto regs = c->regs();
     for (auto rpair: regs) {
-        write(&c, rpair.second);
+        write(c, rpair.second);
     }
 }
 
 void ScheduledRegionVerilogPrinter::writeOutputs() {
     _ctxt << "\n// ***** Final output LI bits *****\n";
-    const ScheduledRegion::Cycle& lastCycle = _sr->cycles(_sr->cycles_size() - 1);
+    const ScheduledRegion::Cycle* lastCycle = _sr->cycles(_sr->cycles_size() - 1);
 
     _ctxt << boost::format(
         "    wire [%2%-1:0] __outputfork_dout_valid;\n"
@@ -441,7 +441,7 @@ void ScheduledRegionVerilogPrinter::writeOutputs() {
         "        .dout_valid(__outputfork_dout_valid),\n"
         "        .dout_bp(__outputfork_dout_bp)\n"
         "    );\n")
-        % validSignal(&lastCycle)
+        % validSignal(lastCycle)
         % _sr->externalOutputs().size();
     unsigned idx = 0;
     for (auto op: _sr->externalOutputs()) {

@@ -2,6 +2,7 @@
 
 #include <libraries/synthesis/pipeline.hpp>
 #include <passes/transforms/simplify.hpp>
+#include <analysis/graph.hpp>
 #include <analysis/graph_queries.hpp>
 #include <libraries/synthesis/fork.hpp>
 #include <libraries/synthesis/pipeline.hpp>
@@ -173,7 +174,8 @@ ScheduledRegion::ScheduledRegion(MutableModule* parent,
     ContainerModule(parent->design(), name),
     _parent(parent),
     _constPorts(constPorts),
-    _finalized(false) {
+    _finalized(false),
+    _deps(this) {
 
     assert(BlockAllowedFull(seed));
     module(parent);
@@ -189,7 +191,7 @@ ScheduledRegion::ScheduledRegion(MutableModule* parent,
 
 ScheduledRegion::~ScheduledRegion() { }
 
-bool ScheduledRegion::grow(const Port* port) {
+bool ScheduledRegion::grow(Port* port) {
     assert(_members.count(port) > 0);
 
     ConnectionDB* conns = port->owner()->module()->conns();
@@ -231,7 +233,7 @@ bool ScheduledRegion::grow() {
     return ret;
 }
 
-bool ScheduledRegion::isConnectedToMe(const Port* port) const {
+bool ScheduledRegion::isConnectedToMe(Port* port) const {
     ConnectionDB* conns = port->owner()->module()->conns();
     assert(conns != nullptr);
 
@@ -252,24 +254,24 @@ bool ScheduledRegion::isConnectedToMe(const Port* port) const {
 
     bool isConnected = false;
     for (auto c: connected) {
-        if (_members.count(c) > 0)
+        if (_members.count(c->m()) > 0)
             isConnected = true;
     }
 
     return isConnected;
 }
 
-void ScheduledRegion::addDrivers(const OutputPort* port) {
+void ScheduledRegion::addDrivers(OutputPort* port) {
     auto dr = port->deps();
     if (dr.depType == DependenceRule::AND_FireOne) {
         for (auto inp: dr.inputs) {
-            add(inp);
+            add(inp->m());
         }
     }
 }
 
-void ScheduledRegion::addDriven(const InputPort* port) {
-    std::set<const Port*> fires;
+void ScheduledRegion::addDriven(InputPort* port) {
+    std::set<Port*> fires;
     bool andFireOne = true;
     
     // Find output ports which are always driven by this port and only this
@@ -277,9 +279,9 @@ void ScheduledRegion::addDriven(const InputPort* port) {
     for (auto op: port->findDriven()) {
         auto dr = op->deps();
         if (dr.depType == DependenceRule::AND_FireOne){
-            fires.insert(op->owner()->toMutable(op));
+            fires.insert(op->m());
             for (auto dep: dr.inputs) {
-                fires.insert(dep->owner()->toMutable(dep));
+                fires.insert(dep->m());
             }
         } else {
             andFireOne = false;
@@ -293,7 +295,7 @@ void ScheduledRegion::addDriven(const InputPort* port) {
     }
 }
 
-bool ScheduledRegion::add(const Port* port) {
+bool ScheduledRegion::add(Port* port) {
     if (_members.count(port) > 0)
         // Already added! Cannot add it again, damnit!
         return false;
@@ -435,7 +437,7 @@ void ScheduledRegion::absorb() {
     map<InputPort*, OutputPort*> virtualPorts;
 
     // Absorb based on all input port members. This should pull in _all_
-    set<const Port*> membersCopy = _members.members;
+    set<Port*> membersCopy = _members.members;
     for (auto memb: membersCopy) {
         members.insert(memb->ownerP());
         if (memb->isInput()) {
@@ -558,14 +560,14 @@ void ScheduledRegion::absorb(OutputPort* op, InputPort* ip) {
     conns()->connect(op, ip);
 }
 
-const std::set<const InputPort*>& ScheduledRegion::calculateExecutionOrder(
-    const OutputPort* op,
+const std::set<InputPort*>& ScheduledRegion::calculateExecutionOrder(
+    OutputPort* op,
     ConnectionDB* conns) {
-    auto f = _executesNotLaterThan.find(op);
-    if (f != _executesNotLaterThan.end())
-        return f->second;
+    if (_deps.has(op)) {
+        return _deps[op];
+    }
 
-    set<const InputPort*> ret;
+    set<InputPort*> ret;
     set<InputPort*> sinks;
     conns->findSinks(op, sinks);
     for (auto sink: sinks) {
@@ -582,10 +584,13 @@ const std::set<const InputPort*>& ScheduledRegion::calculateExecutionOrder(
     }
 
     if (_members.contains(op)) {
-        _executesNotLaterThan[op] = ret;
-        return _executesNotLaterThan[op];
+        _deps.declare(op);
+        for (auto ip: ret) {
+            _deps.declare(ip, op);
+        }
+        return _deps[op];
     } else {
-        static std::set<const InputPort*> EmptySet;
+        static std::set<InputPort*> EmptySet;
         return EmptySet;
     }
 }
@@ -716,7 +721,7 @@ void ScheduledRegion::cleanInternal() {
     blocksToRemove.clear();
 
     // Find and remove deleted ports from members
-    deque<const Port*> membToRemove;
+    deque<Port*> membToRemove;
     for (auto memb: _members) {
         if (memb->owner()->module() == this) {
             if (memb->isInput()) {
@@ -736,30 +741,75 @@ void ScheduledRegion::cleanInternal() {
         }
     }
 
-    // Find and remove deleted ports from ordering structures
-    deque<const OutputPort*> toRemove;
-    for (auto& opSetPair: _executesNotLaterThan) {
-        if (!_members.contains(opSetPair.first)) {
-            toRemove.push_back(opSetPair.first);
-        } else {
-            deque<const InputPort*> toRemoveInternal;
-            for (auto ip: opSetPair.second) {
-                if (!_members.contains(ip)) {
-                    toRemoveInternal.push_back(ip);
-                }
-            }
+    _members.cleanInternal();
+    _deps.clean();
+}
 
-            for (auto r: toRemoveInternal) {
-                opSetPair.second.erase(r);
+void ScheduledRegion::Deps::clean() {
+    // Rebuild _deps with only current members
+    std::map<InputPort*, std::set<OutputPort*> > origDeps;
+    origDeps.swap(deps);
+    reverse.clear();
+
+    for (auto p: sr->_members) {
+        if (p->isInput())
+            declare(p->asInput());
+    }
+    for (auto ipDeps: origDeps) {
+        auto ip = ipDeps.first;
+        if (sr->_members.contains(ip)) {
+            // Still a member!
+            for (auto dep: ipDeps.second) {
+                if (sr->_members.contains(dep)) {
+                    // Dependency is also still a member
+                    deps[ip].insert(dep);
+                }
             }
         }
     }
 
-    for (auto r: toRemove) {
-        _executesNotLaterThan.erase(r);
-    }
+    rebuildReverse();
+    minimize();
+}
 
-    _members.cleanInternal();
+/**
+ * Remove redundancy from this graph. In other words, if a dep shares a direct
+ * dep, delete the direct dep and allow it to be indirect.
+ */
+void ScheduledRegion::Deps::minimize() {
+    std::map<InputPort*, std::set<OutputPort*> > origDeps;
+    origDeps.swap(deps);
+    for (auto ipDepsPair: origDeps) {
+        auto ip = ipDepsPair.first;
+        auto deps = ipDepsPair.second;
+        set<OutputPort*> newDeps = deps;
+        for (OutputPort* depOP: deps) {
+            auto dr = depOP->deps();
+            for (auto depIP: dr.inputs) {
+                auto depDeps = origDeps[depIP->m()];
+                for (OutputPort* depDep: depDeps) {
+                    newDeps.erase(depDep);
+                }
+            }
+        }
+        this->deps[ip] = newDeps;
+    }
+    rebuildReverse();
+}
+
+
+void ScheduledRegion::Deps::rebuildReverse() {
+    reverse.clear();
+    for (auto p: sr->_members) {
+        if (p->isOutput())
+            declare(p->asOutput());
+    }
+    for (auto ipDeps: deps) {
+        auto ip = ipDeps.first;
+        for (auto dep: ipDeps.second) {
+            reverse[dep].insert(ip);
+        }
+    }
 }
 
 void ScheduledRegion::Members::cleanInternal() {
@@ -772,7 +822,7 @@ void ScheduledRegion::Members::cleanInternal() {
     blocks.clear();
 }
 
-bool ScheduledRegion::finalize(const OutputPort* root) {
+bool ScheduledRegion::finalize(OutputPort* root) {
     if (_members.size() == 0)
         return false;
 
@@ -796,24 +846,6 @@ bool ScheduledRegion::finalize(const OutputPort* root) {
         // Require at least one full member, for now.
         return false;
     
-    // Find dangling outputs and add NullSinks
-    for (auto memb: _members) {
-        if (memb->isOutput()) {
-            auto outp = memb->asOutput();
-            std::set<InputPort*> sinks;
-            conns->findSinks(outp, sinks);
-            unsigned memSinkCount = 0;
-            for (auto sink: sinks)
-                if (_members.contains(sink))
-                    memSinkCount += 1;
-            if (memSinkCount == 0) {
-                auto ns = new NullSink(outp->type());
-                conns->connect((OutputPort*)outp, ns->din());
-                _members.insert(ns->din());
-            }
-        }
-    }
-
     // OK, time to actually bring everything inside
     absorb();
 
@@ -863,7 +895,7 @@ void ScheduledRegion::addNewMembers() {
             auto inp = memb->asInput();
             auto source = findInternalSource(inp);
             if (source != nullptr)
-                _executesNotLaterThan[source].insert(inp);
+                _deps.declare(inp, source);
         }
     }
 }
@@ -882,129 +914,69 @@ void ScheduledRegion::scheduleMinimumClocks() {
     // order and member data.
     addNewMembers();
 
-    set<const OutputPort*> inputSources;
-    for (auto extInp: _externalInputs) {
-        inputSources.insert(getDriver(extInp));
+    // How many cycles?
+    Latency criticalLen = _deps.findCriticalLength();
+    unsigned numCycles = criticalLen.depth().registers();
+    if (numCycles == 0 && combinationallyDrivesSelf()) {
+        numCycles = 1;
     }
+    printf("Scheduling %s in %u cycles\n", name().c_str(), numCycles);
+        
 
-    // Find deps by inverting _executesNotLaterThan
-    map<const InputPort*, set<const OutputPort*> > remainingDeps;
-    for (const auto& executesPair: _executesNotLaterThan) {
-        for (auto ip: executesPair.second) {
-            remainingDeps[ip].insert(executesPair.first);
-        }
+    // Create each cycle
+    for (unsigned i=0; i<=numCycles; i++) {
+        _cycles.push_back(new Cycle(this));
     }
-
-    map<unsigned, deque<const InputPort*>> firingAtCycle;
-    // Start with all outputs
-    for (auto extOutp: _externalOutputs) {
-        firingAtCycle[0].push_back(getSink(extOutp));
-    }
-    // And any input which leads nowhere
-    for (auto memb: _members) {
-        if (memb->isInput()) {
-            auto inp = memb->asInput();
-            if (inp->findDriven().size() == 0)
-                firingAtCycle[0].push_back(inp);
-        }
-    }
-
-    for (auto memb: _members) {
-        if (memb->isOutput()) {
-            auto outMemb = memb->asOutput();
-            set<const InputPort*> sinks;
-            findInternalSinks(outMemb, sinks);
-            if (sinks.size() == 0) {
-                debugPrint("DanglingOutputs");
-                assert(sinks.size() > 0 && "Cannot have dangling outputs!");
-            }
-        }
-    }
-
-    // 'available' keeps track of values that subsequent stages need. An OP is
-    // added when it's used and the OP is removed when it is produced.
-    set<const OutputPort*> available;
-
-    // Iterate until all inputs have been fired
-    do {
-        unsigned cycleNum = _cycles.size();
-        _cycles.insert(_cycles.begin(), Cycle(this));
-        Cycle& cycle = _cycles.front();
-
-        if (cycleNum > 100) {
-            printf("ERROR: Giving up scheduling!\n");
-            break;
-        }
-
-        // Iterate over everything firing this cycle
-        //   Note: do not cache pointers into this data structure as it can be
-        //   updated in this loop, invalidating those pointers.
-        while (firingAtCycle[cycleNum].size() > 0) {
-            auto firingIP = firingAtCycle[cycleNum].front();
-            firingAtCycle[cycleNum].pop_front();
-            if (cycle._firing.count((InputPort*)firingIP) > 0)
-                // We have already fired this one this cycle. Somehow got in
-                // the list twice, just just ignore it.
-                continue;
-            cycle._firing.insert(firingIP->owner()->toMutable(firingIP));
-
-            // These outputs MUST already have been available, even if they
-            // aren't actually used.
-            auto f = remainingDeps.find(firingIP);
-            assert(f != remainingDeps.end());
-            auto neededDeps = f->second;
-            remainingDeps.erase(f);
-
-            auto dataSource = findInternalSource(firingIP);
-            assert(dataSource != nullptr);
-            assert(neededDeps.count(dataSource) > 0 ||
-                   dataSource->owner()->is<DummyBlock>() ); // Sanity check
-            // The data on this output port must be available this cycle!
-            available.insert(dataSource);
-
-            // Go through all the deps and determine if we have already
-            // calculated it or if this is the first usage.
-            for (auto dep: neededDeps) {
-                if (inputSources.count(dep) > 0)
-                    continue; // No need to schedule inputs
-
-                const auto& otherUsers = _executesNotLaterThan[dep];
-                bool alreadyUsed = false;
-                for (auto otherUser: otherUsers) {
-                    if (remainingDeps.count(otherUser) > 0)
-                        alreadyUsed = true;
-                }
-
-                if (!alreadyUsed) {
-                    // OK, this is the first use of this value. Schedule it to
-                    // ensure it is available THIS clock cycle.
-                    cycle._newValues.insert((OutputPort*)dep);
-                    auto dr = internalDeps(dep);
-                    assert(dr.inputs.size() == dr.latencies.size());
-                    for (unsigned i=0; i<dr.inputs.size(); i++) {
-                        auto ip = dr.inputs[i];
-                        auto lat = dr.latencies[i];
-                        auto scheduledCycle =
-                            cycleNum + lat.depth().registers();
-                        firingAtCycle[scheduledCycle].push_back(ip);
-                    }
-                }
-            }
-        }
-        firingAtCycle.erase(cycleNum);
-        cycle._available = available;
-        for (auto nv: cycle._newValues) {
-            available.erase(nv);
-        }
-    } while (remainingDeps.size() > 0);
-
+ 
     finalizeCycles();
+}
+
+struct SelfFindingVisitor : public Visitor<IOEdge> {
+    const ScheduledRegion* sr;
+    bool hitMyself;
+
+    SelfFindingVisitor(const ScheduledRegion* sr) :
+        sr(sr),
+        hitMyself(false)
+    { }
+
+    // Visit a vertex in the graph
+    Terminate visit(const ConnectionDB*,
+                    const IOEdge& edge) {
+        if (edge.endPort()->owner() == sr) {
+            hitMyself = true;
+            return TerminateSearch;
+        }
+        return Continue;
+    }
+
+    Terminate next(const ConnectionDB*,
+                   const IOEdge& edge, 
+                   std::vector<const InputPort*>& ret) {
+        auto dr = edge.endPort()->deps();
+        for (unsigned i=0; i<dr.inputs.size(); i++) {
+            auto lat = dr.latencies[i];
+            if (lat.depth().registers() == 0 ||
+                !lat.depth().fixed()) {
+                ret.push_back(dr.inputs[i]);
+            }
+        }
+        return Continue;
+    }
+};
+
+bool ScheduledRegion::combinationallyDrivesSelf() const {
+    SelfFindingVisitor visitor(this);
+    GraphSearch<SelfFindingVisitor, DFS> search (module()->connsConst(), visitor);
+    search.go(inputs());
+    return visitor.hitMyself;
 }
 
 void ScheduledRegion::finalizeCycles() {
     for (auto extInp: _externalInputs) {
         auto extSource = getDriver(extInp);
-        _cycles[0]._newValues.insert(extSource);
+        _cycles[0]->_newValues.insert(extSource);
+        _cycles[0]->_available.insert(extSource);
         _cycleIdx[extSource] = 0;
     }
 
@@ -1019,21 +991,21 @@ void ScheduledRegion::finalizeCycles() {
     }
 
     for (unsigned i=0; i<_cycles.size(); i++) {
-        Cycle& cycle = _cycles[i];
-        for (auto nv: cycle._newValues) {
+        Cycle* cycle = _cycles[i];
+        for (auto nv: cycle->_newValues) {
             _cycleIdx[nv] = i;
         }
-        for (auto firing: cycle._firing) {
+        for (auto firing: cycle->_firing) {
             _cycleIdx[firing] = i;
         }
-        cycle.finalize(i);
+        cycle->finalize(i);
 
-        if (i == 0)
-            cycle._controller->connectVin(conns(), startSig);
+        if (i == 0 && _cycles.size() > 1)
+            cycle->controller()->connectVin(conns(), startSig);
     }
 }
 
-const OutputPort* ScheduledRegion::findInternalSource(
+OutputPort* ScheduledRegion::findInternalSource(
     const InputPort* sink) const {
 
     if (sink->owner()->is<DummyBlock>() &&
@@ -1063,7 +1035,7 @@ const OutputPort* ScheduledRegion::findInternalSource(
 
 void ScheduledRegion::findInternalSinks(
     const OutputPort* source,
-    set<const InputPort*>& sinks) const {
+    set<InputPort*>& sinks) const {
 
     if (source->owner()->is<DummyBlock>() &&
         source->owner()->module() == this) {
@@ -1189,7 +1161,7 @@ std::string ScheduledRegion::print() const {
             % _members.size());
 }
 
-void ScheduledRegion::Members::erase(const Block* b) {
+void ScheduledRegion::Members::erase(Block* b) {
     for (auto inp: b->inputs()) {
         members.erase(inp);
     }
@@ -1199,13 +1171,13 @@ void ScheduledRegion::Members::erase(const Block* b) {
 }
 
 void ScheduledRegion::Members::shrinkToConstraints(
-    const OutputPort* root, 
+    OutputPort* root, 
     ConnectionDB* conns) {
 
     struct DepInfo {
-        const OutputPort* op;
-        std::set<const Port*> allDeps;
-        std::set<const OutputPort*> extDeps;
+        OutputPort* op;
+        std::set<Port*> allDeps;
+        std::set<OutputPort*> extDeps;
     };
 
     while (members.size() > 0) {
@@ -1306,7 +1278,7 @@ void ScheduledRegion::Members::shrinkToConstraints(
         members.erase(toRemove.op);
         auto dr = toRemove.op->deps();
         for (auto inp: dr.inputs) {
-            members.erase(inp);
+            members.erase(inp->m());
             // printf("%p, ", inp);
         }
         // printf("\n");
@@ -1314,7 +1286,7 @@ void ScheduledRegion::Members::shrinkToConstraints(
 }
 
 void ScheduledRegion::Members::removeIneligiblePorts() {
-    set<const Port*> toRemove;
+    set<Port*> toRemove;
     do {
         toRemove.clear();
         for (auto memb: members) {
@@ -1325,7 +1297,7 @@ void ScheduledRegion::Members::removeIneligiblePorts() {
                 }
             } else if (memb->isOutput()) {
                 for (auto dep: memb->asOutput()->deps().inputs) {
-                    if (members.count(dep) == 0)
+                    if (members.count(dep->m()) == 0)
                         toRemove.insert(memb);
                 }
             } else {
@@ -1339,10 +1311,10 @@ void ScheduledRegion::Members::removeIneligiblePorts() {
 }
 
 void ScheduledRegion::Members::findDeps(
-    const OutputPort* op,
+    OutputPort* op,
     ConnectionDB* conns,
-    std::set<const Port*>& allDeps,
-    std::set<const OutputPort*>& extDeps) const {
+    std::set<Port*>& allDeps,
+    std::set<OutputPort*>& extDeps) const {
 
     // Make sure 'op' is a member!
     assert(members.count(op) > 0);
@@ -1354,10 +1326,10 @@ void ScheduledRegion::Members::findDeps(
 
     auto dr = op->deps();
     for (auto ip: dr.inputs) {
-        if (members.count(ip) == 0)
+        if (members.count(ip->m()) == 0)
             continue;
 
-        allDeps.insert(ip);
+        allDeps.insert(ip->m());
         auto source = conns->findSource(ip);
         if (source != nullptr) {
             if (members.count(source) > 0) {
@@ -1369,9 +1341,9 @@ void ScheduledRegion::Members::findDeps(
     }
 }
 
-std::set<const OutputPort*> ScheduledRegion::Members::findExtIns(
+std::set<OutputPort*> ScheduledRegion::Members::findExtIns(
     ConnectionDB* conns) const {
-    set<const OutputPort*> ret;
+    set<OutputPort*> ret;
     for (auto member: members) {
         if (member->isInput()) {
             auto inp = member->asInput();
@@ -1384,9 +1356,9 @@ std::set<const OutputPort*> ScheduledRegion::Members::findExtIns(
     return ret;
 }
 
-std::set<const OutputPort*> ScheduledRegion::Members::findExtOuts(
+std::set<OutputPort*> ScheduledRegion::Members::findExtOuts(
     ConnectionDB* conns) const {
-    set<const OutputPort*> ret;
+    set<OutputPort*> ret;
     for (auto member: members) {
         if (member->isOutput()) {
             auto outp = member->asOutput();
@@ -1407,8 +1379,8 @@ std::set<const OutputPort*> ScheduledRegion::Members::findExtOuts(
 }
 
 
-std::set<const InputPort*> ScheduledRegion::Members::getAllInputs() const {
-    set<const InputPort*> ret;
+std::set<InputPort*> ScheduledRegion::Members::getAllInputs() const {
+    set<InputPort*> ret;
     for (auto memb: members) {
         if (memb->isInput()) {
             ret.insert(memb->asInput());
@@ -1421,37 +1393,8 @@ unsigned ScheduledRegion::clocks() const {
     return _cycles.size() - 1;
 }
 
-unsigned ScheduledRegion::findClockNum(const Port* p) const {
+unsigned ScheduledRegion::findClockNum(Port* p) const {
     auto f = _cycleIdx.find(p);
-    if (f != _cycleIdx.end())
-        return f->second;
-    if (p->owner()->is<DummyBlock>()) {
-        auto db = p->owner()->as<DummyBlock>();
-        if (p->isInput()) {
-            p = db->dout();
-        } else {
-            p = db->din();
-        }
-    } else if (p->owner() == this) {
-        // Port is one of our ports!
-        if (p->isInput()) {
-            auto inp = (InputPort*)p->asInput();
-            if (_externalInputs.count(inp) > 0)
-                p = getDriver(inp);
-            else if (_internalInputs.count(inp) > 0)
-                p = module()->conns()->findSource(inp);
-        } else {
-            auto op = (OutputPort*)p->asOutput();
-            if (_externalOutputs.count(op) > 0)
-                p = getSink(op);
-            else if (_internalOutputs.count(op) > 0)
-                p = conns()->findSource(getSink(op));
-        }
-    }
-
-    // Retry with port on other end of DummyBlock
-    //   (Some code does really stupid things, let's just accommodate this)
-    f = _cycleIdx.find(p);
     if (f != _cycleIdx.end())
         return f->second;
 
@@ -1460,7 +1403,7 @@ unsigned ScheduledRegion::findClockNum(const Port* p) const {
 
 void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
     if (cycleNum > 0) {
-        _prev = &_sr->_cycles[cycleNum-1];
+        _prev = _sr->_cycles[cycleNum-1];
     }
     
     // *********
@@ -1505,7 +1448,7 @@ void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
 
     auto conns = _sr->conns();
     for (auto firing: _firing) {
-        auto source = (OutputPort*)_sr->findInternalSource(firing);
+        auto source = _sr->findInternalSource(firing);
         assert(_sr->isConst(source) || _available.count(source) > 0);
         if (_newValues.count(source) == 0 &&
             !_sr->isConst(source)) {
@@ -1519,7 +1462,7 @@ void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
 }
 
 OutputPort* ScheduledRegion::Cycle::getPipelinedPort(
-    const OutputPort* opConst) {
+    OutputPort* opConst) {
     
     auto op = (OutputPort*)opConst;
     if (_sr->isConst(opConst))
@@ -1543,6 +1486,60 @@ OutputPort* ScheduledRegion::Cycle::getPipelinedPort(
     } else {
         return f->second->dout();
     }
+}
+
+Latency ScheduledRegion::Deps::findCriticalLength() const {
+    auto backend = sr->design().backend();
+    return findCriticalPath().latency(backend);
+}
+
+Path ScheduledRegion::Deps::findCriticalPath() const {
+    auto backend = sr->design().backend();
+    Path longest;
+    for (auto extOut: sr->externalOutputs()) {
+        auto sink = sr->getSink(extOut);
+        auto p = findCriticalPath(sink);
+        if (p.latency(backend).depth() > longest.latency(backend).depth()) {
+            longest = p;
+        }
+        assert(p.isValid());
+    }
+    return longest;
+}
+
+Path ScheduledRegion::Deps::findCriticalPath(InputPort* ip) const {
+    auto backend = sr->design().backend();
+    auto deps = (*this)[ip];
+    Path longest;
+    longest.push_back(ip);
+    for (auto dep: deps) {
+        Path dp = findCriticalPath(dep);
+        dp.push_back(ip);
+        if (dp.latency(backend).depth() > longest.latency(backend).depth()) {
+            longest = dp;
+        }
+        assert(dp.isValid());
+    }
+    return longest;
+}
+
+Path ScheduledRegion::Deps::findCriticalPath(OutputPort* op) const {
+    auto backend = sr->design().backend();
+    Path longest;
+    Latency llat = longest.latency(backend);
+    longest.push_back(op);
+    auto dr = op->deps();
+    for (unsigned i=0; i<dr.inputs.size(); i++) {
+        Path p = findCriticalPath(dr.inputs[i]->m());
+        p.push_back(op);
+        auto plat = p.latency(backend);
+        if (plat.depth() > llat.depth()) {
+            longest = p;
+            llat = plat;
+        }
+        assert(p.isValid());
+    }
+    return longest;
 }
 
 } // namespace llpm
