@@ -21,13 +21,14 @@ I think the following are required, though this list may be missing a few:
 - doxygen (recommended)
 - gdb (recommended)
 
-Next, LLPM relies on two submodules which are build out-of-band. First, fetch
+Next, LLPM relies on three submodules which are build out-of-band. First, fetch
 and build them:
 ```bash
 $ git submodule init
 $ git submodule update
 $ ./build_llvm.sh
 $ ./build_verilator.sh
+$ ./build_flopc.sh
 ```
 
 Finally, you should be able to build llpm:
