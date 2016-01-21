@@ -30,10 +30,12 @@ reg [Width-1:0] data;
 
 assign read = data;
 
-assign write_req_bps = write_resp_bps;
-
 reg write_reqs_last_cycle [NumWrites-1:0];
 assign write_resp_valids = write_reqs_last_cycle;
+assign write_req_bps = write_resp_bps & ~write_reqs_last_cycle;
+
+wire write_resps_acked [NumWrites-1:0];
+assign write_resps_acked = write_resp_valids & ~write_resp_bps;
 
 reg has_valid_write;
 reg [CLog2NumWrites-1:0] write_select;
@@ -45,7 +47,7 @@ begin
     has_valid_write = 1'b0;
     for (i=0; i<NumWrites; i = i + 1)
     begin
-        if (write_req_valids[i] && ! write_resp_bps[i])
+        if (write_req_valids[i] && !write_req_bps[i])
         begin
             write_select = i[CLog2NumWrites-1:0];
             has_valid_write = 1'b1;
@@ -60,7 +62,8 @@ begin
         data <= ResetValue;
         write_reqs_last_cycle <= '{NumWrites{1'b0}};
     end else begin
-        write_reqs_last_cycle <= write_req_valids;
+        for (i=0; i<NumWrites; i = i + 1)
+            write_reqs_last_cycle[i] <= ~write_resps_acked[i] | write_req_valids[i];
         if (has_valid_write)
         begin
             data <= write_reqs[write_select];
