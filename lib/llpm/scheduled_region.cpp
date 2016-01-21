@@ -517,6 +517,7 @@ void ScheduledRegion::absorb(OutputPort* op, InputPort* ip) {
                 _externalInputs.insert(np);
             }
             internalOutput = getDriver(np);
+            internalOutput->name(np->name());
             _members.insert(internalOutput);
             extConns->connect(op, np);
         }
@@ -555,6 +556,7 @@ void ScheduledRegion::absorb(OutputPort* op, InputPort* ip) {
                 _externalOutputs.insert(np);
             }
             internalInput = getSink(np);
+            internalInput->name(np->name());
             _members.insert(internalInput);
             extConns->connect(np, ip);
         }
@@ -953,6 +955,16 @@ void ScheduledRegion::scheduleMinimumClocks() {
                 Deps.insert(idx, depid);
             }
 
+            if (ip->owner()->is<DummyBlock>()) {
+                auto ext = findExternalPortFromSink(ip);
+                if (_members.contains(ext)) {
+                    assert(id.find(ext) != id.end());
+                    auto ipid = id[ext];
+                    CalcLatency.insert(ipid, idx);
+                    CalcLatencies(ipid, idx) = 0;
+                }
+            } 
+
             if (mustBeSequential &&
                 _externalOutputs.count(findExternalPortFromSink(ip)) > 0) {
                 ExtOuts.insert(idx);
@@ -960,6 +972,15 @@ void ScheduledRegion::scheduleMinimumClocks() {
         } else if (p->isOutput()) {
             auto op = p->asOutput();
             auto dr = op->deps();
+            if (op->owner()->is<DummyBlock>()) {
+                auto ext = findExternalPortFromDriver(op);
+                if (_members.contains(ext)) {
+                    assert(id.find(ext) != id.end());
+                    auto ipid = id[ext];
+                    CalcLatency.insert(idx, ipid);
+                    CalcLatencies(idx, ipid) = 0;
+                }
+            } 
             for (unsigned i=0; i<dr.inputs.size(); i++) {
                 auto ip = dr.inputs[i]->m();
                 if (_members.contains(ip)) {
@@ -1017,6 +1038,8 @@ void ScheduledRegion::scheduleMinimumClocks() {
         }
 
 #if 0
+
+        auto idx = id[p];
         printf("[%u] %s %s %s: %i\n", idx, p->owner()->name().c_str(),
                cpp_demangle(typeid(*p->owner()).name()).c_str(),
                p->name().c_str(), cycNum);
@@ -1238,10 +1261,10 @@ bool ScheduledRegion::refine(ConnectionDB& conns) const {
 }
 
 DependenceRule ScheduledRegion::deps(const OutputPort* op) const {
-    vector<InputPort*> deps(_externalInputs.begin(), _externalInputs.end());
     if (_externalOutputs.count((OutputPort*)op) > 0) {
-        return DependenceRule(DependenceRule::AND_FireOne, deps);
+        return DependenceRule(DependenceRule::AND_FireOne, inputs());
     } else {
+        vector<InputPort*> deps(_externalInputs.begin(), _externalInputs.end());
         return DependenceRule(DependenceRule::Custom, deps);
     }
 }
@@ -1252,8 +1275,9 @@ void ScheduledRegion::validityCheck() const {
 
 std::string ScheduledRegion::print() const {
     return str(
-        boost::format("memb: %1%")
-            % _members.size());
+        boost::format("memb: %1%, cycles: %2%")
+            % _members.size()
+            % _cycles.size());
 }
 
 void ScheduledRegion::Members::erase(Block* b) {
@@ -1547,7 +1571,7 @@ void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
         // assert(_sr->isConst(source) || _available.count(source) > 0);
         if (_newValues.count(source) == 0 &&
             !_sr->isConst(source)) {
-            // Wasn't generated this cycle, look to the past!
+            // Wasn't generated this cycle (or constant), look to the past!
             assert(_prev != nullptr);
             conns->disconnect(source, firing);
             source = _prev->getPipelinedPort(source);
