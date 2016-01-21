@@ -87,13 +87,15 @@ void CheckOutputsPass::runInternal(Module* m) {
     }
 }
 
-static bool isPipelineReg(Block* b) {
-    return b->is<PipelineRegister>();
+static bool isSequential(Block* b) {
+    return b->is<PipelineRegister>() ||
+           (b->is<ScheduledRegion>() &&
+            b->as<ScheduledRegion>()->cycles().size() > 1);
 }
 
 void CheckCyclesPass::runInternal(Module* m) {
     std::vector< std::pair<const OutputPort*, const InputPort*> > cycle;
-    auto found = queries::FindCycle(m, &isPipelineReg, cycle);
+    auto found = queries::FindCycle(m, &isSequential, cycle);
     if (found) {
         auto& namer = m->design().namer();
         printf("Error: found combinatorial loop in %s!\n",
