@@ -253,13 +253,25 @@ output wire vin_bp;
 output wire vout_valid;
 input wire vout_bp;
 
-output wire ce_valid;
+output wire [2:0] ce_valid;
+/*
+* ce_valid[0]: data1 write?
+* ce_valid[1]: data1 source (data2 or d)?
+* ce_valid[2]: data2 write?
+*/
 
 
-reg             valid;
+// Current number of valid tokens in our slaves
+reg [1:0]       tokens;
+
+// Are both slots full?
+wire            full = tokens == 2;
+
+// Do we have at least one token
+wire            valid = |tokens;
 
 // Backpressure our input if we have data
-assign vin_bp = valid || ~vin_valid;
+assign vin_bp = full || ~vin_valid;
 
 // Must we absorb a token?
 wire incoming = vin_valid && ~vin_bp;
@@ -267,22 +279,29 @@ wire incoming = vin_valid && ~vin_bp;
 // Is the current token leaving us?
 wire outgoing = valid && ~vout_bp;
 
-assign ce_valid = incoming;
 assign vout_valid = valid;
+
+assign ce_valid[0] = incoming || (outgoing && full);
+assign ce_valid[1] = (outgoing && full);
+assign ce_valid[2] = incoming && valid;
 
 always@(posedge clk)
 begin
     if(~resetn)
     begin
-        valid <= 1'b0;
+        tokens <= 2'b00;
     end else begin
-        if (outgoing)
+        if (outgoing && incoming)
         begin
-            valid <= 1'b0;
+            // Count doesn't change
+        end
+        else if (outgoing)
+        begin
+            tokens <= tokens - 1; 
         end
         else if (incoming)
         begin
-            valid <= 1'b1;
+            tokens <= tokens + 1; 
         end 
     end
     `ifdef verilator
@@ -311,25 +330,38 @@ input wire [Width-1:0] d;
 
 output wire [Width-1:0] q;
 
-input wire ce_valid;
+input wire [2:0] ce_valid;
+/*
+* ce_valid[0]: data1 write?
+* ce_valid[1]: data1 source (data2 or d)?
+* ce_valid[2]: data2 write?
+*/
 
-reg [Width-1:0] data;
+reg [Width-1:0] data1;
+reg [Width-1:0] data2;
 
-assign q = data;
+assign q = data1;
 
 always@(posedge clk)
 begin
     if(~resetn)
     begin
-        data <= {Width{1'bx}};
+        data1 <= {Width{1'bx}};
+        data2 <= {Width{1'bx}};
     end else begin
-        if (ce_valid)
+        if (ce_valid[0])
         begin
-            data <= d;
+            data1 <= ce_valid[1] ? data2 : d;
+        end
+
+        if (ce_valid[2])
+        begin
+            data2 <= d;
         end
     end
     `ifdef verilator
-    $c("debug_reg(", Name, ", ", 0, ", ", data, ");");
+    $c("debug_reg(", Name, ", ", 2, ", ", data1, ", ",
+                                 2, ", ", data2, ");");
     `endif
 end
 
