@@ -539,6 +539,7 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
     os << mod->name() << "::" << mod->name() << "() {\n"
        << "    simulator = new V" << mod->name() << "();\n"
        << "    cycleCount = 0;\n"
+       << "    globalCycleCounter = &cycleCount;\n"
        << "    tfp = NULL;\n"
        << "};\n";
 

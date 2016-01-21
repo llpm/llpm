@@ -6,6 +6,14 @@
 
 using namespace std;
 
+uint64_t* globalCycleCounter = NULL;
+double sc_time_stamp() {
+    if (globalCycleCounter != NULL) {
+        return *globalCycleCounter;
+    }
+    return -1.0;
+}
+
 static FILE* debug_output = NULL;
 static map<string, uint64_t> counter;
 

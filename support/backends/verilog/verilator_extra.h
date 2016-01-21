@@ -3,6 +3,8 @@
 
 #include "verilated.h"
 
+extern uint64_t* globalCycleCounter;
+
 template<typename T>
 void debug_reg(
     WData* reg_name,

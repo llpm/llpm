@@ -286,30 +286,66 @@ void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
 
     // Write the connection to this I/O
     auto ip = b->din();
-    auto ext = _sr->findExternalPortFromSink(ip);
-    if (ext != nullptr) {
+    auto extOut = _sr->findExternalPortFromSink(ip);
+    if (extOut != nullptr) {
         _ctxt << "\n    // Output connection\n";
         auto source = _sr->connsConst()->findSource(ip);
         if (source == nullptr) {
             printf("Warning: found undriven SR output: %s.%s\n",
                    _sr->name().c_str(),
-                   _ctxt.name(ext, true).c_str());
+                   _ctxt.name(extOut, true).c_str());
         } else {
             if (bitwidth(ip->type()) > 0) {
                 _ctxt << boost::format(
                     "    assign %1% = %2%;\n")
-                    % _ctxt.name((InputPort*)ip)
+                    % _ctxt.name(ip)
                     % _ctxt.name(source);
             }
 
-            if (_sr->internalOutputs().count(ext) > 0) {
+            if (_sr->internalOutputs().count(extOut) > 0) {
                 // Drive the valid signal here only if it's an internalOutput
                 assert(cycle != nullptr);
                 _ctxt << boost::format(
                     "    assign %1%_valid = %2%_valid && ~%2%_bp;\n")
-                    % _ctxt.name((InputPort*)ip)
+                    % _ctxt.name(ip)
                     % validSignal(cycle);
+                _ctxt << boost::format(
+                    "    always @ (posedge clk)\n"
+                    "        %1%_CHECKBP: assert (!(%1%_valid && %1%_bp))\n"
+                    "        begin\n"
+                    "        end else begin\n"
+                    "            $display(\"ERROR (%2%.%1%): got backpressure"
+                    " in SR virtual at \", $time);\n"
+                    "        end\n")
+                    % _ctxt.name(ip)
+                    % _sr->name();
             }
+        }
+    }
+
+    // Write the connection to this I/O
+    auto op = b->dout();
+    auto extIn = _sr->findExternalPortFromDriver(op);
+    if (extIn != nullptr) {
+        _ctxt << "\n    // Input connection\n";
+        if (_sr->internalInputs().count(extIn) > 0) {
+            _ctxt << boost::format(
+                "    assign %1%_bp = %2%_bp;\n")
+                % _ctxt.name(op)
+                % validSignal(cycle);
+
+            _ctxt << boost::format(
+                "    always @ (posedge clk)\n"
+                "        %1%_CHECKLI: assert ((%1%_valid && ~%1%_bp) ==\n"
+                "                             (%2%_valid && ~%2%_bp))\n"
+                "        begin\n"
+                "        end else begin\n"
+                "            $display(\"ERROR (%3%.%1%): valid int_ and PSC don't"
+                " match at \", $time);\n"
+                "        end\n")
+                % _ctxt.name(op)
+                % validSignal(cycle)
+                % _sr->name();
         }
     }
 }
