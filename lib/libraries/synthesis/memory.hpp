@@ -83,7 +83,7 @@ public:
         return true;
     }
 
-    virtual DependenceRule depRule(const OutputPort* op) const {
+    virtual DependenceRule deps(const OutputPort* op) const {
         for (const auto& port: _ports) {
             if (op == port->dout())
                 return DependenceRule(DependenceRule::AND_FireOne,

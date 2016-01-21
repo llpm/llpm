@@ -357,6 +357,9 @@ public:
     virtual bool outputsSeparate() const {
         return true;
     }
+    virtual bool outputsTied() const {
+        return true;
+    }
 
     virtual bool refine(ConnectionDB& conns) const;
     virtual bool refinable() const {

@@ -12,8 +12,11 @@
 #include <backends/graphviz/graphviz.hpp>
 #include <boost/format.hpp>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverflow"
 #include <flopc.hpp>
 #include <OsiCbcSolverInterface.hpp>
+#pragma GCC diagnostic pop
 
 using namespace std;
 
@@ -924,13 +927,13 @@ void ScheduledRegion::scheduleMinimumClocks() {
     std::map<Port*, unsigned> id;
     unsigned idx = 0;
     for (auto p: _members) {
-
         id[p] = idx++;
     }
 
     // Formulate as LP
     using namespace flopc;
-    MP_model::getDefaultModel().setSolver(new OsiCbcSolverInterface);
+    MP_model model(new OsiCbcSolverInterface);
+    model.silent();
     MP_set Port(_members.size());
     MP_variable Assignment(Port);
     Assignment.lowerLimit(Port) = 0;
@@ -953,7 +956,6 @@ void ScheduledRegion::scheduleMinimumClocks() {
             if (mustBeSequential &&
                 _externalOutputs.count(findExternalPortFromSink(ip)) > 0) {
                 ExtOuts.insert(idx);
-                printf("ExtOut: %u\n", idx);
             }
         } else if (p->isOutput()) {
             auto op = p->asOutput();
@@ -965,9 +967,6 @@ void ScheduledRegion::scheduleMinimumClocks() {
                     CalcLatency.insert(idx, ipid);
                     auto lat = dr.latencies[i].depth().registers();
                     CalcLatencies(idx, ipid) = lat;
-                    if (lat > 0) {
-                        printf("Lat: %u (%u, %u)\n", lat, idx, ipid);
-                    }
                 }
             }
         }
@@ -985,7 +984,7 @@ void ScheduledRegion::scheduleMinimumClocks() {
     CalcLatencyConstr(CalcLatency(i, j)) =
         Assignment(i) - Assignment(j) == CalcLatencies(i, j);
 
-    minimize( sum(Port(i), Assignment(i) ));
+    model.minimize( sum(Port(i), Assignment(i) ));
     int maxCyc = 0;
     for (unsigned idx=0; idx<_members.size(); idx++) {
         int cycNum = Assignment.level(idx);
@@ -999,17 +998,29 @@ void ScheduledRegion::scheduleMinimumClocks() {
     for (auto p: _members) {
         auto idx = id[p];
         int cycNum = Assignment.level(idx);
-        auto cycle = _cycles[cycNum];
         _cycleIdx[p] = cycNum;
+    }
+
+    // Make sure extOutputs are in last cycle:
+    for (auto extOut: _externalOutputs) {
+        _cycleIdx[extOut] = maxCyc;
+        _cycleIdx[getSink(extOut)] = maxCyc;
+    }
+
+    for (auto p: _members) {
+        unsigned cycNum = _cycleIdx[p];
+        auto cycle = _cycles[cycNum];
         if (p->isInput()) {
             cycle->_firing.insert(p->asInput());
         } else {
             cycle->_newValues.insert(p->asOutput());
         }
 
+#if 0
         printf("[%u] %s %s %s: %i\n", idx, p->owner()->name().c_str(),
                cpp_demangle(typeid(*p->owner()).name()).c_str(),
                p->name().c_str(), cycNum);
+#endif
     }
  
     finalizeCycles();
@@ -1040,8 +1051,8 @@ struct SelfFindingVisitor : public Visitor<IOEdge> {
         auto dr = edge.endPort()->deps();
         for (unsigned i=0; i<dr.inputs.size(); i++) {
             auto lat = dr.latencies[i];
-            if (lat.depth().registers() == 0 ||
-                !lat.depth().fixed()) {
+            if (!lat.depth().finite() ||
+                 lat.depth().registers() == 0) {
                 ret.push_back(dr.inputs[i]);
             }
         }

@@ -394,7 +394,7 @@ void ScheduledRegionVerilogPrinter::write(const ScheduledRegion::Cycle* cycle,
     _ctxt << boost::format(
         "    wire %3%_valid;\n"
         "    wire %3%_bp;\n"
-        "    wire %1%_ce;\n"
+        "    wire [2:0] %1%_ce;\n"
         "    PipelineStageController %1% (\n"
         "        .clk(clk),\n"
         "        .resetn(resetn),\n"
@@ -434,30 +434,32 @@ void ScheduledRegionVerilogPrinter::writeOutputs() {
     _ctxt << "\n// ***** Final output LI bits *****\n";
     const ScheduledRegion::Cycle* lastCycle = _sr->cycles(_sr->cycles_size() - 1);
 
-    _ctxt << boost::format(
-        "    wire [%2%-1:0] __outputfork_dout_valid;\n"
-        "    wire [%2%-1:0] __outputfork_dout_bp;\n"
-        "    Fork_VoidData # (\n"
-        "        .NumOutputs(%2%)\n"
-        "    ) __outputfork (\n"
-        "        .clk(clk),\n"
-        "        .resetn(resetn),\n"
-        "        .din_valid(%1%_valid),\n"
-        "        .din_bp(%1%_bp),\n"
-        "        .dout_valid(__outputfork_dout_valid),\n"
-        "        .dout_bp(__outputfork_dout_bp)\n"
-        "    );\n")
-        % validSignal(lastCycle)
-        % _sr->externalOutputs().size();
-    unsigned idx = 0;
-    for (auto op: _sr->externalOutputs()) {
-        assert(_written.count(_sr->getSink(op)->owner()) > 0);
+    if (_sr->externalOutputs().size() > 0) {
         _ctxt << boost::format(
-            "    assign %1%_valid = __outputfork_dout_valid[%2%];\n"
-            "    assign __outputfork_dout_bp[%2%] = %1%_bp;\n")
-            % _ctxt.name(op, true)
-            % idx;
-        idx++;
+            "    wire [%2%-1:0] __outputfork_dout_valid;\n"
+            "    wire [%2%-1:0] __outputfork_dout_bp;\n"
+            "    Fork_VoidData # (\n"
+            "        .NumOutputs(%2%)\n"
+            "    ) __outputfork (\n"
+            "        .clk(clk),\n"
+            "        .resetn(resetn),\n"
+            "        .din_valid(%1%_valid),\n"
+            "        .din_bp(%1%_bp),\n"
+            "        .dout_valid(__outputfork_dout_valid),\n"
+            "        .dout_bp(__outputfork_dout_bp)\n"
+            "    );\n")
+            % validSignal(lastCycle)
+            % _sr->externalOutputs().size();
+        unsigned idx = 0;
+        for (auto op: _sr->externalOutputs()) {
+            assert(_written.count(_sr->getSink(op)->owner()) > 0);
+            _ctxt << boost::format(
+                "    assign %1%_valid = __outputfork_dout_valid[%2%];\n"
+                "    assign __outputfork_dout_bp[%2%] = %1%_bp;\n")
+                % _ctxt.name(op, true)
+                % idx;
+            idx++;
+        }
     }
 }
 
