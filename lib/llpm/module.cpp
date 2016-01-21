@@ -2,6 +2,7 @@
 
 #include <analysis/graph_queries.hpp>
 #include <util/llvm_type.hpp>
+#include <backends/graphviz/graphviz.hpp>
 
 #include <boost/format.hpp>
 #include <deque>
@@ -447,6 +448,21 @@ bool ContainerModule::unifyOutput() {
     }
 
     return true;
+}
+
+
+bool Module::debugPrint(Module* mod, const char* name) {
+    if (mod->connsConst() != nullptr) {
+        auto f = mod->_design.workingDir()->create(name);
+        mod->_design.gv()->writeModule(
+            f,
+            mod,
+            false,
+            mod->_name);
+        f->close();
+        return true;
+    }
+    return false;
 }
 
 } // namespace llpm

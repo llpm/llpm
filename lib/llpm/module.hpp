@@ -129,6 +129,8 @@ public:
     void internalDrivers(std::vector<OutputPort*>&) const;
 
     virtual bool hasCycle() const = 0;
+
+    static bool debugPrint(Module*, const char* name);
 };
 
 /**
