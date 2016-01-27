@@ -53,7 +53,18 @@ DependenceRule::DepType Block::firing() const {
 // differ or are maybes. Otherwise, output tokens are always produced
 // based on the same rules, so they are "dependent"
 bool Block::outputsTied() const {
+    set<const InputPort*> deps;
+    bool first = true;
     for (auto output: outputs()) {
+        auto dr = output->deps();
+        if (first) {
+            deps.insert(dr.inputs.begin(), dr.inputs.end());
+            first = false;
+        } else {
+            set<const InputPort*> lcldeps(dr.inputs.begin(), dr.inputs.end());
+            if (deps != lcldeps)
+                return false;
+        }
         if (output->deps().depType != 
                 DependenceRule::AND_FireOne)
             return false;
