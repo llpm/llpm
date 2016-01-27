@@ -955,7 +955,8 @@ void ScheduledRegion::scheduleMinimumClocks() {
                 Deps.insert(idx, depid);
             }
 
-            if (ip->owner()->is<DummyBlock>()) {
+            if (ip->owner()->is<DummyBlock>() &&
+                ip->owner()->module() == this) {
                 auto ext = findExternalPortFromSink(ip);
                 if (_members.contains(ext)) {
                     assert(id.find(ext) != id.end());
@@ -963,7 +964,20 @@ void ScheduledRegion::scheduleMinimumClocks() {
                     CalcLatency.insert(ipid, idx);
                     CalcLatencies(ipid, idx) = 0;
                 }
-            } 
+            } else if (ip->owner()->module() != this) {
+                // External (virtual) connections cannot be pipelined. The
+                // pipeline must occur inside of the SR instead.
+                auto conns = ip->owner()->module()->connsConst();
+                assert(conns != nullptr);
+                auto source = conns->findSource(ip);
+                assert(source != nullptr);
+                assert(_members.count(source));
+                assert(id.find(source) != id.end());
+
+                auto sourceid = id[source];
+                CalcLatency.insert(sourceid, idx);
+                CalcLatencies(sourceid, idx) = 0;
+            }
 
             if (mustBeSequential &&
                 _externalOutputs.count(findExternalPortFromSink(ip)) > 0) {
@@ -972,7 +986,8 @@ void ScheduledRegion::scheduleMinimumClocks() {
         } else if (p->isOutput()) {
             auto op = p->asOutput();
             auto dr = op->deps();
-            if (op->owner()->is<DummyBlock>()) {
+            if (op->owner()->is<DummyBlock>() &&
+                op->owner()->module() == this) {
                 auto ext = findExternalPortFromDriver(op);
                 if (_members.contains(ext)) {
                     assert(id.find(ext) != id.end());
@@ -980,7 +995,7 @@ void ScheduledRegion::scheduleMinimumClocks() {
                     CalcLatency.insert(idx, ipid);
                     CalcLatencies(idx, ipid) = 0;
                 }
-            } 
+            }
             for (unsigned i=0; i<dr.inputs.size(); i++) {
                 auto ip = dr.inputs[i]->m();
                 if (_members.contains(ip)) {
@@ -1006,6 +1021,7 @@ void ScheduledRegion::scheduleMinimumClocks() {
         Assignment(i) - Assignment(j) == CalcLatencies(i, j);
 
     model.minimize( sum(Port(i), Assignment(i) ));
+    assert(model.getStatus() == MP_model::OPTIMAL);
     int maxCyc = 0;
     for (unsigned idx=0; idx<_members.size(); idx++) {
         int cycNum = Assignment.level(idx);
@@ -1573,6 +1589,8 @@ void ScheduledRegion::Cycle::finalize(unsigned cycleNum) {
             !_sr->isConst(source)) {
             // Wasn't generated this cycle (or constant), look to the past!
             assert(_prev != nullptr);
+            assert(firing->owner()->module() == _sr);
+            assert(source->owner()->module() == _sr);
             conns->disconnect(source, firing);
             source = _prev->getPipelinedPort(source);
             conns->connect(source, firing);
