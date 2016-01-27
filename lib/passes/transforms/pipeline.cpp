@@ -230,7 +230,9 @@ void LatchUntiedOutputs::runInternal(Module* mod) {
     set<Block*> blocks;
     t.conns()->findAllBlocks(blocks);
     for (auto b: blocks) {
-        if (b->outputsTied() || b->outputs().size() <= 1)
+        if (b->outputsTied() || 
+            b->outputs().size() <= 1 ||
+            b->outputsSeparate() )
             continue;
 
         // If the outputs aren't tied, a latch may be necessary
