@@ -27,15 +27,19 @@ input  wire write_resp_bps    [NumWrites-1:0];
 
 output wire [Width-1:0] read;
 reg [Width-1:0] data;
-
 assign read = data;
 
-reg write_reqs_last_cycle [NumWrites-1:0];
-assign write_resp_valids = write_reqs_last_cycle;
-assign write_req_bps = write_resp_bps & ~write_reqs_last_cycle;
+PipelineReg_DoubleWidth_NoData resps [NumWrites-1:0] (
+    .clk(clk),
+    .resetn(resetn),
+    .d_valid(write_req_valids),
+    .d_bp(write_req_bps),
+    .q_valid(write_resp_valids),
+    .q_bp(write_resp_bps)
+);
 
-wire write_resps_acked [NumWrites-1:0];
-assign write_resps_acked = write_resp_valids & ~write_resp_bps;
+wire write_reqs_acked [NumWrites-1:0];
+assign write_reqs_acked = write_req_valids & ~write_req_bps;
 
 reg has_valid_write;
 reg [CLog2NumWrites-1:0] write_select;
@@ -47,7 +51,7 @@ begin
     has_valid_write = 1'b0;
     for (i=0; i<NumWrites; i = i + 1)
     begin
-        if (write_req_valids[i] && !write_req_bps[i])
+        if (write_reqs_acked[i])
         begin
             write_select = i[CLog2NumWrites-1:0];
             has_valid_write = 1'b1;
@@ -60,10 +64,7 @@ begin
     if(~resetn)
     begin
         data <= ResetValue;
-        write_reqs_last_cycle <= '{NumWrites{1'b0}};
     end else begin
-        for (i=0; i<NumWrites; i = i + 1)
-            write_reqs_last_cycle[i] <= ~write_resps_acked[i] | write_req_valids[i];
         if (has_valid_write)
         begin
             data <= write_reqs[write_select];

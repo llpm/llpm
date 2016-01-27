@@ -256,7 +256,7 @@ input wire vout_bp;
 output wire [2:0] ce_valid;
 /*
 * ce_valid[0]: data1 write?
-* ce_valid[1]: data1 source (data2 or d)?
+* ce_valid[1]: data1 source (data2 ==1 or d ==0)?
 * ce_valid[2]: data2 write?
 */
 
@@ -267,23 +267,25 @@ reg [1:0]       tokens;
 // Are both slots full?
 wire            full = tokens == 2;
 
-// Do we have at least one token
+// Do we have at least one token?
 wire            valid = |tokens;
 
-// Backpressure our input if we have data
-assign vin_bp = full || ~vin_valid;
+// Backpressure our input if we are full w/ data
+assign vin_bp = full | ~vin_valid;
+
+// Tell the next guy if we have any data
+assign vout_valid = valid;
 
 // Must we absorb a token?
 wire incoming = vin_valid && ~vin_bp;
 
 // Is the current token leaving us?
-wire outgoing = valid && ~vout_bp;
+wire outgoing = vout_valid && ~vout_bp;
 
-assign vout_valid = valid;
-
-assign ce_valid[0] = incoming || (outgoing && full);
-assign ce_valid[1] = (outgoing && full);
-assign ce_valid[2] = incoming && valid;
+// Commands to slave registers
+assign ce_valid[0] = outgoing || (incoming && ~valid);
+assign ce_valid[1] = full;
+assign ce_valid[2] = incoming;
 
 always@(posedge clk)
 begin
@@ -333,7 +335,7 @@ output wire [Width-1:0] q;
 input wire [2:0] ce_valid;
 /*
 * ce_valid[0]: data1 write?
-* ce_valid[1]: data1 source (data2 or d)?
+* ce_valid[1]: data1 source (data2 ==1 or d ==0)?
 * ce_valid[2]: data2 write?
 */
 
