@@ -452,6 +452,8 @@ void VerilatorWedge::writeHeader(FileSet::File* f, Module* mod) {
         os << boost::format("    bool %1%_nonblock(%2%*);\n")
                     % op->name()
                     % tName;
+        os << boost::format("    unsigned %1%_size();\n")
+                    % op->name();
         os << boost::format("    void %1%(%2%*);\n")
                     % op->name()
                     % tName;
@@ -778,6 +780,13 @@ void VerilatorWedge::writeImplementation(FileSet::File* f, Module* mod) {
                     % op->name()
                     % tName
                     % mod->name();
+
+        os << boost::format(
+            "unsigned %2%::%1%_size() {\n"
+            "    return %1%_incoming.size();\n"
+            "}\n")
+            % op->name()
+            % mod->name();
 
         os << boost::format(
                 "void %3%::%1%(%2%* arg) {\n"
