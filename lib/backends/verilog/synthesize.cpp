@@ -1568,10 +1568,13 @@ public:
                     % ctxt.name(f->dout(i));
         }
 
-        ctxt << boost::format("    %1% # (\n") % style
-             << boost::format("        .Width(%1%),\n") 
-                             % bitwidth(f->din()->type())
-             << boost::format("        .NumOutputs(%1%)\n")
+        ctxt << boost::format("    %1% # (\n") % style;
+
+        if (bitwidth(f->din()->type()) > 0) {
+            ctxt << boost::format("        .Width(%1%),\n") 
+                                 % bitwidth(f->din()->type());
+        }
+        ctxt << boost::format("        .NumOutputs(%1%)\n")
                              % f->dout_size()
              << boost::format("    ) %1% (\n") % ctxt.name(f)
              <<               "        .clk(clk),\n"
