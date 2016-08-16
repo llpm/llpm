@@ -211,6 +211,22 @@ namespace llpm {
         }
     };
 
+    // Negate all the bits of an input
+    class Negate : public Function {
+    private:
+        virtual float logicalEffortFunc() const {
+            return 1.0;
+        }
+
+    public:
+        Negate(llvm::Type* t);
+
+        virtual bool inputCommutative(InputPort* op) const {
+            assert(op == din());
+            return true;
+        }
+    };
+
     class IntCompare : public Function {
     public:
         enum Cmp {

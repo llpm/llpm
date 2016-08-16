@@ -21,6 +21,7 @@ void StdLibStops(BaseLibraryStopCondition& sc) {
     sc.addClass<IntDivide>();
     sc.addClass<IntRemainder>();
     sc.addClass<Bitwise>();
+    sc.addClass<Negate>();
     sc.addClass<IntCompare>();
     sc.addClass<IntTruncate>();
     sc.addClass<IntExtend>();
@@ -242,6 +243,11 @@ llvm::Type* Bitwise::OutType(unsigned N, llvm::Type* t) {
 Bitwise::Bitwise(unsigned N, llvm::Type* t, Op op) :
     Function(InType(N, t), OutType(N, t)),
     _op(op)
+{
+}
+
+Negate::Negate(llvm::Type* t) :
+    Function(t, t)
 {
 }
 
