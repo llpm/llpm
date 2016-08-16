@@ -872,6 +872,9 @@ public:
         case Shift::Right:
             op = ">>";
             break;
+
+        default:
+            assert(false && "Unknown shift direction!");
         }
 
         switch (s->style()) {
@@ -879,7 +882,36 @@ public:
             print_function(ctxt, c, op, false);
             break;
         case Shift::Rotating: {
-            assert(false && "Rotating shifts not yet implemented!");
+            auto dinType = s->din()->type();
+
+
+            unsigned valWidth = bitwidth(nthType(dinType, 0));
+            unsigned shAmtOffset = bitoffset(dinType, 1);
+            unsigned shAmtWidth = bitwidth(nthType(dinType, 1));
+
+            string valName = str(boost::format("(%1%[%2%-1:0])")
+                                 % ctxt.name(s->din())
+                                 % valWidth);
+            string shAmtName = str(boost::format("(%1%[%2%-1:%3%])")
+                                 % ctxt.name(s->din())
+                                 % (shAmtWidth + shAmtOffset)
+                                 % shAmtOffset);
+
+            ctxt << "    assign " << ctxt.name(s->dout()) << " = ";
+            switch (s->dir()) {
+            case Shift::Left:
+                ctxt << boost::format(
+                    "%3%'(({%1%, %1%} << %2%) >> %3%);\n")
+                    % valName
+                    % shAmtName
+                    % valWidth;
+            case Shift::Right:
+                ctxt << boost::format(
+                    "%3%'({%1%, %1%} >> %2%);\n")
+                    % valName
+                    % shAmtName
+                    % valWidth;
+            }
             break;
         }
         case Shift::Arithmetic:
@@ -939,6 +971,23 @@ public:
                     % absAmt;
             break;
         }
+    }
+};
+
+class NegatePrinter : public VerilogSynthesizer::Printer {
+public:
+    bool handles(Block* b) const {
+        return dynamic_cast<Negate*>(b) != NULL;
+    }
+
+    void print(VerilogSynthesizer::Context& ctxt, Block* c) const {
+        Negate* s = dynamic_cast<Negate*>(c);
+
+        string name = ctxt.name(s->din());
+        ctxt << boost::format(
+            "    assign %1% = ~%2%;\n")
+            % ctxt.name(s->dout())
+            % name;
     }
 };
 
@@ -1897,6 +1946,7 @@ void VerilogSynthesizer::addDefaultPrinters() {
     _printers.appendEntry(make_shared<BitwiseOpPrinter>());
     _printers.appendEntry(make_shared<ShiftPrinter>());
     _printers.appendEntry(make_shared<ConstShiftPrinter>());
+    _printers.appendEntry(make_shared<NegatePrinter>());
 
     _printers.appendEntry(make_shared<IntTruncatePrinter>());
     _printers.appendEntry(make_shared<IntExtendPrinter>());
